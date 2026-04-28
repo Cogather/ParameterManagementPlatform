@@ -1,0 +1,163 @@
+.card-item {
+  background-color: #fff;
+  border-radius: 4px;
+  padding: 20px;
+  box-shadow: 0px 1px 2px rgba(6, 70, 113, 0.08);
+}
+
+/**
+ * 业务页主区（无 el-card 包裹，与宿主内容区直接对齐）
+ * 原 page-card 外边距/内边距由 padding 落在 .page-main 上
+ */
+.common-main.page-main {
+  box-sizing: border-box;
+  padding: 0 20px 20px;
+}
+
+.app-shell--embedded .common-main.page-main {
+  padding: 0 12px 12px;
+}
+
+/** border-card Tab 内容区（与卡片内边距同档，略小于默认 EP 大留白） */
+.page-main .el-tabs--border-card > .el-tabs__content {
+  padding: 15px 16px;
+}
+
+/** 命令域：左操作按钮、右关键字/筛选查询，同一行紧挨（不两端对齐） */
+.command-toolbar-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  justify-content: flex-start;
+  margin-bottom: 12px;
+}
+
+.command-toolbar-row .filter-row {
+  flex: 0 1 auto;
+  margin-bottom: 0;
+}
+
+.command-toolbar-row .filter-row.el-form--inline {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+}
+
+.command-toolbar-row .filter-row.el-form--inline .el-form-item {
+  align-items: center;
+  display: inline-flex;
+  margin-bottom: 0;
+  margin-right: 0;
+}
+
+.command-toolbar-row .dict-toolbar {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  /* DictToolbar.vue scoped 里默认有 margin-bottom，命令域工具条行必须清零避免错位 */
+  margin-bottom: 0 !important;
+}
+
+.command-toolbar-row :deep(.el-form-item__content) {
+  align-items: center;
+}
+
+/** 项目主题主色（按钮、Element Plus primary 等） */
+:root {
+  --el-color-primary: #56abe3;
+}
+
+.common-main {
+  /** param-web 单行工具条约 44px；宿主全壳 78px 见 frontend-style.md §6.1 */
+  height: calc(100vh - 44px);
+  overflow: hidden;
+  padding: 0 !important;
+  background-color: #ecf0fe;
+}
+
+/** 表头与 frontend-style.md §5.3 一致（与宿主表格风格对齐） */
+.common-main .el-table .el-table__header th {
+  background-color: #f5f7fa;
+  color: #555;
+}
+
+/**
+ * §5.2 按钮组件（docs/frontend-style.md，与宿主 / frontend-vue.mdc 一致）
+ * 仅作用于 Element Plus 按钮，不全局改 --el-color-primary，避免影响非按钮组件
+ */
+.el-button--primary {
+  --el-button-bg-color: #56abe3;
+  --el-button-border-color: #56abe3;
+  --el-button-hover-bg-color: #6fb8e8;
+  --el-button-hover-border-color: #6fb8e8;
+  background-color: #56abe3;
+  border-color: #56abe3;
+
+  &:hover,
+  &:focus {
+    background-color: #6fb8e8;
+    border-color: #6fb8e8;
+  }
+}
+
+.el-button--text,
+.el-button.is-text,
+.el-button.is-link {
+  color: #56abe3;
+
+  &:hover {
+    color: #3d8bc4;
+  }
+}
+
+.btn-hover {
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transform: scale(1.02);
+  }
+}
+
+.btn-div {
+  background: #f0f7fe;
+  border: 1px solid #e7f4fc;
+  border-radius: 28px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16);
+  height: 56px;
+  margin: 12px 0;
+  width: 272px;
+}
+
+/** 宿主 iframe 内再让出一行高度，避免多重留白顶满视口 */
+.app-shell--embedded .common-main {
+  height: calc(100vh - 40px);
+}
+
+/** 参数页内部分栏：嵌入时再收紧一档（与 ParameterLayout.vue 配合） */
+.app-shell--embedded .param-split {
+  min-height: 360px;
+}
+
+.app-shell--embedded .param-aside {
+  padding: 8px;
+}
+
+.app-shell--embedded .page-main .param-main-inner {
+  padding: 8px 10px;
+}
+
+.common-footer {
+  width: 100%;
+  position: absolute;
+  bottom: 0;
+  background-color: #273039;
+  text-align: center;
+  line-height: 34px;
+  color: #98a1a9;
+  font-size: 15px;
+}
+
