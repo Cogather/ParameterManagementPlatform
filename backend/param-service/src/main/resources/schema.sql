@@ -2,7 +2,7 @@
 -- 注意：此文件使用 PostgreSQL/openGauss 方言；不包含 MySQL 的 ENGINE/CHARSET/COLLATE 语法
 
 -- 产品主数据上下文（详设/表字段简介：entity_basic_info）
-CREATE TABLE IF NOT EXISTS entity_basic_info (
+CREATE TABLE entity_basic_info (
   entity_name VARCHAR(255) NULL,
   product_form_id VARCHAR(50) NOT NULL,
   product_soft_param_type VARCHAR(50) NULL,
@@ -37,9 +37,9 @@ INSERT INTO entity_basic_info (
   ('Alpha 产品', 'pform_alpha_main', 'Single', '主形态', 'product_alpha', 'mock', CURRENT_TIMESTAMP(3), 'mock', CURRENT_TIMESTAMP(3), 'owner_a', 1),
   ('Alpha 产品', 'pform_alpha_ext', 'Multi', '扩展形态', 'product_alpha', 'mock', CURRENT_TIMESTAMP(3), 'mock', CURRENT_TIMESTAMP(3), 'owner_a,owner_b', 1),
   ('Beta 产品', 'pform_beta_main', 'Multi', '主形态', 'product_beta', 'mock', CURRENT_TIMESTAMP(3), 'mock', CURRENT_TIMESTAMP(3), 'owner_beta', 1)
-ON CONFLICT (product_form_id) DO NOTHING;
+;
 
-CREATE TABLE IF NOT EXISTS entity_version_info (
+CREATE TABLE entity_version_info (
   owned_product_id VARCHAR(255) NOT NULL,
   version_id VARCHAR(255) NOT NULL,
   version_name VARCHAR(255) NULL,
@@ -53,18 +53,7 @@ CREATE TABLE IF NOT EXISTS entity_version_info (
   PRIMARY KEY (version_id)
 );
 
--- 兼容详细设计/代码字段：历史库可能缺少以下列（MyBatis-Plus 插入会用到）
-ALTER TABLE entity_version_info ADD COLUMN IF NOT EXISTS version_type VARCHAR(50) NULL;
-ALTER TABLE entity_version_info ADD COLUMN IF NOT EXISTS version_desc VARCHAR(1024) NULL;
-ALTER TABLE entity_version_info ADD COLUMN IF NOT EXISTS owner_list VARCHAR(512) NULL;
-ALTER TABLE entity_version_info ADD COLUMN IF NOT EXISTS supported_version VARCHAR(50) NULL;
-ALTER TABLE entity_version_info ADD COLUMN IF NOT EXISTS baseline_version_id VARCHAR(255) NULL;
-ALTER TABLE entity_version_info ADD COLUMN IF NOT EXISTS baseline_version_name VARCHAR(255) NULL;
-ALTER TABLE entity_version_info ADD COLUMN IF NOT EXISTS approver VARCHAR(50) NULL;
-ALTER TABLE entity_version_info ADD COLUMN IF NOT EXISTS is_hidden VARCHAR(16) NULL;
-ALTER TABLE entity_version_info ADD COLUMN IF NOT EXISTS introduced_product_id VARCHAR(255) NULL;
-
-CREATE TABLE IF NOT EXISTS entity_business_category (
+CREATE TABLE entity_business_category (
   owned_product_id VARCHAR(255) NOT NULL,
   category_id VARCHAR(255) NOT NULL,
   category_name_cn VARCHAR(256) NULL,
@@ -79,19 +68,7 @@ CREATE TABLE IF NOT EXISTS entity_business_category (
   PRIMARY KEY (category_id)
 );
 
--- 兼容历史库字段命名（最小迁移：让数据库列名与代码一致）
--- 1) category_code -> category_id
--- 2) category_name -> category_name_cn（若历史库只有一个“分类名称”列）
--- 注意：Spring 的 schema.sql 初始化器会按分号切分 SQL，无法可靠执行包含内部分号的 DO $$...$$ 过程块。
--- 因此这里不做“条件重命名列”的自动迁移；如需从历史库迁移，请手工执行：
---   ALTER TABLE entity_business_category RENAME COLUMN category_code TO category_id;
---   ALTER TABLE entity_business_category RENAME COLUMN category_name TO category_name_cn;
--- 3) 补齐代码/详设需要的列（历史库缺失时新增空列）
-ALTER TABLE entity_business_category ADD COLUMN IF NOT EXISTS category_name_en VARCHAR(256) NULL;
-ALTER TABLE entity_business_category ADD COLUMN IF NOT EXISTS feature_range VARCHAR(1024) NULL;
-ALTER TABLE entity_business_category ADD COLUMN IF NOT EXISTS category_type VARCHAR(256) NULL;
-
-CREATE TABLE IF NOT EXISTS config_change_source_keyword (
+CREATE TABLE config_change_source_keyword (
   owned_product_id VARCHAR(255) NOT NULL,
   keyword_id VARCHAR(255) NOT NULL,
   keyword_regex VARCHAR(512) NULL,
@@ -105,10 +82,7 @@ CREATE TABLE IF NOT EXISTS config_change_source_keyword (
   PRIMARY KEY (keyword_id)
 );
 
--- 兼容 table字段简介.md：关键字“原因（reason）”
-ALTER TABLE config_change_source_keyword ADD COLUMN IF NOT EXISTS reason VARCHAR(512) NULL;
-
-CREATE TABLE IF NOT EXISTS entity_applicable_ne_dict (
+CREATE TABLE entity_applicable_ne_dict (
   owned_product_id VARCHAR(255) NOT NULL,
   ne_type_id VARCHAR(255) NOT NULL,
   ne_type_name_cn VARCHAR(256) NULL,
@@ -122,7 +96,7 @@ CREATE TABLE IF NOT EXISTS entity_applicable_ne_dict (
   PRIMARY KEY (ne_type_id)
 );
 
-CREATE TABLE IF NOT EXISTS entity_nf_config_dict (
+CREATE TABLE entity_nf_config_dict (
   owned_product_id VARCHAR(255) NOT NULL,
   nf_config_id VARCHAR(255) NOT NULL,
   nf_config_name_cn VARCHAR(256) NULL,
@@ -135,7 +109,7 @@ CREATE TABLE IF NOT EXISTS entity_nf_config_dict (
   PRIMARY KEY (nf_config_id)
 );
 
-CREATE TABLE IF NOT EXISTS entity_effective_mode_dict (
+CREATE TABLE entity_effective_mode_dict (
   owned_product_id VARCHAR(255) NOT NULL,
   effective_mode_id VARCHAR(255) NOT NULL,
   effective_mode_name_cn VARCHAR(256) NULL,
@@ -149,7 +123,7 @@ CREATE TABLE IF NOT EXISTS entity_effective_mode_dict (
   PRIMARY KEY (effective_mode_id)
 );
 
-CREATE TABLE IF NOT EXISTS entity_effective_form_dict (
+CREATE TABLE entity_effective_form_dict (
   owned_product_id VARCHAR(255) NOT NULL,
   effective_form_id VARCHAR(255) NOT NULL,
   effective_form_name_cn VARCHAR(256) NULL,
@@ -163,7 +137,7 @@ CREATE TABLE IF NOT EXISTS entity_effective_form_dict (
   PRIMARY KEY (effective_form_id)
 );
 
-CREATE TABLE IF NOT EXISTS version_feature_dict (
+CREATE TABLE version_feature_dict (
   owned_product_pbi_id VARCHAR(255) NOT NULL,
   owned_version_id VARCHAR(255) NOT NULL,
   feature_id VARCHAR(255) NOT NULL,
@@ -181,13 +155,8 @@ CREATE TABLE IF NOT EXISTS version_feature_dict (
   PRIMARY KEY (feature_id)
 );
 
--- 兼容详设字段：`version_feature_dict` 在文档中使用 owned_product_id（历史实现为 owned_product_pbi_id）
--- 启动初始化不做 rename；若需迁移旧列名请手工改库并清洗数据。
-ALTER TABLE version_feature_dict ADD COLUMN IF NOT EXISTS owned_product_id VARCHAR(255) NULL;
-ALTER TABLE version_feature_dict ADD COLUMN IF NOT EXISTS introduced_product_id VARCHAR(255) NULL;
-
 -- 类型枚举与 BIT 位数定义（仅数据库维护；前端下拉/参数位数依赖）
-CREATE TABLE IF NOT EXISTS type_bit_dict (
+CREATE TABLE type_bit_dict (
   type_bit_id VARCHAR(128) NOT NULL,
   type_enum VARCHAR(64) NOT NULL,
   bit_count INT NOT NULL,
@@ -195,7 +164,7 @@ CREATE TABLE IF NOT EXISTS type_bit_dict (
 );
 
 -- 避免重复插入：同 type_enum 只保留一条
-CREATE UNIQUE INDEX IF NOT EXISTS ux_type_bit_dict_enum ON type_bit_dict(type_enum);
+CREATE UNIQUE INDEX ux_type_bit_dict_enum ON type_bit_dict(type_enum);
 
 INSERT INTO type_bit_dict(type_bit_id, type_enum, bit_count) VALUES
   ('tb_bit', 'BIT', 1),
@@ -203,9 +172,9 @@ INSERT INTO type_bit_dict(type_bit_id, type_enum, bit_count) VALUES
   ('tb_dword', 'DWORD', 32),
   ('tb_string', 'STRING', 32),
   ('tb_int', 'INT', 0)
-ON CONFLICT (type_enum) DO NOTHING;
+;
 
-CREATE TABLE IF NOT EXISTS project_team_dict (
+CREATE TABLE project_team_dict (
   owned_product_id VARCHAR(255) NOT NULL,
   team_id VARCHAR(255) NOT NULL,
   team_name VARCHAR(512) NULL,
@@ -220,7 +189,7 @@ CREATE TABLE IF NOT EXISTS project_team_dict (
 );
 
 -- 产品模块字典表（详设/表字段简介：entity_module_dict）
-CREATE TABLE IF NOT EXISTS entity_module_dict (
+CREATE TABLE entity_module_dict (
   owned_product_id VARCHAR(255) NOT NULL,
   module_id VARCHAR(255) NOT NULL,
   module_name_cn VARCHAR(255) NULL,
@@ -234,7 +203,7 @@ CREATE TABLE IF NOT EXISTS entity_module_dict (
 );
 
 -- 命令管理域（spec-01 / 表文档 §2～§4）
-CREATE TABLE IF NOT EXISTS entity_command_mapping (
+CREATE TABLE entity_command_mapping (
   owned_product_id VARCHAR(255) NOT NULL,
   command_id VARCHAR(255) NOT NULL,
   command_name VARCHAR(255) NOT NULL,
@@ -250,7 +219,7 @@ CREATE TABLE IF NOT EXISTS entity_command_mapping (
   PRIMARY KEY (command_id)
 );
 
-CREATE TABLE IF NOT EXISTS command_type_definition (
+CREATE TABLE command_type_definition (
   owned_product_id VARCHAR(255) NOT NULL,
   owned_command_id VARCHAR(255) NOT NULL,
   command_type_id VARCHAR(255) NOT NULL,
@@ -267,12 +236,8 @@ CREATE TABLE IF NOT EXISTS command_type_definition (
   PRIMARY KEY (command_type_id)
 );
 
-ALTER TABLE command_type_definition ADD COLUMN IF NOT EXISTS owned_product_id VARCHAR(255) NULL;
-ALTER TABLE command_type_definition ADD COLUMN IF NOT EXISTS owned_command_id VARCHAR(255) NULL;
-ALTER TABLE command_type_definition ADD COLUMN IF NOT EXISTS command_type_id VARCHAR(255) NULL;
-
 -- 参数核心（与 SystemParameterPo、设计文档 §15 对齐）
-CREATE TABLE IF NOT EXISTS system_parameter (
+CREATE TABLE system_parameter (
   parameter_id SERIAL PRIMARY KEY,
   parameter_code VARCHAR(50) NULL,
   owned_object_type VARCHAR(64) NULL,
@@ -349,7 +314,7 @@ CREATE TABLE IF NOT EXISTS system_parameter (
   internal_description VARCHAR(1024) NULL
 );
 
-CREATE TABLE IF NOT EXISTS config_change_description (
+CREATE TABLE config_change_description (
   change_description_id VARCHAR(255) NOT NULL PRIMARY KEY,
   parameter_id INT NULL,
   change_type VARCHAR(255) NULL,
@@ -365,11 +330,7 @@ CREATE TABLE IF NOT EXISTS config_change_description (
   update_timestamp TIMESTAMP(3) NULL
 );
 
--- 兼容详细设计：变更说明需写入 entity_unique_id / version_id（详设 §13.2.E）
-ALTER TABLE config_change_description ADD COLUMN IF NOT EXISTS entity_unique_id VARCHAR(255) NULL;
-ALTER TABLE config_change_description ADD COLUMN IF NOT EXISTS version_id VARCHAR(255) NULL;
-
-CREATE TABLE IF NOT EXISTS config_change_type (
+CREATE TABLE config_change_type (
   change_type_id SERIAL PRIMARY KEY,
   change_type_name VARCHAR(100) NULL,
   change_type_name_cn VARCHAR(100) NULL,
@@ -395,9 +356,9 @@ INSERT INTO config_change_type(change_type_id, change_type_name, change_type_nam
   (15, '修改应用场景',     '修改应用场景',     'Modified application scenarios.',                   10),
   (16, '修改生效方式',     '修改生效方式',     'Modified the effective mode.',                      11),
   (17, '修改参数取值说明', '修改参数取值说明', 'Value Description modified',                         4)
-ON CONFLICT (change_type_id) DO NOTHING;
+;
 
-CREATE TABLE IF NOT EXISTS command_type_version_range (
+CREATE TABLE command_type_version_range (
   version_range_id VARCHAR(255) NOT NULL,
   owned_product_id VARCHAR(255) NULL,
   owned_command_id VARCHAR(255) NULL,
@@ -416,7 +377,7 @@ CREATE TABLE IF NOT EXISTS command_type_version_range (
 );
 
 -- 操作审计（详设 parameter-management §1.7，单表）
-CREATE TABLE IF NOT EXISTS operation_log (
+CREATE TABLE operation_log (
   log_id VARCHAR(64) NOT NULL,
   biz_table VARCHAR(128) NOT NULL,
   owned_product_id VARCHAR(255) NOT NULL,
@@ -432,7 +393,5 @@ CREATE TABLE IF NOT EXISTS operation_log (
   log_batch_id VARCHAR(64) NULL,
   PRIMARY KEY (log_id)
 );
--- 增量升级：老库可能没有 resource_name 列
-ALTER TABLE operation_log ADD COLUMN IF NOT EXISTS resource_name VARCHAR(512) NULL;
-CREATE INDEX IF NOT EXISTS idx_operation_log_scope_time
+CREATE INDEX idx_operation_log_scope_time
   ON operation_log (biz_table, owned_product_id, owned_version_id, operated_at DESC);
