@@ -7,6 +7,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 /**
  * 下载响应工具：将内容以附件形式输出（CSV/XLSX）。
@@ -25,7 +26,7 @@ public final class CsvDownload {
      */
     public static ResponseEntity<byte[]> attachment(byte[] bytes, String filename) {
         HttpHeaders headers = new HttpHeaders();
-        if (filename != null && filename.toLowerCase().endsWith(".xlsx")) {
+        if (filename != null && filename.toLowerCase(Locale.ROOT).endsWith(".xlsx")) {
             headers.setContentType(MediaType.parseMediaType(ExcelHelper.XLSX_CONTENT_TYPE));
         } else {
             headers.setContentType(new MediaType("text", "csv", StandardCharsets.UTF_8));

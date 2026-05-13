@@ -67,7 +67,7 @@ class EntityBasicInfoAppServiceTest {
     }
 
     @Test
-    void listProductChoices_shouldDeduplicateByProductId_andPickLexicographicallySmallestName() {
+    void listProductChoices_dedupProductId_pickSmallestNameLex() {
         EntityBasicInfoPo a1 = new EntityBasicInfoPo();
         a1.setProductId("p1");
         a1.setEntityName("B");

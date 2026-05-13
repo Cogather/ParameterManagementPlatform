@@ -26,7 +26,7 @@ class ParameterSaveInvariantTest {
     }
 
     @Test
-    void assertBitDisjointAcrossVersionCommand_shouldPass_whenDisjointUnderSameTypeSeq() {
+    void bitDisjointVerCmd_pass_whenDisjointSameTypeSeq() {
         var rows =
                 List.of(
                         new ParameterSaveInvariant.ParameterRowForBitCheck(1, "BYTE_1", "1,2"),
@@ -47,7 +47,7 @@ class ParameterSaveInvariantTest {
     }
 
     @Test
-    void assertBitDisjointAcrossVersionCommand_shouldThrow_whenBitsOverlapAcrossRows() {
+    void bitDisjointVerCmd_throw_whenBitsOverlapAcrossRows() {
         var rows =
                 List.of(
                         new ParameterSaveInvariant.ParameterRowForBitCheck(1, "BYTE_1", "1"),

@@ -357,7 +357,9 @@ public class CommandTypeDefinitionAppService {
 
     private static String colAny(List<String> cols, Map<String, Integer> idx, String... headerCns) {
         for (String h : headerCns) {
-            if (h == null) continue;
+            if (h == null) {
+                continue;
+            }
             Integer i = idx.get(h);
             if (i != null && i >= 0 && i < cols.size()) {
                 String v = cols.get(i);

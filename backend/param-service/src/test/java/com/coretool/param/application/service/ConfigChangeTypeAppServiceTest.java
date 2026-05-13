@@ -58,7 +58,7 @@ class ConfigChangeTypeAppServiceTest {
     }
 
     @Test
-    void validateChangeTypesForParameterSave_shouldPass_whenCreateAndOnlyNewParameter() {
+    void validateChangeTypes_paramSave_pass_createOnlyNewParam() {
         when(mapper.selectList(any())).thenReturn(List.of());
 
         new ConfigChangeTypeAppService(mapper)
@@ -67,7 +67,7 @@ class ConfigChangeTypeAppServiceTest {
     }
 
     @Test
-    void validateChangeTypesForParameterSave_shouldThrow_whenCreateAndNotOnlyNewParameter() {
+    void validateChangeTypes_paramSave_throw_createNotOnlyNew() {
         when(mapper.selectList(any())).thenReturn(List.of());
 
         assertThatThrownBy(
@@ -80,7 +80,7 @@ class ConfigChangeTypeAppServiceTest {
     }
 
     @Test
-    void validateChangeTypesForParameterSave_shouldPass_whenUpdateAndAllowedType() {
+    void validateChangeTypes_paramSave_pass_updateAllowedType() {
         when(mapper.selectList(any())).thenReturn(List.of());
 
         new ConfigChangeTypeAppService(mapper)

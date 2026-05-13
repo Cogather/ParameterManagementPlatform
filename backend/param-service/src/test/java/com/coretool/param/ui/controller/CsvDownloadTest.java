@@ -27,7 +27,7 @@ class CsvDownloadTest {
     }
 
     @Test
-    void attachment_shouldReturnXlsxContentType_whenFilenameIsXlsx_ignoreCase() {
+    void attachment_xlsxType_whenFilenameXlsx_ignoreCase() {
         byte[] bytes = new byte[] {1, 2, 3};
 
         var res = CsvDownload.attachment(bytes, "report.XLSX");

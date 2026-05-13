@@ -22,7 +22,7 @@ class ParameterAllocationDomainServiceTest {
     }
 
     @Test
-    void computeAvailableSequences_shouldReturnPartial_whenSomeBitsOccupied() {
+    void computeAvailSeq_partial_whenSomeBitsOccupied() {
         var snap =
                 new ParameterAllocationDomainService.ParameterSnapshot("BYTE_1", 1, "1", CID);
         var out = svc.computeAvailableSequences(1, 1, "BYTE", CID, List.of(snap));
@@ -31,7 +31,7 @@ class ParameterAllocationDomainServiceTest {
     }
 
     @Test
-    void computeAvailableSequences_shouldOmitSequence_whenAllBitsOccupiedForBitType() {
+    void computeAvailSeq_omitSeq_whenAllBitsOccupiedBitType() {
         var snap =
                 new ParameterAllocationDomainService.ParameterSnapshot("BIT_1", 1, "1", CID);
         assertThat(svc.computeAvailableSequences(1, 1, "BIT", CID, List.of(snap))).isEmpty();

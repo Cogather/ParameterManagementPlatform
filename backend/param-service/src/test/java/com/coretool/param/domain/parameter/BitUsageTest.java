@@ -51,7 +51,7 @@ class BitUsageTest {
     }
 
     @Test
-    void assertPairwiseDisjointAcrossRows_shouldThrow_whenBitOutOfMaxForType() {
+    void pairwiseDisjointRows_throw_whenBitExceedsMaxForType() {
         assertThatThrownBy(
                         () ->
                                 BitUsage.assertPairwiseDisjointAcrossRows(

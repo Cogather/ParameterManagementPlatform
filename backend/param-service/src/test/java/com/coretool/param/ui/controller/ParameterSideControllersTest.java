@@ -90,7 +90,7 @@ class ParameterSideControllersTest {
     }
 
     @Test
-    void entityBasicInfoController_productChoices_andDelete_shouldDelegate() {
+    void entityBasicInfoCtrl_choicesAndDelete_delegate() {
         EntityBasicInfoController c = new EntityBasicInfoController(entityBasicInfoAppService);
         when(entityBasicInfoAppService.listProductChoices()).thenReturn(List.of(new EntityBasicInfoPo()));
 

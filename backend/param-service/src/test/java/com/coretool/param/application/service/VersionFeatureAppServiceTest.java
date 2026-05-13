@@ -46,7 +46,7 @@ class VersionFeatureAppServiceTest {
     }
 
     @Test
-    void page_shouldReturnPagingFields_whenVersionOwnedAndRepositoryReturnsSlice() {
+    void page_returnsPaging_whenVersionOwned_repoReturnsSlice() {
         ProductVersion v = org.mockito.Mockito.mock(ProductVersion.class);
         when(v.belongsToProduct("p1")).thenReturn(true);
         when(productVersionRepository.findById("v1")).thenReturn(Optional.of(v));

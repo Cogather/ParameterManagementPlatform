@@ -10,7 +10,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.coretool.param.application.service.OperationLogAppService;
 import com.coretool.param.infrastructure.persistence.entity.OperationLogPo;
 import com.coretool.param.ui.response.PageResponse;
-import com.coretool.param.ui.vo.OperationLogPageQuery;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

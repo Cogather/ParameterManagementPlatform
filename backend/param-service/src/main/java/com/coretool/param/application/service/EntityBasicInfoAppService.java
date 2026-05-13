@@ -20,6 +20,7 @@ import jakarta.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
@@ -277,7 +278,7 @@ public class EntityBasicInfoAppService {
                                                         .isNull(
                                                                 EntityBasicInfoPo
                                                                         ::getEntityStatus))
-                                .apply("lower(btrim(product_form)) = {0}", productForm.toLowerCase()));
+                                .apply("lower(btrim(product_form)) = {0}", productForm.toLowerCase(Locale.ROOT)));
         if (cnt > 0) {
             throw new DomainRuleException("PRODUCT_FORM_DUPLICATE: 同一产品下产品形态名称已存在");
         }

@@ -83,7 +83,7 @@ class ExceptionHandlerControllerBranchTest {
     }
 
     @Test
-    void defaultErrorHandler_shouldMapGenericException_to500WithFriendlyMessage() {
+    void defaultErrorHandler_genericEx_to500FriendlyMsg() {
         ResponseEntity<ResponseObject<Object>> res =
                 advice.defaultErrorHandler(null, new IllegalStateException("x"));
 
