@@ -2,6 +2,12 @@ package com.coretool.param.ui.vo;
 
 import lombok.Data;
 
+/**
+ * 请求/查询视图对象「ParameterPageQuery」。
+ *
+ * @since 2026-04-28
+ */
+
 @Data
 public class ParameterPageQuery {
     private String commandId;
@@ -10,4 +16,3 @@ public class ParameterPageQuery {
     private int page = 1;
     private int size = 20;
 }
-

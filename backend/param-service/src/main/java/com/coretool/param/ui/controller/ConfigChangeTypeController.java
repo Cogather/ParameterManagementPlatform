@@ -17,6 +17,7 @@ import jakarta.annotation.Resource;
 
 /**
  * 变更类型字典（spec-03 §3.6）；供参数变更说明子表下拉。
+ * @since 2026-04-28
  */
 @RestController
 @RequestMapping("/api/v1/config-change-types")

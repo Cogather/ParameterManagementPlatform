@@ -5,7 +5,11 @@ import com.baomidou.mybatisplus.annotation.TableName;
 
 import lombok.Data;
 
-/** type_bit_dict（类型枚举与 BIT 位数映射；仅数据库维护）。 */
+/**
+ * type_bit_dict（类型枚举与 BIT 位数映射；仅数据库维护）。
+ *
+ * @since 2026-04-28
+ */
 @Data
 @TableName("type_bit_dict")
 public class TypeBitDictPo {
@@ -17,4 +21,3 @@ public class TypeBitDictPo {
 
     private Integer bitCount;
 }
-

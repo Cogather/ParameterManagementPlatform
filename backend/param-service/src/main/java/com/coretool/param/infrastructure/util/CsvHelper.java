@@ -4,6 +4,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 工具/说明类「CsvHelper」。
+ *
+ * @since 2026-04-28
+ */
+
 public final class CsvHelper {
 
     private CsvHelper() {}

@@ -21,6 +21,7 @@ import java.util.List;
 
 /**
  * 产品主数据（entity_basic_info）维护；不位于 /products/{productId} 之下，供「产品配置」独立页使用。
+ * @since 2026-04-28
  */
 @RestController
 @RequestMapping("/api/v1/entity-basic-infos")

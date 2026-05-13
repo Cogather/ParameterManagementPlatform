@@ -8,7 +8,11 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
 
-/** 项目组领域服务：封装归属校验、状态变更等规则。 */
+/**
+ * 项目组领域服务：封装归属校验、状态变更等规则。
+ *
+ * @since 2026-04-28
+ */
 public class ProjectTeamDomainService {
 
     public record CreateCommand(
@@ -124,4 +128,3 @@ public class ProjectTeamDomainService {
                 .orElseThrow(() -> new DomainRuleException("项目组不存在或不属于该产品"));
     }
 }
-

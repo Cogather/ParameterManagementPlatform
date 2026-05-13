@@ -51,6 +51,12 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+/**
+ * 应用服务「ParameterAppService」，编排用例与事务边界。
+ *
+ * @since 2026-04-28
+ */
+
 @Service
 public class ParameterAppService {
 

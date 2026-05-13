@@ -2,7 +2,11 @@ package com.coretool.param.ui.vo;
 
 import lombok.Data;
 
-/** GET .../parameters/baseline-count 的 data。 */
+/**
+ * GET .../parameters/baseline-count 的 data。
+ *
+ * @since 2026-04-28
+ */
 @Data
 public class BaselineCountPayload {
 

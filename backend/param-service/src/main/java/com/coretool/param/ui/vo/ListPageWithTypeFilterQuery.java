@@ -4,6 +4,7 @@ import lombok.Data;
 
 /**
  * 分页 + 按归属类型 ID 过滤（如类型版本区段列表）。
+ * @since 2026-04-28
  */
 @Data
 public class ListPageWithTypeFilterQuery {

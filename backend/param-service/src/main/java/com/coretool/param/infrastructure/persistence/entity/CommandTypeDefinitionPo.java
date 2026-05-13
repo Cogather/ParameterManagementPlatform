@@ -7,7 +7,11 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/** command_type_definition（与 docs/table字段简介.md §3 对齐）。 */
+/**
+ * command_type_definition（与 docs/table字段简介.md §3 对齐）。
+ *
+ * @since 2026-04-28
+ */
 @Data
 @TableName("command_type_definition")
 public class CommandTypeDefinitionPo {

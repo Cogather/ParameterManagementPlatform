@@ -7,7 +7,11 @@ import org.apache.commons.lang3.StringUtils;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-/** 产品命令（entity_command_mapping）。 */
+/**
+ * 产品命令（entity_command_mapping）。
+ *
+ * @since 2026-04-28
+ */
 public class Command {
 
     public record Registration(

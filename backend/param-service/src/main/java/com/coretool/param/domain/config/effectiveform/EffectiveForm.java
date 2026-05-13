@@ -7,7 +7,11 @@ import org.apache.commons.lang3.StringUtils;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-/** 生效形态（entity_effective_form_dict） */
+/**
+ * 生效形态（entity_effective_form_dict）
+ *
+ * @since 2026-04-28
+ */
 public class EffectiveForm {
 
     public record Registration(

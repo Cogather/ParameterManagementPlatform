@@ -4,6 +4,12 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
+/**
+ * 请求/查询视图对象「OperationLogGroupSelectQuery」。
+ *
+ * @since 2026-04-28
+ */
+
 @Data
 public class OperationLogGroupSelectQuery {
     private String productId;
@@ -16,4 +22,3 @@ public class OperationLogGroupSelectQuery {
     private long offset;
     private long size;
 }
-

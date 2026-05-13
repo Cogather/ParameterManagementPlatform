@@ -5,7 +5,11 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-/** change_source 黑名单：非 blank 时 find() 匹配任一启用正则即命中（spec-03 §5.3）。 */
+/**
+ * change_source 黑名单：非 blank 时 find() 匹配任一启用正则即命中（spec-03 §5.3）。
+ *
+ * @since 2026-04-28
+ */
 public final class ChangeSourceBlacklistPolicy {
 
     private ChangeSourceBlacklistPolicy() {}

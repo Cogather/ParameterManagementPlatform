@@ -3,6 +3,12 @@ package com.coretool.param.infrastructure.persistence.assembly;
 import com.coretool.param.domain.config.category.BusinessCategory;
 import com.coretool.param.infrastructure.persistence.entity.EntityBusinessCategoryPo;
 
+/**
+ * 装配器「BusinessCategoryAssembler」，在领域对象与持久化 PO 之间转换。
+ *
+ * @since 2026-04-28
+ */
+
 public final class BusinessCategoryAssembler {
 
     private BusinessCategoryAssembler() {}

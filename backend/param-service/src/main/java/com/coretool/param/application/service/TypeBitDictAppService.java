@@ -8,6 +8,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * 应用服务「TypeBitDictAppService」，编排用例与事务边界。
+ *
+ * @since 2026-04-28
+ */
+
 @Service
 public class TypeBitDictAppService {
 
@@ -32,4 +38,3 @@ public class TypeBitDictAppService {
         return mapper.selectList(new QueryWrapper<TypeBitDictPo>().orderByAsc("type_enum"));
     }
 }
-

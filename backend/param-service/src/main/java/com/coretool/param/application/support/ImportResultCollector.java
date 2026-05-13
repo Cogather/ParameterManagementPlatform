@@ -5,6 +5,12 @@ import com.coretool.param.ui.response.BatchImportResult;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 应用支撑类型「ImportResultCollector」。
+ *
+ * @since 2026-04-28
+ */
+
 public class ImportResultCollector {
     private final List<Integer> successRowNumbers = new ArrayList<>();
     private final List<BatchImportResult.BatchImportFailure> failures = new ArrayList<>();

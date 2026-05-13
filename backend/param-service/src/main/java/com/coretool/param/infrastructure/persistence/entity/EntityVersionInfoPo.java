@@ -7,7 +7,11 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/** entity_version_info（与 docs/table字段简介.md §5 对齐）。 */
+/**
+ * entity_version_info（与 docs/table字段简介.md §5 对齐）。
+ *
+ * @since 2026-04-28
+ */
 @Data
 @TableName("entity_version_info")
 public class EntityVersionInfoPo {

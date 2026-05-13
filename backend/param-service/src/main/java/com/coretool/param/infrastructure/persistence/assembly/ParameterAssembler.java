@@ -4,6 +4,12 @@ import com.coretool.param.domain.parameter.Parameter;
 import com.coretool.param.domain.parameter.ParameterAllocationDomainService;
 import com.coretool.param.infrastructure.persistence.entity.SystemParameterPo;
 
+/**
+ * 装配器「ParameterAssembler」，在领域对象与持久化 PO 之间转换。
+ *
+ * @since 2026-04-28
+ */
+
 public final class ParameterAssembler {
 
     private ParameterAssembler() {}

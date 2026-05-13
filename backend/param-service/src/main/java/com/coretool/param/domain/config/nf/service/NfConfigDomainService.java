@@ -8,7 +8,11 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
 
-/** NF 配置领域服务：封装唯一性/归属/状态变更等规则。 */
+/**
+ * NF 配置领域服务：封装唯一性/归属/状态变更等规则。
+ *
+ * @since 2026-04-28
+ */
 public class NfConfigDomainService {
 
     public record CreateCommand(
@@ -130,4 +134,3 @@ public class NfConfigDomainService {
                 .orElseThrow(() -> new DomainRuleException("NF 配置不存在或不属于该产品"));
     }
 }
-

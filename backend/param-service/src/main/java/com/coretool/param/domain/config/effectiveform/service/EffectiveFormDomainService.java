@@ -8,7 +8,11 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
 
-/** 生效形态领域服务：封装归属校验与状态变更等规则。 */
+/**
+ * 生效形态领域服务：封装归属校验与状态变更等规则。
+ *
+ * @since 2026-04-28
+ */
 public class EffectiveFormDomainService {
 
     public record CreateCommand(
@@ -124,4 +128,3 @@ public class EffectiveFormDomainService {
                 .orElseThrow(() -> new DomainRuleException("生效形态不存在或不属于该产品"));
     }
 }
-

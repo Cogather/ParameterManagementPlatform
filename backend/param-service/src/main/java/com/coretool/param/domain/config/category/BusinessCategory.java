@@ -7,7 +7,11 @@ import org.apache.commons.lang3.StringUtils;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-/** 业务分类（entity_business_category）；同一产品下分类中文名唯一。 */
+/**
+ * 业务分类（entity_business_category）；同一产品下分类中文名唯一。
+ *
+ * @since 2026-04-28
+ */
 public class BusinessCategory {
 
     public record Registration(

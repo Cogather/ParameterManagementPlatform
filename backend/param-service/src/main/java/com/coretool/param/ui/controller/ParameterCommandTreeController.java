@@ -18,6 +18,7 @@ import jakarta.annotation.Resource;
 
 /**
  * 参数页左树：命令 → 类型（spec-03 §1.2）；无命令主数据时返回演示数据。
+ * @since 2026-04-28
  */
 @RestController
 @RequestMapping("/api/v1/products/{productId}")

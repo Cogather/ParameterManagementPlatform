@@ -8,6 +8,12 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
+/**
+ * 持久化实体「ConfigChangeDescriptionPo」，映射数据库表结构。
+ *
+ * @since 2026-04-28
+ */
+
 @Getter
 @Setter
 @TableName("config_change_description")

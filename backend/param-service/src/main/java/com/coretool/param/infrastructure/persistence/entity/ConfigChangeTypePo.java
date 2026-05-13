@@ -5,6 +5,12 @@ import com.baomidou.mybatisplus.annotation.TableName;
 
 import lombok.Data;
 
+/**
+ * 持久化实体「ConfigChangeTypePo」，映射数据库表结构。
+ *
+ * @since 2026-04-28
+ */
+
 @Data
 @TableName("config_change_type")
 public class ConfigChangeTypePo {

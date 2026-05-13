@@ -8,7 +8,11 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
 
-/** 命令领域服务：封装唯一性、归属校验、状态变更等规则。 */
+/**
+ * 命令领域服务：封装唯一性、归属校验、状态变更等规则。
+ *
+ * @since 2026-04-28
+ */
 public class CommandDomainService {
 
     public record CreateCommand(
@@ -121,4 +125,3 @@ public class CommandDomainService {
                 .orElseThrow(() -> new DomainRuleException("命令不存在或不属于该产品"));
     }
 }
-

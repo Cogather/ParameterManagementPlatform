@@ -7,7 +7,11 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.HashSet;
 import java.util.Set;
 
-/** bit_usage：英文逗号分隔；单行内不重复；同序号多行集合两两不相交（spec-03 §5.2）。 */
+/**
+ * bit_usage：英文逗号分隔；单行内不重复；同序号多行集合两两不相交（spec-03 §5.2）。
+ *
+ * @since 2026-04-28
+ */
 public final class BitUsage {
 
     private BitUsage() {}

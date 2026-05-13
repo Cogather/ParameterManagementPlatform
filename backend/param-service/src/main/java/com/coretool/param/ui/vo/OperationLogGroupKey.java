@@ -4,6 +4,12 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
+/**
+ * 请求/查询视图对象「OperationLogGroupKey」。
+ *
+ * @since 2026-04-28
+ */
+
 @Data
 public class OperationLogGroupKey {
     private String productId;
@@ -15,4 +21,3 @@ public class OperationLogGroupKey {
     private LocalDateTime operatedAt;
     private String logBatchId;
 }
-

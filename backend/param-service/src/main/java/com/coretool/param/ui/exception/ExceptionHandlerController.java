@@ -25,6 +25,12 @@ import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+/**
+ * REST 控制器「ExceptionHandlerController」，对外提供 HTTP API。
+ *
+ * @since 2026-04-28
+ */
+
 @ControllerAdvice
 public class ExceptionHandlerController {
     private static final Log LOG = LogFactory.getLog(ExceptionHandlerController.class);
@@ -126,4 +132,3 @@ public class ExceptionHandlerController {
         return new ResponseEntity<>(body, headers, status);
     }
 }
-

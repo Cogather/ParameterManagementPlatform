@@ -7,7 +7,11 @@ import org.apache.commons.lang3.StringUtils;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-/** NF 配置字典（entity_nf_config_dict） */
+/**
+ * NF 配置字典（entity_nf_config_dict）
+ *
+ * @since 2026-04-28
+ */
 public class NfConfigEntry {
 
     public record Registration(

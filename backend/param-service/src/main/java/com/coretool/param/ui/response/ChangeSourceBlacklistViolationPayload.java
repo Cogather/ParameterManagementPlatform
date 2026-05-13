@@ -2,7 +2,11 @@ package com.coretool.param.ui.response;
 
 import lombok.Data;
 
-/** 黑名单命中时 ResponseObject.data（openspec/schemas/blacklist-violation.json）。 */
+/**
+ * 黑名单命中时 ResponseObject.data（openspec/schemas/blacklist-violation.json）。
+ *
+ * @since 2026-04-28
+ */
 @Data
 public class ChangeSourceBlacklistViolationPayload {
 

@@ -2,6 +2,12 @@ package com.coretool.param.ui.response;
 
 import java.util.List;
 
+/**
+ * 响应/数据传输对象「PageResponse」。
+ *
+ * @since 2026-04-28
+ */
+
 public class PageResponse<T> {
     private List<T> records;
     private long total;
@@ -80,4 +86,3 @@ public class PageResponse<T> {
         this.size = size;
     }
 }
-

@@ -6,7 +6,11 @@ import com.coretool.param.infrastructure.persistence.entity.ConfigChangeTypePo;
 import java.util.ArrayList;
 import java.util.List;
 
-/** 表 config_change_type 无数据时的字典兜底（spec-03 §3.6）。 */
+/**
+ * 表 config_change_type 无数据时的字典兜底（spec-03 §3.6）。
+ *
+ * @since 2026-04-28
+ */
 public final class ChangeDescriptionTypeDictionary {
 
     private ChangeDescriptionTypeDictionary() {}

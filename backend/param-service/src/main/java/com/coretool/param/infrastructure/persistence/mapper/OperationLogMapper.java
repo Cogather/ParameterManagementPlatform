@@ -10,6 +10,12 @@ import com.coretool.param.ui.vo.OperationLogGroupSelectQuery;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+/**
+ * MyBatis-Plus Mapper 接口「OperationLogMapper」。
+ *
+ * @since 2026-04-28
+ */
+
 public interface OperationLogMapper extends BaseMapper<OperationLogPo> {
 
     @Select(
@@ -106,4 +112,3 @@ public interface OperationLogMapper extends BaseMapper<OperationLogPo> {
     java.util.List<OperationLogGroupLine> selectLinesForGroup(
             @Param("k") OperationLogGroupKey k);
 }
-

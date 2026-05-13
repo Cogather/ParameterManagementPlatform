@@ -23,6 +23,12 @@ import java.util.List;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
+/**
+ * 应用服务「EntityBasicInfoAppService」，编排用例与事务边界。
+ *
+ * @since 2026-04-28
+ */
+
 @Service
 public class EntityBasicInfoAppService {
 

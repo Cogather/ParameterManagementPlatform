@@ -2,7 +2,11 @@ package com.coretool.param.domain.support;
 
 import java.util.UUID;
 
-/** 主数据资源 ID 生成（前缀 + 随机段，供创建接口在客户端未传 ID 时使用）。 */
+/**
+ * 主数据资源 ID 生成（前缀 + 随机段，供创建接口在客户端未传 ID 时使用）。
+ *
+ * @since 2026-04-28
+ */
 public final class IdGenerator {
 
     private IdGenerator() {}

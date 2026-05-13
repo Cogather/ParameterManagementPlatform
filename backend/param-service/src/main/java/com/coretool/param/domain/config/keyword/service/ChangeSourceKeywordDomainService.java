@@ -8,7 +8,11 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
 
-/** 变更来源关键字领域服务：封装归属校验、ID 冲突、状态变更等规则。 */
+/**
+ * 变更来源关键字领域服务：封装归属校验、ID 冲突、状态变更等规则。
+ *
+ * @since 2026-04-28
+ */
 public class ChangeSourceKeywordDomainService {
 
     public record CreateCommand(
@@ -116,4 +120,3 @@ public class ChangeSourceKeywordDomainService {
         return existing;
     }
 }
-

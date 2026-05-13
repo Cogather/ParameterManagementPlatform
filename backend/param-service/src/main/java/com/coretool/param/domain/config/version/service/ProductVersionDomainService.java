@@ -8,7 +8,11 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
 
-/** 产品版本领域服务：封装唯一性、归属校验、状态变更等规则。 */
+/**
+ * 产品版本领域服务：封装唯一性、归属校验、状态变更等规则。
+ *
+ * @since 2026-04-28
+ */
 public class ProductVersionDomainService {
 
     public record CreateCommand(
@@ -181,4 +185,3 @@ public class ProductVersionDomainService {
         return existing;
     }
 }
-

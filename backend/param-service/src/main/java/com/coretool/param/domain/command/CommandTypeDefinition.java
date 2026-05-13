@@ -7,7 +7,11 @@ import org.apache.commons.lang3.StringUtils;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-/** 命令类型定义（command_type_definition）。 */
+/**
+ * 命令类型定义（command_type_definition）。
+ *
+ * @since 2026-04-28
+ */
 public class CommandTypeDefinition {
 
     public record Registration(

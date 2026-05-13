@@ -4,7 +4,11 @@ import lombok.Data;
 
 import java.util.List;
 
-/** GET .../available-sequences 的 data（openspec/schemas/available-sequences.json）。 */
+/**
+ * GET .../available-sequences 的 data（openspec/schemas/available-sequences.json）。
+ *
+ * @since 2026-04-28
+ */
 @Data
 public class AvailableSequencesData {
 

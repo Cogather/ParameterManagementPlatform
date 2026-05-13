@@ -4,6 +4,7 @@ import lombok.Data;
 
 /**
  * 产品主数据全路径分页：keyword / productId 均可选。
+ * @since 2026-04-28
  */
 @Data
 public class EntityBasicInfoListQuery {

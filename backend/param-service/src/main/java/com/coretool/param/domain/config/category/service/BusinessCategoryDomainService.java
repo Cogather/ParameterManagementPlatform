@@ -8,7 +8,11 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
 
-/** 业务分类领域服务：封装唯一性/归属/状态变更等规则。 */
+/**
+ * 业务分类领域服务：封装唯一性/归属/状态变更等规则。
+ *
+ * @since 2026-04-28
+ */
 public class BusinessCategoryDomainService {
 
     public record CreateCommand(
@@ -139,4 +143,3 @@ public class BusinessCategoryDomainService {
                 .orElseThrow(() -> new DomainRuleException("分类不存在或不属于该产品"));
     }
 }
-

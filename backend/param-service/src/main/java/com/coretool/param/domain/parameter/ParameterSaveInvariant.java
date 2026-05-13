@@ -9,7 +9,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** 保存路径：parameter_code 与序号、bit_usage 不相交（spec-03 §5.1～§5.2）。 */
+/**
+ * 保存路径：parameter_code 与序号、bit_usage 不相交（spec-03 §5.1～§5.2）。
+ *
+ * @since 2026-04-28
+ */
 public final class ParameterSaveInvariant {
 
     private ParameterSaveInvariant() {}

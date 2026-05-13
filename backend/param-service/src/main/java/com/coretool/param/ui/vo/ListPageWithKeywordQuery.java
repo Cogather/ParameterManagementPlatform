@@ -4,6 +4,7 @@ import lombok.Data;
 
 /**
  * 通用列表分页 + 关键字（产品/版本下字典分页等场景复用 query 参数绑定）。
+ * @since 2026-04-28
  */
 @Data
 public class ListPageWithKeywordQuery {

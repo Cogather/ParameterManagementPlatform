@@ -40,4 +40,3 @@ public class TypeBitDictController {
         return new ResponseObject<List<TypeBitDictPo>>().success(appService.listAll());
     }
 }
-

@@ -7,7 +7,11 @@ import org.apache.commons.lang3.StringUtils;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-/** 生效方式（entity_effective_mode_dict） */
+/**
+ * 生效方式（entity_effective_mode_dict）
+ *
+ * @since 2026-04-28
+ */
 public class EffectiveMode {
 
     public record Registration(

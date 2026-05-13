@@ -1,7 +1,15 @@
 package com.coretool.param.domain.parameter;
 
-/** 已基线后禁止写（spec-03 §5.4）。 */
+/**
+ * 已基线后禁止写（spec-03 §5.4）。
+ *
+ * @since 2026-04-28
+ */
 public final class ParameterBaselinePolicy {
+
+/**
+ * 字段「STATUS_BASELINE_LOCKED」。
+ */
 
     public static final String STATUS_BASELINE_LOCKED = "已基线";
 

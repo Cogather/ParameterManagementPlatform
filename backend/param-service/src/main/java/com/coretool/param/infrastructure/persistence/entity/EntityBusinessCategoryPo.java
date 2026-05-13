@@ -7,7 +7,11 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/** entity_business_category（与 docs/table字段简介.md §6 对齐）。 */
+/**
+ * entity_business_category（与 docs/table字段简介.md §6 对齐）。
+ *
+ * @since 2026-04-28
+ */
 @Data
 @TableName("entity_business_category")
 public class EntityBusinessCategoryPo {

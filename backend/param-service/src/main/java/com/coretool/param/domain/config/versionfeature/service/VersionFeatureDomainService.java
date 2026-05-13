@@ -8,7 +8,11 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
 
-/** 版本特性领域服务：封装唯一性、归属校验、状态变更等规则。 */
+/**
+ * 版本特性领域服务：封装唯一性、归属校验、状态变更等规则。
+ *
+ * @since 2026-04-28
+ */
 public class VersionFeatureDomainService {
 
     public record CreateCommand(
@@ -150,4 +154,3 @@ public class VersionFeatureDomainService {
                 .orElseThrow(() -> new DomainRuleException("特性不存在或不属于该产品/版本"));
     }
 }
-

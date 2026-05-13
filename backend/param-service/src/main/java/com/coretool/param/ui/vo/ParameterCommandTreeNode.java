@@ -4,7 +4,11 @@ import lombok.Data;
 
 import java.util.List;
 
-/** 参数页左树：命令 → 类型（spec-03 §1.2）。 */
+/**
+ * 参数页左树：命令 → 类型（spec-03 §1.2）。
+ *
+ * @since 2026-04-28
+ */
 @Data
 public class ParameterCommandTreeNode {
 

@@ -4,6 +4,12 @@ import lombok.Data;
 
 import java.util.List;
 
+/**
+ * 类型「BatchImportResult」，承载业务实现与数据表达。
+ *
+ * @since 2026-04-28
+ */
+
 @Data
 public class BatchImportResult {
     private int totalRows;
@@ -18,4 +24,3 @@ public class BatchImportResult {
         private String reason;
     }
 }
-

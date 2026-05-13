@@ -49,138 +49,587 @@ import java.util.Objects;
 
 /**
  * 操作审计写入与查询（详设 §1.7）；命令 / 类型定义 / 版本区段已接写入口。
+ * @since 2026-04-28
  */
 @Service
 public class OperationLogAppService {
 
+/**
+ * 字段「BIZ_TABLE_ENTITY_COMMAND_MAPPING」。
+ */
+
     public static final String BIZ_TABLE_ENTITY_COMMAND_MAPPING = "entity_command_mapping";
+/**
+ * 字段「BIZ_TABLE_COMMAND_TYPE_DEFINITION」。
+ */
+
     public static final String BIZ_TABLE_COMMAND_TYPE_DEFINITION = "command_type_definition";
+/**
+ * 字段「BIZ_TABLE_COMMAND_TYPE_VERSION_RANGE」。
+ */
+
     public static final String BIZ_TABLE_COMMAND_TYPE_VERSION_RANGE = "command_type_version_range";
+/**
+ * 字段「BIZ_TABLE_ENTITY_VERSION_INFO」。
+ */
+
     public static final String BIZ_TABLE_ENTITY_VERSION_INFO = "entity_version_info";
+/**
+ * 字段「BIZ_TABLE_ENTITY_BASIC_INFO」。
+ */
+
     public static final String BIZ_TABLE_ENTITY_BASIC_INFO = "entity_basic_info";
+/**
+ * 字段「BIZ_TABLE_SYSTEM_PARAMETER」。
+ */
+
     public static final String BIZ_TABLE_SYSTEM_PARAMETER = "system_parameter";
+/**
+ * 字段「BIZ_TABLE_ENTITY_BUSINESS_CATEGORY」。
+ */
+
     public static final String BIZ_TABLE_ENTITY_BUSINESS_CATEGORY = "entity_business_category";
+/**
+ * 字段「BIZ_TABLE_ENTITY_APPLICABLE_NE_DICT」。
+ */
+
     public static final String BIZ_TABLE_ENTITY_APPLICABLE_NE_DICT = "entity_applicable_ne_dict";
+/**
+ * 字段「BIZ_TABLE_ENTITY_NF_CONFIG_DICT」。
+ */
+
     public static final String BIZ_TABLE_ENTITY_NF_CONFIG_DICT = "entity_nf_config_dict";
+/**
+ * 字段「BIZ_TABLE_ENTITY_EFFECTIVE_MODE_DICT」。
+ */
+
     public static final String BIZ_TABLE_ENTITY_EFFECTIVE_MODE_DICT = "entity_effective_mode_dict";
+/**
+ * 字段「BIZ_TABLE_ENTITY_EFFECTIVE_FORM_DICT」。
+ */
+
     public static final String BIZ_TABLE_ENTITY_EFFECTIVE_FORM_DICT = "entity_effective_form_dict";
+/**
+ * 字段「BIZ_TABLE_PROJECT_TEAM_DICT」。
+ */
+
     public static final String BIZ_TABLE_PROJECT_TEAM_DICT = "project_team_dict";
+/**
+ * 字段「BIZ_TABLE_CONFIG_CHANGE_SOURCE_KEYWORD」。
+ */
+
     public static final String BIZ_TABLE_CONFIG_CHANGE_SOURCE_KEYWORD = "config_change_source_keyword";
+/**
+ * 字段「BIZ_TABLE_VERSION_FEATURE_DICT」。
+ */
+
     public static final String BIZ_TABLE_VERSION_FEATURE_DICT = "version_feature_dict";
 
+/**
+ * 字段「OP_CREATE」。
+ */
+
     public static final String OP_CREATE = "CREATE";
+/**
+ * 字段「OP_UPDATE」。
+ */
+
     public static final String OP_UPDATE = "UPDATE";
+/**
+ * 字段「OP_DELETE」。
+ */
+
     public static final String OP_DELETE = "DELETE";
 
+/**
+ * 字段「DELETE_OBJECT_LABEL」。
+ */
+
     public static final String DELETE_OBJECT_LABEL = "删除对象";
+/**
+ * 字段「LABEL_COMMAND」。
+ */
+
     public static final String LABEL_COMMAND = "命令";
+/**
+ * 字段「LABEL_OWNER」。
+ */
+
     public static final String LABEL_OWNER = "责任人(英文逗号)";
 
+/**
+ * 字段「T_LABEL_OWNED_CMD」。
+ */
+
     public static final String T_LABEL_OWNED_CMD = "归属命令ID";
+/**
+ * 字段「T_LABEL_TYPE_NAME」。
+ */
+
     public static final String T_LABEL_TYPE_NAME = "类型名称";
+/**
+ * 字段「T_LABEL_TYPE_ENUM」。
+ */
+
     public static final String T_LABEL_TYPE_ENUM = "类型枚举";
+/**
+ * 字段「T_LABEL_MIN」。
+ */
+
     public static final String T_LABEL_MIN = "最小序号";
+/**
+ * 字段「T_LABEL_MAX」。
+ */
+
     public static final String T_LABEL_MAX = "最大序号";
+/**
+ * 字段「T_LABEL_OCCUPIED」。
+ */
+
     public static final String T_LABEL_OCCUPIED = "占用序号";
 
+/**
+ * 字段「R_LABEL_OWNED_CMD」。
+ */
+
     public static final String R_LABEL_OWNED_CMD = "归属命令ID";
+/**
+ * 字段「R_LABEL_TYPE_ID」。
+ */
+
     public static final String R_LABEL_TYPE_ID = "类型ID";
+/**
+ * 字段「R_LABEL_START」。
+ */
+
     public static final String R_LABEL_START = "起始序号";
+/**
+ * 字段「R_LABEL_END」。
+ */
+
     public static final String R_LABEL_END = "结束序号";
+/**
+ * 字段「R_LABEL_DESC」。
+ */
+
     public static final String R_LABEL_DESC = "说明";
+/**
+ * 字段「R_LABEL_RANGE_TYPE」。
+ */
+
     public static final String R_LABEL_RANGE_TYPE = "区段划分类型";
+/**
+ * 字段「R_LABEL_VER」。
+ */
+
     public static final String R_LABEL_VER = "归属版本ID";
 
+/**
+ * 字段「V_LABEL_NAME」。
+ */
+
     public static final String V_LABEL_NAME = "版本名称";
+/**
+ * 字段「V_LABEL_TYPE」。
+ */
+
     public static final String V_LABEL_TYPE = "版本类型";
+/**
+ * 字段「V_LABEL_SUPPORT」。
+ */
+
     public static final String V_LABEL_SUPPORT = "支持版本";
+/**
+ * 字段「V_LABEL_DESC」。
+ */
+
     public static final String V_LABEL_DESC = "版本说明";
+/**
+ * 字段「V_LABEL_VDESC」。
+ */
+
     public static final String V_LABEL_VDESC = "版本描述";
+/**
+ * 字段「V_LABEL_BASE_ID」。
+ */
+
     public static final String V_LABEL_BASE_ID = "基线版本ID";
+/**
+ * 字段「V_LABEL_BASE_NAME」。
+ */
+
     public static final String V_LABEL_BASE_NAME = "基线版本名称";
+/**
+ * 字段「V_LABEL_OWNER」。
+ */
+
     public static final String V_LABEL_OWNER = "责任人";
+/**
+ * 字段「V_LABEL_STATUS」。
+ */
+
     public static final String V_LABEL_STATUS = "状态";
 
     /** 与产品配置页列表列名一致（不记页面未展示的字段如产品名、产品 ID、状态等） */
     public static final String EB_SOFT_TYPE = "参数类型";
+/**
+ * 字段「EB_FORM」。
+ */
+
     public static final String EB_FORM = "产品形态";
+/**
+ * 字段「EB_OWNERS」。
+ */
+
     public static final String EB_OWNERS = "责任人";
 
+/**
+ * 字段「P_LABEL_CODE」。
+ */
+
     public static final String P_LABEL_CODE = "参数编码";
+/**
+ * 字段「P_LABEL_NAME_CN」。
+ */
+
     public static final String P_LABEL_NAME_CN = "参数名称（中文）";
+/**
+ * 字段「P_LABEL_NAME_EN」。
+ */
+
     public static final String P_LABEL_NAME_EN = "参数名称（英文）";
+/**
+ * 字段「P_LABEL_CMD」。
+ */
+
     public static final String P_LABEL_CMD = "归属命令ID";
+/**
+ * 字段「P_LABEL_STATUS」。
+ */
+
     public static final String P_LABEL_STATUS = "数据状态";
+/**
+ * 字段「P_LABEL_SEQ」。
+ */
+
     public static final String P_LABEL_SEQ = "参数序号";
+/**
+ * 字段「P_LABEL_INTRO」。
+ */
+
     public static final String P_LABEL_INTRO = "引入类型";
+/**
+ * 字段「P_LABEL_INHERIT」。
+ */
+
     public static final String P_LABEL_INHERIT = "继承/引用版本 ID";
+/**
+ * 字段「P_LABEL_VALUE_RANGE」。
+ */
+
     public static final String P_LABEL_VALUE_RANGE = "取值范围";
+/**
+ * 字段「P_LABEL_BIT_USAGE」。
+ */
+
     public static final String P_LABEL_BIT_USAGE = "BIT 占用";
+/**
+ * 字段「P_LABEL_VALUE_DESC_CN」。
+ */
+
     public static final String P_LABEL_VALUE_DESC_CN = "取值说明（中文）";
+/**
+ * 字段「P_LABEL_VALUE_DESC_EN」。
+ */
+
     public static final String P_LABEL_VALUE_DESC_EN = "取值说明（英文）";
+/**
+ * 字段「P_LABEL_SCENE_CN」。
+ */
+
     public static final String P_LABEL_SCENE_CN = "应用场景（中文）";
+/**
+ * 字段「P_LABEL_SCENE_EN」。
+ */
+
     public static final String P_LABEL_SCENE_EN = "应用场景（英文）";
+/**
+ * 字段「P_LABEL_DEFAULT」。
+ */
+
     public static final String P_LABEL_DEFAULT = "参数默认值";
+/**
+ * 字段「P_LABEL_RECOMMEND」。
+ */
+
     public static final String P_LABEL_RECOMMEND = "参数推荐值";
+/**
+ * 字段「P_LABEL_NE」。
+ */
+
     public static final String P_LABEL_NE = "适用网元";
+/**
+ * 字段「P_LABEL_FEATURE」。
+ */
+
     public static final String P_LABEL_FEATURE = "所属特性";
+/**
+ * 字段「P_LABEL_FEATURE_ID」。
+ */
+
     public static final String P_LABEL_FEATURE_ID = "所属特性 ID";
+/**
+ * 字段「P_LABEL_BIZ_CLASS」。
+ */
+
     public static final String P_LABEL_BIZ_CLASS = "业务分类";
+/**
+ * 字段「P_LABEL_CATEGORY_ID」。
+ */
+
     public static final String P_LABEL_CATEGORY_ID = "业务分类 ID";
+/**
+ * 字段「P_LABEL_TAKE_EFFECT」。
+ */
+
     public static final String P_LABEL_TAKE_EFFECT = "立即生效";
+/**
+ * 字段「P_LABEL_EM_CN」。
+ */
+
     public static final String P_LABEL_EM_CN = "生效方式（中文）";
+/**
+ * 字段「P_LABEL_EM_EN」。
+ */
+
     public static final String P_LABEL_EM_EN = "生效方式（英文）";
+/**
+ * 字段「P_LABEL_EF_CN」。
+ */
+
     public static final String P_LABEL_EF_CN = "生效形态（中文）";
+/**
+ * 字段「P_LABEL_EF_EN」。
+ */
+
     public static final String P_LABEL_EF_EN = "生效形态（英文）";
+/**
+ * 字段「P_LABEL_TEAM」。
+ */
+
     public static final String P_LABEL_TEAM = "项目组";
+/**
+ * 字段「P_LABEL_MODULE」。
+ */
+
     public static final String P_LABEL_MODULE = "归属模块";
+/**
+ * 字段「P_LABEL_PATCH」。
+ */
+
     public static final String P_LABEL_PATCH = "版本号";
+/**
+ * 字段「P_LABEL_INTRO_VER」。
+ */
+
     public static final String P_LABEL_INTRO_VER = "引入版本";
+/**
+ * 字段「P_LABEL_PARAM_DESC_CN」。
+ */
+
     public static final String P_LABEL_PARAM_DESC_CN = "参数含义（中文）";
+/**
+ * 字段「P_LABEL_PARAM_DESC_EN」。
+ */
+
     public static final String P_LABEL_PARAM_DESC_EN = "参数含义（英文）";
+/**
+ * 字段「P_LABEL_IMPACT_CN」。
+ */
+
     public static final String P_LABEL_IMPACT_CN = "影响说明（中文）";
+/**
+ * 字段「P_LABEL_IMPACT_EN」。
+ */
+
     public static final String P_LABEL_IMPACT_EN = "影响说明（英文）";
+/**
+ * 字段「P_LABEL_EXAMPLE_CN」。
+ */
+
     public static final String P_LABEL_EXAMPLE_CN = "配置举例（中文）";
+/**
+ * 字段「P_LABEL_EXAMPLE_EN」。
+ */
+
     public static final String P_LABEL_EXAMPLE_EN = "配置举例（英文）";
+/**
+ * 字段「P_LABEL_RELATED_DESC_CN」。
+ */
+
     public static final String P_LABEL_RELATED_DESC_CN = "关联参数描述（中文）";
+/**
+ * 字段「P_LABEL_RELATED_DESC_EN」。
+ */
+
     public static final String P_LABEL_RELATED_DESC_EN = "关联参数描述（英文）";
+/**
+ * 字段「P_LABEL_REMARK」。
+ */
+
     public static final String P_LABEL_REMARK = "备注";
+/**
+ * 字段「P_LABEL_ENUM_CN」。
+ */
+
     public static final String P_LABEL_ENUM_CN = "枚举值（中文）";
+/**
+ * 字段「P_LABEL_ENUM_EN」。
+ */
+
     public static final String P_LABEL_ENUM_EN = "枚举值（英文）";
+/**
+ * 字段「P_LABEL_UNIT_CN」。
+ */
+
     public static final String P_LABEL_UNIT_CN = "参数单位（中文）";
+/**
+ * 字段「P_LABEL_UNIT_EN」。
+ */
+
     public static final String P_LABEL_UNIT_EN = "参数单位（英文）";
+/**
+ * 字段「P_LABEL_PARAM_RANGE」。
+ */
+
     public static final String P_LABEL_PARAM_RANGE = "parameter_range";
 
+/**
+ * 字段「BC_CN」。
+ */
+
     public static final String BC_CN = "分类名称（中文）";
+/**
+ * 字段「BC_EN」。
+ */
+
     public static final String BC_EN = "分类名称（英文）";
+/**
+ * 字段「BC_RANGE」。
+ */
+
     public static final String BC_RANGE = "包含特性范围";
+/**
+ * 字段「BC_TYPE」。
+ */
+
     public static final String BC_TYPE = "所属类别";
 
+/**
+ * 字段「NE_NAME」。
+ */
+
     public static final String NE_NAME = "适用网元名称";
+/**
+ * 字段「NE_DESC」。
+ */
+
     public static final String NE_DESC = "网元类型描述";
+/**
+ * 字段「NE_FORM」。
+ */
+
     public static final String NE_FORM = "产品形态";
 
+/**
+ * 字段「NF_NAME」。
+ */
+
     public static final String NF_NAME = "nf 名称";
+/**
+ * 字段「NF_DESC」。
+ */
+
     public static final String NF_DESC = "nf 配置描述";
 
+/**
+ * 字段「EM_CN」。
+ */
+
     public static final String EM_CN = "生效方式（中文）";
+/**
+ * 字段「EM_EN」。
+ */
+
     public static final String EM_EN = "生效方式（英文）";
+/**
+ * 字段「EM_DESC」。
+ */
+
     public static final String EM_DESC = "生效方式描述";
 
+/**
+ * 字段「EF_CN」。
+ */
+
     public static final String EF_CN = "生效形态（中文）";
+/**
+ * 字段「EF_EN」。
+ */
+
     public static final String EF_EN = "生效形态（英文）";
+/**
+ * 字段「EF_DESC」。
+ */
+
     public static final String EF_DESC = "生效形态描述";
 
+/**
+ * 字段「PT_NAME」。
+ */
+
     public static final String PT_NAME = "项目组名称";
+/**
+ * 字段「PT_DESC」。
+ */
+
     public static final String PT_DESC = "项目组描述";
+/**
+ * 字段「PT_OWNER」。
+ */
+
     public static final String PT_OWNER = "责任人";
 
+/**
+ * 字段「KW_REGEX」。
+ */
+
     public static final String KW_REGEX = "关键字正则";
+/**
+ * 字段「KW_REASON」。
+ */
+
     public static final String KW_REASON = "原因";
 
+/**
+ * 字段「VF_CN」。
+ */
+
     public static final String VF_CN = "中文名称";
+/**
+ * 字段「VF_EN」。
+ */
+
     public static final String VF_EN = "英文名称";
+/**
+ * 字段「VF_INTRO」。
+ */
+
     public static final String VF_INTRO = "引入类型";
+/**
+ * 字段「VF_INHERIT」。
+ */
+
     public static final String VF_INHERIT = "继承/引用版本 ID";
 
     private static final ThreadLocal<String> IMPORT_LOG_BATCH = new ThreadLocal<>();

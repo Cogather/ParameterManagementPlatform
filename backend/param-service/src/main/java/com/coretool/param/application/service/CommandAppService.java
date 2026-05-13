@@ -24,6 +24,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 应用服务「CommandAppService」，编排用例与事务边界。
+ *
+ * @since 2026-04-28
+ */
+
 @Service
 public class CommandAppService {
 
@@ -295,4 +301,3 @@ public class CommandAppService {
         return empty;
     }
 }
-

@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 操作审计查询（详设 §1.7.6；写入由各应用服务在成功路径落库）。
+ * @since 2026-04-28
  */
 @RestController
 @RequestMapping("/api/v1/operation-logs")

@@ -15,6 +15,12 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * 类型「CommandRepositoryImpl」，承载业务实现与数据表达。
+ *
+ * @since 2026-04-28
+ */
+
 @Repository
 public class CommandRepositoryImpl implements CommandRepository {
 
@@ -134,4 +140,3 @@ public class CommandRepositoryImpl implements CommandRepository {
                 size);
     }
 }
-

@@ -9,6 +9,7 @@ import org.springframework.web.filter.CorsFilter;
 
 /**
  * 开发环境允许 Vite 直连后端（未走代理时）。
+ * @since 2026-04-28
  */
 @Configuration
 @Profile("dev")

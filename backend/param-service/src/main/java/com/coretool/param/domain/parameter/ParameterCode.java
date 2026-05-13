@@ -2,7 +2,11 @@ package com.coretool.param.domain.parameter;
 
 import com.coretool.param.domain.exception.DomainRuleException;
 
-/** 参数编码 类型_序号（spec-03 §5.1、design.md R5）。 */
+/**
+ * 参数编码 类型_序号（spec-03 §5.1、design.md R5）。
+ *
+ * @since 2026-04-28
+ */
 public final class ParameterCode {
 
     private ParameterCode() {}

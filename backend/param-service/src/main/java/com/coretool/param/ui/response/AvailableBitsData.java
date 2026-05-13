@@ -4,7 +4,11 @@ import lombok.Data;
 
 import java.util.List;
 
-/** GET .../available-bits 的 data（openspec/schemas/available-bits.json）。 */
+/**
+ * GET .../available-bits 的 data（openspec/schemas/available-bits.json）。
+ *
+ * @since 2026-04-28
+ */
 @Data
 public class AvailableBitsData {
 

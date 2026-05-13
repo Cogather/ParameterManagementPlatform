@@ -157,4 +157,3 @@ public class CommandTypeVersionRangeController {
                 appService.exportExcel(productId, page, size, ownedTypeId), "command-type-version-ranges.xlsx");
     }
 }
-

@@ -4,6 +4,7 @@ import com.coretool.param.domain.exception.DomainRuleException;
 
 /**
  * 参数聚合根（spec-03）：基线锁定等不变量。
+ * @since 2026-04-28
  */
 public class Parameter {
 

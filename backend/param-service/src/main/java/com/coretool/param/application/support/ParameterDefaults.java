@@ -7,6 +7,7 @@ import org.apache.commons.lang3.StringUtils;
 /**
  * 创建参数时，为表 §15 必填列补齐占位默认值（避免 ORM 插入 NULL 违反 NOT NULL）。
  * 前端联调仍应传真实业务值；此处仅作服务端兜底。
+ * @since 2026-04-28
  */
 public final class ParameterDefaults {
 

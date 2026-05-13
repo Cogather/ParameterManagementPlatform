@@ -7,7 +7,11 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/** config_change_source_keyword（与 docs/table字段简介.md §7 对齐）。 */
+/**
+ * config_change_source_keyword（与 docs/table字段简介.md §7 对齐）。
+ *
+ * @since 2026-04-28
+ */
 @Data
 @TableName("config_change_source_keyword")
 public class ConfigChangeSourceKeywordPo {

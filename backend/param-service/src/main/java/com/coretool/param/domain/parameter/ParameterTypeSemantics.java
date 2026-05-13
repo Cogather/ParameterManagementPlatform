@@ -2,7 +2,11 @@ package com.coretool.param.domain.parameter;
 
 import java.util.Locale;
 
-/** BIT/BYTE/DWORD/STRING 与 BIT 槽位上限（spec-03 §3.2）。 */
+/**
+ * BIT/BYTE/DWORD/STRING 与 BIT 槽位上限（spec-03 §3.2）。
+ *
+ * @since 2026-04-28
+ */
 public final class ParameterTypeSemantics {
 
     private ParameterTypeSemantics() {}

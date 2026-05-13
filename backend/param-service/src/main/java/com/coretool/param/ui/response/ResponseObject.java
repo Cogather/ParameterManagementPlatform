@@ -2,6 +2,12 @@ package com.coretool.param.ui.response;
 
 import com.coretool.param.constants.CommonConst;
 
+/**
+ * 类型「ResponseObject」，承载业务实现与数据表达。
+ *
+ * @since 2026-04-28
+ */
+
 public class ResponseObject<T> {
     private boolean success;
     private String message;
@@ -131,4 +137,3 @@ public class ResponseObject<T> {
         return this;
     }
 }
-

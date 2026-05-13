@@ -6,6 +6,12 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDateTime;
 
+/**
+ * 请求/查询视图对象「OperationLogPageQuery」。
+ *
+ * @since 2026-04-28
+ */
+
 @Data
 public class OperationLogPageQuery {
     private String productId;
@@ -26,4 +32,3 @@ public class OperationLogPageQuery {
     private int page = 1;
     private int size = 20;
 }
-

@@ -5,19 +5,68 @@ import com.coretool.param.domain.support.PageSlice;
 
 import java.util.Optional;
 
+/**
+ * 领域仓储接口「CommandRepository」，定义聚合持久化契约。
+ *
+ * @since 2026-04-28
+ */
+
 public interface CommandRepository {
+
+/**
+ * findById。
+ *
+ * @param commandId 见方法签名
+ * @return 可选结果
+ */
 
     Optional<Command> findById(String commandId);
 
+/**
+ * existsSameNameInProduct。
+ *
+ * @param productId 见方法签名
+ * @param commandName 见方法签名
+ * @param excludeCommandId 见方法签名
+ * @return 布尔结果
+ */
+
     boolean existsSameNameInProduct(String productId, String commandName, String excludeCommandId);
 
-    /** 同一产品下按名称查找“已删除/未启用”(status=0) 的命令，用于新增时自动恢复。 */
+    /**
+     * 同一产品下按名称查找“已删除/未启用”(status=0) 的命令，用于新增时自动恢复。
+     *
+     * @param productId 产品 ID
+     * @param commandName 命令名称
+     * @return 若存在则返回命令
+     */
     Optional<Command> findDisabledByNameInProduct(String productId, String commandName);
+
+/**
+ * insert。
+ *
+ * @param command 见方法签名
+ */
 
     void insert(Command command);
 
+/**
+ * update。
+ *
+ * @param command 见方法签名
+ */
+
     void update(Command command);
+
+/**
+ * pageByProduct。
+ *
+ * @param productId 见方法签名
+ * @param page 见方法签名
+ * @param size 见方法签名
+ * @param keyword 见方法签名
+ * @return 结果
+ */
 
     PageSlice<Command> pageByProduct(String productId, int page, int size, String keyword);
 }
-

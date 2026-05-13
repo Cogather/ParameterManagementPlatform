@@ -3,6 +3,12 @@ package com.coretool.param.infrastructure.persistence.assembly;
 import com.coretool.param.domain.command.CommandTypeVersionRange;
 import com.coretool.param.infrastructure.persistence.entity.CommandTypeVersionRangePo;
 
+/**
+ * 装配器「CommandTypeVersionRangeAssembler」，在领域对象与持久化 PO 之间转换。
+ *
+ * @since 2026-04-28
+ */
+
 public final class CommandTypeVersionRangeAssembler {
 
     private CommandTypeVersionRangeAssembler() {}

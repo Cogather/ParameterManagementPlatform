@@ -16,9 +16,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 工具/说明类「ExcelHelper」。
+ *
+ * @since 2026-04-28
+ */
+
 public final class ExcelHelper {
 
     private ExcelHelper() {}
+
+/**
+ * 字段「XLSX_CONTENT_TYPE」。
+ */
 
     public static final String XLSX_CONTENT_TYPE =
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -175,4 +185,3 @@ public final class ExcelHelper {
      */
     public record ParsedSheet(String sheetName, List<List<String>> rows) {}
 }
-

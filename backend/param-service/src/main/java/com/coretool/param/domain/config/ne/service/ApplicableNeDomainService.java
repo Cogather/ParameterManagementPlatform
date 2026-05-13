@@ -8,7 +8,11 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
 
-/** 适用网元领域服务：封装唯一性/归属/状态变更等规则。 */
+/**
+ * 适用网元领域服务：封装唯一性/归属/状态变更等规则。
+ *
+ * @since 2026-04-28
+ */
 public class ApplicableNeDomainService {
 
     public record CreateCommand(
@@ -135,4 +139,3 @@ public class ApplicableNeDomainService {
                 .orElseThrow(() -> new DomainRuleException("网元不存在或不属于该产品"));
     }
 }
-

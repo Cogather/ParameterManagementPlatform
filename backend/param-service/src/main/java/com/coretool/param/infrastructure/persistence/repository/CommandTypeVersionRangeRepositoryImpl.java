@@ -16,6 +16,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * 类型「CommandTypeVersionRangeRepositoryImpl」，承载业务实现与数据表达。
+ *
+ * @since 2026-04-28
+ */
+
 @Repository
 public class CommandTypeVersionRangeRepositoryImpl implements CommandTypeVersionRangeRepository {
 

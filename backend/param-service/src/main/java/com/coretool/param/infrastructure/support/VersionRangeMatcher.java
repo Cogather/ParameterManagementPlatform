@@ -2,6 +2,7 @@ package com.coretool.param.infrastructure.support;
 
 /**
  * 版本号是否在 [minVersion, maxVersion] 内（字符串序比较；复杂 semver 需后续增强）。
+ * @since 2026-04-28
  */
 public final class VersionRangeMatcher {
 

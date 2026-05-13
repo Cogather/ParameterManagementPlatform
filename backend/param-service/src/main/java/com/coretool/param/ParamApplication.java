@@ -4,6 +4,12 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+/**
+ * Spring Boot 应用入口，负责组件扫描与启动。
+ *
+ * @since 2026-04-28
+ */
+
 @SpringBootApplication
 @MapperScan("com.coretool.param.infrastructure.persistence.mapper")
 public class ParamApplication {
@@ -16,4 +22,3 @@ public class ParamApplication {
         SpringApplication.run(ParamApplication.class, args);
     }
 }
-

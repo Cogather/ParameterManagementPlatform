@@ -8,6 +8,12 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
+/**
+ * 持久化实体「EntityEffectiveModeDictPo」，映射数据库表结构。
+ *
+ * @since 2026-04-28
+ */
+
 @TableName("entity_effective_mode_dict")
 @Getter
 @Setter
