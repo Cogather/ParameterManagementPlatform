@@ -9,6 +9,7 @@ import java.util.Set;
  * 序号 FULL/PARTIAL 与可用 BIT（spec-03 §3.2、§7.1～§7.2）。
  *
  * <p>FULL：该序号下尚无任何参数行。PARTIAL：已有行但仍有未占用 BIT。若 BIT 槽位已满则该序号不出现在结果中。
+ *
  * @since 2026-04-28
  */
 public class ParameterAllocationDomainService {

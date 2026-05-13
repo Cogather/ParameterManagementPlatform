@@ -3,7 +3,7 @@ package com.coretool.param.ui.response;
 import java.util.List;
 
 /**
- * 响应/数据传输对象「PageResponse」。
+ * 分页列表响应载荷（records、total、page、size）。
  *
  * @since 2026-04-28
  */

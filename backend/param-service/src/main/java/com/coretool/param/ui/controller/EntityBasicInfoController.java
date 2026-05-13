@@ -20,6 +20,7 @@ import java.util.List;
 
 /**
  * 产品主数据（entity_basic_info）维护；不位于 /products/{productId} 之下，供「产品配置」独立页使用。
+ *
  * @since 2026-04-28
  */
 @RestController
@@ -32,6 +33,7 @@ public class EntityBasicInfoController {
      * 构造控制器。
      *
      * @param entityBasicInfoAppService 产品主数据应用服务
+     * @return 当前控制器实例
      */
     public EntityBasicInfoController(EntityBasicInfoAppService entityBasicInfoAppService) {
         this.entityBasicInfoAppService = entityBasicInfoAppService;

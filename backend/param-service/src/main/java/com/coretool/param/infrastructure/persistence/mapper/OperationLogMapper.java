@@ -18,6 +18,12 @@ import org.apache.ibatis.annotations.Select;
 
 public interface OperationLogMapper extends BaseMapper<OperationLogPo> {
 
+    /**
+     * 按筛选条件统计操作日志分组条数（子查询分组后计数）。
+     *
+     * @param q 分组筛选条件
+     * @return 分组数量
+     */
     @Select(
         """
         <script>
@@ -48,6 +54,12 @@ public interface OperationLogMapper extends BaseMapper<OperationLogPo> {
     long countGroups(
         @Param("q") OperationLogGroupSelectQuery q);
 
+    /**
+     * 分页查询操作日志分组摘要列表。
+     *
+     * @param q 分组查询与分页参数
+     * @return 分组摘要行列表
+     */
     @Select(
         """
         <script>
@@ -90,6 +102,12 @@ public interface OperationLogMapper extends BaseMapper<OperationLogPo> {
     java.util.List<OperationLogGroupItem> selectGroupPage(
         @Param("q") OperationLogGroupSelectQuery q);
 
+    /**
+     * 查询指定分组下的操作日志明细行（字段级变更）。
+     *
+     * @param k 分组键
+     * @return 明细行列表
+     */
     @Select(
         """
         SELECT

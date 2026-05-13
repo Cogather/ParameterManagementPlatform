@@ -2,6 +2,7 @@ package com.coretool.param.domain.exception;
 
 /**
  * 变更来源命中关键字黑名单（spec-03 §5.3）；HTTP 500 且 data.violatedKeywordRegex 为命中正则原文。
+ *
  * @since 2026-04-28
  */
 public class BlacklistViolationException extends RuntimeException {

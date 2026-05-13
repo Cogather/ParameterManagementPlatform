@@ -5,7 +5,7 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * 参数页左树：命令 → 类型（spec-03 §1.2）。
+ * 参数页左侧树节点：命令及其下属类型列表（spec-03 §1.2）。
  *
  * @since 2026-04-28
  */
@@ -16,18 +16,23 @@ public class ParameterCommandTreeNode {
     private String commandName;
     private List<ParameterTypeNode> types;
 
+    /**
+     * 树中「类型」子节点（编码与展示名称）。
+     *
+     * @since 2026-04-28
+     */
     @Data
     public static class ParameterTypeNode {
         private String code;
         private String name;
 
         /**
-         * 创建空类型节点。
+         * 无参构造（供序列化框架 / Lombok 使用）。
          */
         public ParameterTypeNode() {}
 
         /**
-         * 创建类型节点。
+         * 使用编码与名称创建类型节点。
          *
          * @param code 类型编码
          * @param name 类型名称

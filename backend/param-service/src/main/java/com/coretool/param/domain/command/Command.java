@@ -8,12 +8,17 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
- * 产品命令（entity_command_mapping）。
+ * 产品命令聚合（映射 entity_command_mapping），承载注册、还原与可编辑字段补丁等行为。
  *
  * @since 2026-04-28
  */
 public class Command {
 
+    /**
+     * 新注册命令时的入参快照（record）。
+     *
+     * @since 2026-04-28
+     */
     public record Registration(
             String ownedProductId,
             String commandId,
@@ -24,6 +29,11 @@ public class Command {
             Integer commandStatus,
             LocalDateTime now) {}
 
+    /**
+     * 从持久化或仓储加载命令时的字段快照（record）。
+     *
+     * @since 2026-04-28
+     */
     public record Snapshot(
             String ownedProductId,
             String commandId,
@@ -35,6 +45,11 @@ public class Command {
             String ownerList,
             Integer commandStatus) {}
 
+    /**
+     * 可编辑字段的增量补丁（record）。
+     *
+     * @since 2026-04-28
+     */
     public record EditablePatch(
             String commandName,
             String ownerList,
@@ -52,6 +67,13 @@ public class Command {
     private String ownerList;
     private Integer commandStatus;
 
+    /**
+     * 由注册入参在内存中新建命令聚合。
+     *
+     * @param input 注册快照（非空，且命令 ID/名称/责任人非空）
+     * @return 新建命令聚合
+     * @throws DomainRuleException 入参为空或必填字段为空时
+     */
     public static Command registerNew(Registration input) {
         if (input == null) {
             throw new DomainRuleException("注册参数不能为空");
@@ -73,6 +95,12 @@ public class Command {
         return c;
     }
 
+    /**
+     * 由快照还原命令聚合；入参为 null 时返回 null。
+     *
+     * @param input 快照（可为 null）
+     * @return 命令聚合，或 null
+     */
     public static Command rehydrate(Snapshot input) {
         if (input == null) {
             return null;
@@ -90,6 +118,12 @@ public class Command {
         return c;
     }
 
+    /**
+     * 按补丁更新可编辑字段与审计时间；补丁为 null 时不做任何修改。
+     *
+     * @param patch 可编辑字段补丁（可为 null）
+     * @return 无
+     */
     public void applyEditablePatch(EditablePatch patch) {
         if (patch == null) {
             return;
@@ -113,6 +147,7 @@ public class Command {
      * 将命令置为禁用状态。
      *
      * @param now 当前时间
+     * @return 无
      */
     public void disable(LocalDateTime now) {
         this.commandStatus = 0;

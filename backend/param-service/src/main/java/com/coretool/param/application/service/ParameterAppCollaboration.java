@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 参数应用服务所需领域协作依赖（与 {@link ParameterAppPersistenceMappers} 共同构成完整构造入参）。
+ *
  * @since 2026-04-28
  */
 @Component

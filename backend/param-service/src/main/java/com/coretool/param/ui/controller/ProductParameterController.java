@@ -20,6 +20,7 @@ import jakarta.annotation.Resource;
 
 /**
  * 全产品参数列表（版本下拉 ALL）：不按版本过滤。
+ *
  * @since 2026-04-28
  */
 @RestController

@@ -16,7 +16,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * 类型「VersionFeatureRepositoryImpl」，承载业务实现与数据表达。
+ * {@link VersionFeatureRepository} 的持久化实现（MyBatis-Plus）。
  *
  * @since 2026-04-28
  */

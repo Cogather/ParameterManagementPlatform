@@ -9,6 +9,7 @@ import java.util.Objects;
 
 /**
  * 产品版本聚合（表 entity_version_info）。
+ *
  * @since 2026-04-28
  */
 public class ProductVersion {

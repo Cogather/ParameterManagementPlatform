@@ -5,6 +5,7 @@ import org.apache.commons.lang3.StringUtils;
 /**
  * spec-03 §4：参数列表与 available-* 使用 {@code commandTypeId}；历史实现使用 {@code commandTypeCode}（类型前缀，与
  * {@code parameter_code} 一致）。二者语义相同，本类做统一解析。
+ *
  * @since 2026-04-28
  */
 public final class CommandTypeQueryParam {

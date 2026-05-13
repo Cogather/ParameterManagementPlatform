@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
  * 命令类型定义领域服务：封装跨实体/仓储的规则校验（唯一性、归属等）。
  *
  * <p>说明：应用层只做用例编排与事务边界；领域规则集中在 domain。
+ *
  * @since 2026-04-28
  */
 public class CommandTypeDefinitionDomainService {

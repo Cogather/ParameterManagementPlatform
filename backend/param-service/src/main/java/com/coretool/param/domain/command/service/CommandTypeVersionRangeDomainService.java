@@ -12,6 +12,7 @@ import java.util.List;
 
 /**
  * 命令类型版本区段领域服务：封装跨聚合校验（归属一致、区段不重叠、区段边界等）。
+ *
  * @since 2026-04-28
  */
 public class CommandTypeVersionRangeDomainService {

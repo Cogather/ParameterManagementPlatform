@@ -9,6 +9,7 @@ import lombok.Data;
 
 /**
  * 产品/产品形态主数据（与 docs/table字段简介.md §1 entity_basic_info 对齐）。
+ *
  * @since 2026-04-28
  */
 @Data

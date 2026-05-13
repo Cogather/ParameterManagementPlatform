@@ -7,6 +7,7 @@ import java.util.Set;
 
 /**
  * 变更类型与新增/编辑约束（spec-03 §3.3）；入参为已 trim 的变更类型中文名列表。
+ *
  * @since 2026-04-28
  */
 public final class ChangeDescriptionTypeRules {

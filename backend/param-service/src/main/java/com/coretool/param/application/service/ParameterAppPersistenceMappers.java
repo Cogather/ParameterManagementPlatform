@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 参数应用服务所需持久化 Mapper 分组（单构造记录 ≤5 个形参，供 {@link ParameterAppService} 注入）。
+ *
  * @since 2026-04-28
  */
 @Component

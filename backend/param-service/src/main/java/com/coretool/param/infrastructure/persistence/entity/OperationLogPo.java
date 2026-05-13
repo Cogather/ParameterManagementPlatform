@@ -12,6 +12,7 @@ import lombok.Setter;
 
 /**
  * 操作审计（单表，详设 §1.7.3；表名与字段与 DDL 一致）。
+ *
  * @since 2026-04-28
  */
 @Getter

@@ -4,6 +4,7 @@ import com.coretool.param.domain.exception.DomainRuleException;
 
 /**
  * 参数聚合根（spec-03）：基线锁定等不变量。
+ *
  * @since 2026-04-28
  */
 public class Parameter {
@@ -14,6 +15,7 @@ public class Parameter {
      * 创建参数聚合根（仅承载不变量与状态判断）。
      *
      * @param dataStatus 数据状态
+     * @return 当前聚合实例
      */
     public Parameter(String dataStatus) {
         this.dataStatus = dataStatus;
@@ -21,6 +23,9 @@ public class Parameter {
 
     /**
      * 断言当前参数可写（若基线锁定则抛出领域异常）。
+     *
+     * @return 无
+     * @throws DomainRuleException 当数据状态为已基线锁定时
      */
     public void assertWritable() {
         if (ParameterBaselinePolicy.isBaselineLocked(dataStatus)) {

@@ -11,6 +11,7 @@ import java.util.regex.PatternSyntaxException;
 
 /**
  * 变更来源关键字（config_change_source_keyword），黑名单用正则必须可编译。
+ *
  * @since 2026-04-28
  */
 public class ChangeSourceKeyword {

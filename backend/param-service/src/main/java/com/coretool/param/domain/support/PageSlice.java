@@ -4,6 +4,7 @@ import java.util.List;
 
 /**
  * 领域分页切片（不含 UI 层类型）。
+ *
  * @since 2026-04-28
  */
 public class PageSlice<T> {

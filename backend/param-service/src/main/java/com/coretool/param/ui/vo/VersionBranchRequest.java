@@ -2,6 +2,7 @@ package com.coretool.param.ui.vo;
 
 /**
  * 拉分支：基于基线版本创建新版本，可选复制参数（参数复制见 spec-03，当前未接表则仅创建版本行）。
+ *
  * @since 2026-04-28
  */
 @lombok.Data

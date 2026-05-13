@@ -2,6 +2,7 @@ package com.coretool.param.domain.exception;
 
 /**
  * 领域规则违反（充血模型内抛出）；由应用层或全局异常处理映射为对外错误信息。
+ *
  * @since 2026-04-28
  */
 public class DomainRuleException extends RuntimeException {

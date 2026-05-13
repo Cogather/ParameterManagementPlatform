@@ -22,7 +22,7 @@ public final class CsvDownload {
      *
      * @param bytes    文件内容
      * @param filename 文件名（用于 Content-Disposition；用于推断内容类型）
-     * @return 响应实体
+     * @return 响应实体（HTTP 200，带 Content-Type 与 Content-Disposition）
      */
     public static ResponseEntity<byte[]> attachment(byte[] bytes, String filename) {
         HttpHeaders headers = new HttpHeaders();

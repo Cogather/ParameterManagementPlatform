@@ -49,6 +49,7 @@ import java.util.Objects;
 
 /**
  * 操作审计写入与查询（详设 §1.7）；命令 / 类型定义 / 版本区段已接写入口。
+ *
  * @since 2026-04-28
  */
 @Service
