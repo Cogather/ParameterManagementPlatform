@@ -2,7 +2,7 @@ import axios, { type AxiosInstance } from 'axios'
 import type { ResponseObject } from '../types/api-response'
 import { getApiBaseUrl, type ApiServiceKey } from './api-config'
 
-function formatUserMessage(raw: unknown, fallback: string) {
+function formatUserMessage(raw: unknown, fallback: string): string {
   const s = typeof raw === 'string' ? raw.trim() : ''
   const base = s || fallback
   // 后端 message 可能携带错误码前缀：CODE: 中文提示。前端仅展示中文提示即可。
@@ -10,7 +10,7 @@ function formatUserMessage(raw: unknown, fallback: string) {
   return base.replace(/^[A-Z0-9_]+[：:]\s*/u, '')
 }
 
-function attachResponseInterceptor(client: AxiosInstance) {
+function attachResponseInterceptor(client: AxiosInstance): void {
   client.interceptors.response.use(
     (resp) => {
       const data = resp.data as unknown as Partial<ResponseObject<unknown>>
@@ -46,7 +46,9 @@ export function createServiceHttp(service: ApiServiceKey): AxiosInstance {
   return client
 }
 
-export async function request<T>(config: Parameters<typeof http.request>[0]) {
+export async function request<T>(
+  config: Parameters<typeof http.request>[0],
+): Promise<ResponseObject<T>> {
   const resp = await http.request<ResponseObject<T>>(config)
   return resp.data
 }

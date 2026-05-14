@@ -3,7 +3,12 @@
  */
 export function isEmbeddedFromQuery(query: Record<string, unknown>): boolean {
   const e = query.embed
-  const s = typeof e === 'string' ? e : Array.isArray(e) && typeof e[0] === 'string' ? e[0] : ''
+  let s = ''
+  if (typeof e === 'string') {
+    s = e
+  } else if (Array.isArray(e) && typeof e[0] === 'string') {
+    s = e[0]
+  }
   return s === '1' || s === 'true' || s === 'yes'
 }
 

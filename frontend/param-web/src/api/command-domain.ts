@@ -4,15 +4,15 @@ import type { BatchImportResult, PageResponse } from '../types/api-response'
 
 const enc = encodeURIComponent
 
-function commandsBase(productId: string) {
+function commandsBase(productId: string): string {
   return `/products/${enc(productId)}/commands`
 }
 
-function typesBase(productId: string) {
+function typesBase(productId: string): string {
   return `/products/${enc(productId)}/command-types`
 }
 
-function rangesBase(productId: string) {
+function rangesBase(productId: string): string {
   return `/products/${enc(productId)}/command-type-version-ranges`
 }
 
@@ -28,7 +28,10 @@ export async function fetchCommands(
   return ro.data
 }
 
-export async function createCommand(productId: string, body: Record<string, unknown>) {
+export async function createCommand(
+  productId: string,
+  body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   const ro = await request<Record<string, unknown>>({
     url: commandsBase(productId),
     method: 'POST',
@@ -37,7 +40,11 @@ export async function createCommand(productId: string, body: Record<string, unkn
   return ro.data
 }
 
-export async function updateCommand(productId: string, commandId: string, body: Record<string, unknown>) {
+export async function updateCommand(
+  productId: string,
+  commandId: string,
+  body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   const ro = await request<Record<string, unknown>>({
     url: `${commandsBase(productId)}/${enc(commandId)}`,
     method: 'PUT',
@@ -46,7 +53,7 @@ export async function updateCommand(productId: string, commandId: string, body: 
   return ro.data
 }
 
-export async function disableCommand(productId: string, commandId: string) {
+export async function disableCommand(productId: string, commandId: string): Promise<void> {
   await request<void>({
     url: `${commandsBase(productId)}/${enc(commandId)}`,
     method: 'DELETE',
@@ -64,11 +71,11 @@ export async function importCommands(productId: string, file: File): Promise<Bat
   return ro.data
 }
 
-export function commandsTemplateUrl(productId: string) {
+export function commandsTemplateUrl(productId: string): string {
   return resolveParamApiUrl(`${commandsBase(productId)}/import-templates`)
 }
 
-export function commandsExportUrl(productId: string, params: { keyword?: string }) {
+export function commandsExportUrl(productId: string, params: { keyword?: string }): string {
   const q = new URLSearchParams()
   if (params.keyword) q.set('keyword', params.keyword)
   return resolveParamApiUrl(`${commandsBase(productId)}/export?${q.toString()}`)
@@ -86,7 +93,10 @@ export async function fetchCommandTypes(
   return ro.data
 }
 
-export async function createCommandType(productId: string, body: Record<string, unknown>) {
+export async function createCommandType(
+  productId: string,
+  body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   const ro = await request<Record<string, unknown>>({
     url: typesBase(productId),
     method: 'POST',
@@ -95,7 +105,11 @@ export async function createCommandType(productId: string, body: Record<string, 
   return ro.data
 }
 
-export async function updateCommandType(productId: string, commandTypeId: string, body: Record<string, unknown>) {
+export async function updateCommandType(
+  productId: string,
+  commandTypeId: string,
+  body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   const ro = await request<Record<string, unknown>>({
     url: `${typesBase(productId)}/${enc(commandTypeId)}`,
     method: 'PUT',
@@ -115,11 +129,11 @@ export async function importCommandTypes(productId: string, file: File): Promise
   return ro.data
 }
 
-export function commandTypesTemplateUrl(productId: string) {
+export function commandTypesTemplateUrl(productId: string): string {
   return resolveParamApiUrl(`${typesBase(productId)}/import-templates`)
 }
 
-export function commandTypesExportUrl(productId: string, params: { keyword?: string }) {
+export function commandTypesExportUrl(productId: string, params: { keyword?: string }): string {
   const q = new URLSearchParams()
   if (params.keyword) q.set('keyword', params.keyword)
   return resolveParamApiUrl(`${typesBase(productId)}/export?${q.toString()}`)
@@ -137,7 +151,10 @@ export async function fetchRanges(
   return ro.data
 }
 
-export async function createRange(productId: string, body: Record<string, unknown>) {
+export async function createRange(
+  productId: string,
+  body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   const ro = await request<Record<string, unknown>>({
     url: rangesBase(productId),
     method: 'POST',
@@ -146,7 +163,11 @@ export async function createRange(productId: string, body: Record<string, unknow
   return ro.data
 }
 
-export async function updateRange(productId: string, rangeId: string, body: Record<string, unknown>) {
+export async function updateRange(
+  productId: string,
+  rangeId: string,
+  body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   const ro = await request<Record<string, unknown>>({
     url: `${rangesBase(productId)}/${enc(rangeId)}`,
     method: 'PUT',
@@ -155,7 +176,7 @@ export async function updateRange(productId: string, rangeId: string, body: Reco
   return ro.data
 }
 
-export async function disableRange(productId: string, rangeId: string) {
+export async function disableRange(productId: string, rangeId: string): Promise<void> {
   await request<void>({
     url: `${rangesBase(productId)}/${enc(rangeId)}`,
     method: 'DELETE',
@@ -173,11 +194,11 @@ export async function importRanges(productId: string, file: File): Promise<Batch
   return ro.data
 }
 
-export function rangesTemplateUrl(productId: string) {
+export function rangesTemplateUrl(productId: string): string {
   return resolveParamApiUrl(`${rangesBase(productId)}/import-templates`)
 }
 
-export function rangesExportUrl(productId: string, params: { ownedTypeId?: string }) {
+export function rangesExportUrl(productId: string, params: { ownedTypeId?: string }): string {
   const q = new URLSearchParams()
   if (params.ownedTypeId) q.set('ownedTypeId', params.ownedTypeId)
   const qs = q.toString()

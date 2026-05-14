@@ -48,11 +48,11 @@ export interface BaselineCountPayload {
 /** 版本选择「全产品」哨兵，与路由中的具体 versionId 区分 */
 export const VERSION_ALL = '__ALL__'
 
-function basePath(productId: string, versionId: string) {
+function basePath(productId: string, versionId: string): string {
   return `/products/${enc(productId)}/versions/${enc(versionId)}/parameters`
 }
 
-function productParametersBase(productId: string) {
+function productParametersBase(productId: string): string {
   return `/products/${enc(productId)}/parameters`
 }
 
@@ -161,7 +161,11 @@ export async function fetchAvailableBits(
   return ro.data
 }
 
-export async function createParameter(productId: string, versionId: string, body: ParameterSaveRequest) {
+export async function createParameter(
+  productId: string,
+  versionId: string,
+  body: ParameterSaveRequest,
+): Promise<Record<string, unknown>> {
   const ro = await request<Record<string, unknown>>({
     url: basePath(productId, versionId),
     method: 'POST',
@@ -175,7 +179,7 @@ export async function updateParameter(
   versionId: string,
   parameterId: number,
   body: ParameterSaveRequest,
-) {
+): Promise<Record<string, unknown>> {
   const ro = await request<Record<string, unknown>>({
     url: `${basePath(productId, versionId)}/${parameterId}`,
     method: 'PUT',
@@ -184,21 +188,33 @@ export async function updateParameter(
   return ro.data
 }
 
-export async function deleteParameter(productId: string, versionId: string, parameterId: number) {
+export async function deleteParameter(
+  productId: string,
+  versionId: string,
+  parameterId: number,
+): Promise<void> {
   await request<void>({
     url: `${basePath(productId, versionId)}/${parameterId}`,
     method: 'DELETE',
   })
 }
 
-export async function baselineParameter(productId: string, versionId: string, parameterId: number) {
+export async function baselineParameter(
+  productId: string,
+  versionId: string,
+  parameterId: number,
+): Promise<void> {
   await request<void>({
     url: `${basePath(productId, versionId)}/${parameterId}/baseline`,
     method: 'POST',
   })
 }
 
-export async function unbaselineParameter(productId: string, versionId: string, parameterId: number) {
+export async function unbaselineParameter(
+  productId: string,
+  versionId: string,
+  parameterId: number,
+): Promise<void> {
   await request<void>({
     url: `${basePath(productId, versionId)}/${parameterId}/unbaseline`,
     method: 'POST',
