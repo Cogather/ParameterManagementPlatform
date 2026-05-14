@@ -1,6 +1,7 @@
 package com.coretool.param.ui.controller;
 
 import com.coretool.param.application.service.NfConfigAppService;
+import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.infrastructure.persistence.entity.EntityNfConfigDictPo;
 import com.coretool.param.infrastructure.util.ExcelHelper;
 import com.coretool.param.ui.response.BatchImportResult;
@@ -92,12 +93,18 @@ public class NfConfigController {
      *
      * @param productId  产品 ID
      * @param nfConfigId 配置 ID
+     * @param updaterId  操作人（可选 query）
+     * @param creatorId  操作人（可选 query）
      * @return 操作结果
      */
     @DeleteMapping(value = "/{nfConfigId}", produces = "application/json; charset=utf-8")
     public ResponseObject<Void> disable(
-            @PathVariable("productId") String productId, @PathVariable("nfConfigId") String nfConfigId) {
-        nfConfigAppService.disable(productId, nfConfigId);
+            @PathVariable("productId") String productId,
+            @PathVariable("nfConfigId") String nfConfigId,
+            @RequestParam(value = "updaterId", required = false) String updaterId,
+            @RequestParam(value = "creatorId", required = false) String creatorId) {
+        nfConfigAppService.disable(
+                productId, nfConfigId, RequestOperatorIds.firstNonBlank(updaterId, creatorId));
         return new ResponseObject<Void>().success("已禁用");
     }
 

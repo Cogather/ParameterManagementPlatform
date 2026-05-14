@@ -1,6 +1,7 @@
 package com.coretool.param.ui.controller;
 
 import com.coretool.param.application.service.ParameterAppService;
+import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.infrastructure.persistence.entity.SystemParameterPo;
 import com.coretool.param.infrastructure.util.ExcelHelper;
 import com.coretool.param.ui.response.AvailableBitsData;
@@ -163,14 +164,19 @@ public class ParameterController {
      * @param productId   产品 ID
      * @param versionId   版本 ID
      * @param parameterId 参数 ID
+     * @param updaterId   操作人（可选 query）
+     * @param creatorId   操作人（可选 query）
      * @return 操作结果
      */
     @DeleteMapping(value = "/{parameterId}", produces = "application/json; charset=utf-8")
     public ResponseObject<Void> delete(
             @PathVariable("productId") String productId,
             @PathVariable("versionId") String versionId,
-            @PathVariable("parameterId") Integer parameterId) {
-        parameterAppService.delete(productId, versionId, parameterId);
+            @PathVariable("parameterId") Integer parameterId,
+            @RequestParam(value = "updaterId", required = false) String updaterId,
+            @RequestParam(value = "creatorId", required = false) String creatorId) {
+        parameterAppService.delete(
+                productId, versionId, parameterId, RequestOperatorIds.firstNonBlank(updaterId, creatorId));
         return new ResponseObject<Void>().success("已删除");
     }
 

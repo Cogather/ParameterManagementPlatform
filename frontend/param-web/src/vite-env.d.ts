@@ -19,3 +19,8 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+/** 宿主注入当前用户（与业务接口 creatorId/updaterId 等对齐） */
+interface Window {
+  username?: string
+}

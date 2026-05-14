@@ -70,7 +70,7 @@ function defaultForm() {
     supportedVersion: '',
     versionDescription: '',
     versionDesc: '',
-    ownerList: 'system',
+    ownerList: '',
   }
 }
 
@@ -81,7 +81,7 @@ function fillFormForEdit(form: Record<string, unknown>, row: Record<string, unkn
   form.supportedVersion = String(row.supportedVersion ?? '')
   form.versionDescription = String(row.versionDescription ?? '')
   form.versionDesc = String(row.versionDesc ?? '')
-  form.ownerList = String(row.ownerList ?? 'system')
+  form.ownerList = String(row.ownerList ?? '')
 }
 
 function validate(form: Record<string, unknown>) {

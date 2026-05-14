@@ -1,6 +1,7 @@
 package com.coretool.param.application.service;
 
 import com.coretool.param.application.support.ImportResultCollector;
+import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.domain.config.keyword.ChangeSourceKeyword;
 import com.coretool.param.domain.config.keyword.repository.ChangeSourceKeywordRepository;
 import com.coretool.param.domain.config.keyword.service.ChangeSourceKeywordDomainService;
@@ -161,11 +162,23 @@ public class ChangeSourceKeywordAppService {
      */
     @Transactional
     public void disable(String productId, String keywordId) {
+        disable(productId, keywordId, null);
+    }
+
+    /**
+     * 禁用变更来源关键字字典项（可携带请求侧操作人）。
+     *
+     * @param productId       产品 ID
+     * @param keywordId       关键字 ID
+     * @param requestOperator   请求中的操作人（可为 {@code null}）
+     */
+    @Transactional
+    public void disable(String productId, String keywordId, String requestOperator) {
         ChangeSourceKeyword pre = keywordRepository.findByKeywordId(keywordId).orElse(null);
         String display = pre == null ? keywordId : StringUtils.defaultIfBlank(pre.getReason(), keywordId);
         ChangeSourceKeyword existing = domainService.disable(productId, keywordId, LocalDateTime.now());
         keywordRepository.update(existing);
-        String opD = StringUtils.defaultIfBlank(existing.getUpdaterId(), "system");
+        String opD = RequestOperatorIds.operationLogOperator(requestOperator, existing.getUpdaterId());
         operationLogAppService.logDictRowDelete(
                 new OperationLogAppService.LogDictRowDeleteInput(
                         OperationLogAppService.BIZ_TABLE_CONFIG_CHANGE_SOURCE_KEYWORD,

@@ -1,6 +1,7 @@
 package com.coretool.param.application.service;
 
 import com.coretool.param.application.support.ImportResultCollector;
+import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.domain.config.projectteam.ProjectTeam;
 import com.coretool.param.domain.config.projectteam.service.ProjectTeamDomainService;
 import com.coretool.param.domain.config.projectteam.repository.ProjectTeamRepository;
@@ -186,11 +187,23 @@ public class ProjectTeamAppService {
      */
     @Transactional
     public void disable(String productId, String teamId) {
+        disable(productId, teamId, null);
+    }
+
+    /**
+     * 禁用项目组字典项（可携带请求侧操作人）。
+     *
+     * @param productId       产品 ID
+     * @param teamId          项目组 ID
+     * @param requestOperator   请求中的操作人（可为 {@code null}）
+     */
+    @Transactional
+    public void disable(String productId, String teamId, String requestOperator) {
         ProjectTeam pre = projectTeamRepository.findByTeamId(teamId).orElse(null);
         String display = pre == null ? teamId : StringUtils.defaultIfBlank(pre.getTeamName(), teamId);
         ProjectTeam e = ensureDomain().disable(productId, teamId, LocalDateTime.now());
         projectTeamRepository.update(e);
-        String opD = StringUtils.defaultIfBlank(e.getUpdaterId(), "system");
+        String opD = RequestOperatorIds.operationLogOperator(requestOperator, e.getUpdaterId());
         operationLogAppService.logDictRowDelete(
                 new OperationLogAppService.LogDictRowDeleteInput(
                         OperationLogAppService.BIZ_TABLE_PROJECT_TEAM_DICT, productId, null, teamId, display, opD));

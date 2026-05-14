@@ -1,6 +1,7 @@
 package com.coretool.param.application.service;
 
 import com.coretool.param.application.support.ImportResultCollector;
+import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.domain.config.category.BusinessCategory;
 import com.coretool.param.domain.config.category.repository.BusinessCategoryRepository;
 import com.coretool.param.domain.config.category.service.BusinessCategoryDomainService;
@@ -199,11 +200,23 @@ public class BusinessCategoryAppService {
      */
     @Transactional
     public void disable(String productId, String categoryId) {
+        disable(productId, categoryId, null);
+    }
+
+    /**
+     * 禁用业务分类字典项（可携带请求侧操作人）。
+     *
+     * @param productId       产品 ID
+     * @param categoryId      分类 ID
+     * @param requestOperator 请求中的操作人（可为 {@code null}）
+     */
+    @Transactional
+    public void disable(String productId, String categoryId, String requestOperator) {
         BusinessCategory pre = categoryRepository.findByCategoryId(categoryId).orElse(null);
         String display = pre == null ? categoryId : StringUtils.defaultIfBlank(pre.getCategoryNameCn(), categoryId);
         BusinessCategory existing = domainService.disable(productId, categoryId, LocalDateTime.now());
         categoryRepository.update(existing);
-        String opD = StringUtils.defaultIfBlank(existing.getUpdaterId(), "system");
+        String opD = RequestOperatorIds.operationLogOperator(requestOperator, existing.getUpdaterId());
         operationLogAppService.logBusinessCategoryDelete(productId, categoryId, display, opD);
     }
 

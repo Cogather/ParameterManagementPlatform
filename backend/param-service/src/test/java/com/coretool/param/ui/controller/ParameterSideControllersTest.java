@@ -95,8 +95,8 @@ class ParameterSideControllersTest {
         when(entityBasicInfoAppService.listProductChoices()).thenReturn(List.of(new EntityBasicInfoPo()));
 
         assertThat(c.productChoices().getData()).hasSize(1);
-        c.delete("pf1");
-        verify(entityBasicInfoAppService).softDelete("pf1");
+        c.delete("pf1", null, null);
+        verify(entityBasicInfoAppService).softDelete("pf1", null);
     }
 
     @Test

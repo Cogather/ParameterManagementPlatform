@@ -1,6 +1,7 @@
 package com.coretool.param.ui.controller;
 
 import com.coretool.param.application.service.EntityBasicInfoAppService;
+import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.infrastructure.persistence.entity.EntityBasicInfoPo;
 import com.coretool.param.ui.response.PageResponse;
 import com.coretool.param.ui.response.ResponseObject;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -96,11 +98,17 @@ public class EntityBasicInfoController {
      * 删除产品主数据（软删除）。
      *
      * @param productFormId 产品形态 ID
+     * @param updaterId     操作人（可选 query，与前端一致）
+     * @param creatorId     操作人（可选 query，与前端一致）
      * @return 操作结果
      */
     @DeleteMapping(value = "/{productFormId}", produces = "application/json; charset=utf-8")
-    public ResponseObject<Void> delete(@PathVariable("productFormId") String productFormId) {
-        entityBasicInfoAppService.softDelete(productFormId);
+    public ResponseObject<Void> delete(
+            @PathVariable("productFormId") String productFormId,
+            @RequestParam(value = "updaterId", required = false) String updaterId,
+            @RequestParam(value = "creatorId", required = false) String creatorId) {
+        entityBasicInfoAppService.softDelete(
+                productFormId, RequestOperatorIds.firstNonBlank(updaterId, creatorId));
         return new ResponseObject<Void>().success("已删除");
     }
 }

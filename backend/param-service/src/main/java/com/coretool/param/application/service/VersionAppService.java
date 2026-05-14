@@ -1,6 +1,7 @@
 package com.coretool.param.application.service;
 
 import com.coretool.param.application.support.ImportResultCollector;
+import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.domain.config.version.ProductVersion;
 import com.coretool.param.domain.config.version.service.ProductVersionDomainService;
 import com.coretool.param.domain.config.version.repository.ProductVersionRepository;
@@ -143,9 +144,6 @@ public class VersionAppService {
         if (StringUtils.isBlank(input.getVersionType())) {
             input.setVersionType("在研");
         }
-        if (StringUtils.isBlank(input.getOwnerList())) {
-            input.setOwnerList("system");
-        }
         LocalDateTime now = LocalDateTime.now();
         ProductVersion v =
                 domainService.createNew(
@@ -248,11 +246,23 @@ public class VersionAppService {
      */
     @Transactional
     public void disable(String productId, String versionId) {
+        disable(productId, versionId, null);
+    }
+
+    /**
+     * 禁用版本（可携带请求侧操作人，用于操作日志）。
+     *
+     * @param productId       产品 ID
+     * @param versionId       版本 ID
+     * @param requestOperator 请求中的操作人（可为 {@code null}）
+     */
+    @Transactional
+    public void disable(String productId, String versionId, String requestOperator) {
         ProductVersion pre = productVersionRepository.findById(versionId).orElse(null);
         String name = pre == null ? versionId : StringUtils.defaultString(pre.getVersionName());
         ProductVersion existing = domainService.disable(productId, versionId, LocalDateTime.now());
         productVersionRepository.update(existing);
-        String opD = StringUtils.defaultIfBlank(existing.getUpdaterId(), "system");
+        String opD = RequestOperatorIds.operationLogOperator(requestOperator, existing.getUpdaterId());
         operationLogAppService.logVersionDelete(productId, versionId, name, opD);
     }
 

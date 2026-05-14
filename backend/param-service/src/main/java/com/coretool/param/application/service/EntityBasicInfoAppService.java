@@ -3,6 +3,7 @@ package com.coretool.param.application.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.domain.exception.DomainRuleException;
 import com.coretool.param.domain.support.IdGenerator;
 import com.coretool.param.infrastructure.persistence.entity.EntityBasicInfoPo;
@@ -182,6 +183,17 @@ public class EntityBasicInfoAppService {
      */
     @Transactional
     public void softDelete(String productFormId) {
+        softDelete(productFormId, null);
+    }
+
+    /**
+     * 删除产品主数据（软删除，可携带请求侧操作人）。
+     *
+     * @param productFormId   产品形态 ID
+     * @param requestOperator 请求中的操作人（可为 {@code null}）
+     */
+    @Transactional
+    public void softDelete(String productFormId, String requestOperator) {
         if (StringUtils.isBlank(productFormId)) {
             throw new DomainRuleException("主键不能为空");
         }
@@ -191,10 +203,10 @@ public class EntityBasicInfoAppService {
         }
         existing.setEntityStatus(0);
         existing.setUpdateTimestamp(LocalDateTime.now());
-        existing.setUpdaterId(
-                StringUtils.defaultIfBlank(existing.getUpdaterId(), "system"));
+        String op = RequestOperatorIds.operationLogOperator(requestOperator, existing.getUpdaterId());
+        existing.setUpdaterId(op);
         entityBasicInfoMapper.updateById(existing);
-        operationLogAppService.logEntityBasicInfoDelete(existing, existing.getUpdaterId());
+        operationLogAppService.logEntityBasicInfoDelete(existing, op);
     }
 
     private static void mergeUpdate(EntityBasicInfoPo target, EntityBasicInfoPo src) {

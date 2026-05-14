@@ -1,6 +1,7 @@
 package com.coretool.param.application.service;
 
 import com.coretool.param.application.support.ImportResultCollector;
+import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.domain.config.effectiveform.EffectiveForm;
 import com.coretool.param.domain.config.effectiveform.service.EffectiveFormDomainService;
 import com.coretool.param.domain.config.effectiveform.repository.EffectiveFormRepository;
@@ -187,6 +188,18 @@ public class EffectiveFormAppService {
      */
     @Transactional
     public void disable(String productId, String effectiveFormId) {
+        disable(productId, effectiveFormId, null);
+    }
+
+    /**
+     * 禁用生效形态字典项（可携带请求侧操作人）。
+     *
+     * @param productId         产品 ID
+     * @param effectiveFormId   生效形态 ID
+     * @param requestOperator   请求中的操作人（可为 {@code null}）
+     */
+    @Transactional
+    public void disable(String productId, String effectiveFormId, String requestOperator) {
         EffectiveForm pre = effectiveFormRepository.findById(effectiveFormId).orElse(null);
         String display =
                 pre == null
@@ -194,7 +207,7 @@ public class EffectiveFormAppService {
                         : StringUtils.defaultIfBlank(pre.getEffectiveFormNameCn(), effectiveFormId);
         EffectiveForm e = ensureDomain().disable(productId, effectiveFormId, LocalDateTime.now());
         effectiveFormRepository.update(e);
-        String opD = StringUtils.defaultIfBlank(e.getUpdaterId(), "system");
+        String opD = RequestOperatorIds.operationLogOperator(requestOperator, e.getUpdaterId());
         operationLogAppService.logDictRowDelete(
                 new OperationLogAppService.LogDictRowDeleteInput(
                         OperationLogAppService.BIZ_TABLE_ENTITY_EFFECTIVE_FORM_DICT,

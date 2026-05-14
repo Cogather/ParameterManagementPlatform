@@ -1,6 +1,7 @@
 package com.coretool.param.application.service;
 
 import com.coretool.param.application.support.ImportResultCollector;
+import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.domain.config.effectivemode.EffectiveMode;
 import com.coretool.param.domain.config.effectivemode.service.EffectiveModeDomainService;
 import com.coretool.param.domain.config.effectivemode.repository.EffectiveModeRepository;
@@ -187,6 +188,18 @@ public class EffectiveModeAppService {
      */
     @Transactional
     public void disable(String productId, String effectiveModeId) {
+        disable(productId, effectiveModeId, null);
+    }
+
+    /**
+     * 禁用生效方式字典项（可携带请求侧操作人）。
+     *
+     * @param productId         产品 ID
+     * @param effectiveModeId   生效方式 ID
+     * @param requestOperator   请求中的操作人（可为 {@code null}）
+     */
+    @Transactional
+    public void disable(String productId, String effectiveModeId, String requestOperator) {
         EffectiveMode pre = effectiveModeRepository.findById(effectiveModeId).orElse(null);
         String display =
                 pre == null
@@ -194,7 +207,7 @@ public class EffectiveModeAppService {
                         : StringUtils.defaultIfBlank(pre.getEffectiveModeNameCn(), effectiveModeId);
         EffectiveMode e = ensureDomain().disable(productId, effectiveModeId, LocalDateTime.now());
         effectiveModeRepository.update(e);
-        String opD = StringUtils.defaultIfBlank(e.getUpdaterId(), "system");
+        String opD = RequestOperatorIds.operationLogOperator(requestOperator, e.getUpdaterId());
         operationLogAppService.logDictRowDelete(
                 new OperationLogAppService.LogDictRowDeleteInput(
                         OperationLogAppService.BIZ_TABLE_ENTITY_EFFECTIVE_MODE_DICT,

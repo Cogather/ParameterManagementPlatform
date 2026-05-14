@@ -1,6 +1,7 @@
 package com.coretool.param.application.service;
 
 import com.coretool.param.application.support.ImportResultCollector;
+import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.domain.command.Command;
 import com.coretool.param.domain.command.service.CommandDomainService;
 import com.coretool.param.domain.command.repository.CommandRepository;
@@ -183,11 +184,23 @@ public class CommandAppService {
      */
     @Transactional
     public void disable(String productId, String commandId) {
+        disable(productId, commandId, null);
+    }
+
+    /**
+     * 禁用命令（可携带请求侧操作人，用于操作日志）。
+     *
+     * @param productId        产品 ID
+     * @param commandId        命令 ID
+     * @param requestOperator  请求中的操作人（可为 {@code null}，与前端 query 一致）
+     */
+    @Transactional
+    public void disable(String productId, String commandId, String requestOperator) {
         Command pre = commandRepository.findById(commandId).orElse(null);
         String displayName = pre == null ? "" : pre.getCommandName();
         Command existing = domainService.disable(productId, commandId, LocalDateTime.now());
         commandRepository.update(existing);
-        String op = StringUtils.defaultIfBlank(existing.getUpdaterId(), "system");
+        String op = RequestOperatorIds.operationLogOperator(requestOperator, existing.getUpdaterId());
         operationLogAppService.logCommandDelete(productId, commandId, displayName, op);
     }
 

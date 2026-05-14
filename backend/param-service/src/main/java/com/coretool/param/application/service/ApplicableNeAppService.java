@@ -1,6 +1,7 @@
 package com.coretool.param.application.service;
 
 import com.coretool.param.application.support.ImportResultCollector;
+import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.domain.config.ne.ApplicableNe;
 import com.coretool.param.domain.config.ne.service.ApplicableNeDomainService;
 import com.coretool.param.domain.config.ne.repository.ApplicableNeRepository;
@@ -197,11 +198,23 @@ public class ApplicableNeAppService {
      */
     @Transactional
     public void disable(String productId, String neTypeId) {
+        disable(productId, neTypeId, null);
+    }
+
+    /**
+     * 禁用适用网元字典项（可携带请求侧操作人）。
+     *
+     * @param productId       产品 ID
+     * @param neTypeId        网元类型 ID
+     * @param requestOperator 请求中的操作人（可为 {@code null}）
+     */
+    @Transactional
+    public void disable(String productId, String neTypeId, String requestOperator) {
         ApplicableNe pre = applicableNeRepository.findByNeTypeId(neTypeId).orElse(null);
         String display = pre == null ? neTypeId : StringUtils.defaultIfBlank(pre.getNeTypeNameCn(), neTypeId);
         ApplicableNe existing = ensureDomain().disable(productId, neTypeId, LocalDateTime.now());
         applicableNeRepository.update(existing);
-        String opD = StringUtils.defaultIfBlank(existing.getUpdaterId(), "system");
+        String opD = RequestOperatorIds.operationLogOperator(requestOperator, existing.getUpdaterId());
         operationLogAppService.logDictRowDelete(
                 new OperationLogAppService.LogDictRowDeleteInput(
                         OperationLogAppService.BIZ_TABLE_ENTITY_APPLICABLE_NE_DICT,

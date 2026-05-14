@@ -1,6 +1,7 @@
 package com.coretool.param.ui.controller;
 
 import com.coretool.param.application.service.CommandAppService;
+import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.infrastructure.persistence.entity.EntityCommandMappingPo;
 import com.coretool.param.infrastructure.util.ExcelHelper;
 import com.coretool.param.ui.response.BatchImportResult;
@@ -100,13 +101,19 @@ public class CommandController {
      *
      * @param productId 产品 ID
      * @param commandId 命令 ID
+     * @param updaterId 操作人（可选 query）
+     * @param creatorId 操作人（可选 query）
      * @return 操作结果
      */
     @Operation(summary = "禁用命令")
     @DeleteMapping(value = "/{commandId}", produces = "application/json; charset=utf-8")
     public ResponseObject<Void> disable(
-            @PathVariable("productId") String productId, @PathVariable("commandId") String commandId) {
-        commandAppService.disable(productId, commandId);
+            @PathVariable("productId") String productId,
+            @PathVariable("commandId") String commandId,
+            @RequestParam(value = "updaterId", required = false) String updaterId,
+            @RequestParam(value = "creatorId", required = false) String creatorId) {
+        commandAppService.disable(
+                productId, commandId, RequestOperatorIds.firstNonBlank(updaterId, creatorId));
         return new ResponseObject<Void>().success("已禁用");
     }
 

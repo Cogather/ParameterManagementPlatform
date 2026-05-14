@@ -1,6 +1,7 @@
 package com.coretool.param.application.service;
 
 import com.coretool.param.application.support.ImportResultCollector;
+import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.domain.config.version.ProductVersion;
 import com.coretool.param.domain.config.version.repository.ProductVersionRepository;
 import com.coretool.param.domain.support.IdGenerator;
@@ -211,6 +212,19 @@ public class VersionFeatureAppService {
      */
     @Transactional
     public void disable(String productId, String versionId, String featureId) {
+        disable(productId, versionId, featureId, null);
+    }
+
+    /**
+     * 禁用版本特性（可携带请求侧操作人）。
+     *
+     * @param productId       产品 ID
+     * @param versionId       版本 ID
+     * @param featureId       特性 ID
+     * @param requestOperator 请求中的操作人（可为 {@code null}）
+     */
+    @Transactional
+    public void disable(String productId, String versionId, String featureId, String requestOperator) {
         VersionFeature pre = featureRepository.findByFeatureId(featureId).orElse(null);
         String display =
                 pre == null
@@ -218,7 +232,7 @@ public class VersionFeatureAppService {
                         : StringUtils.defaultIfBlank(pre.getFeatureNameCn(), featureId);
         VersionFeature e = ensureDomain().disable(productId, versionId, featureId, LocalDateTime.now());
         featureRepository.update(e);
-        String opD = StringUtils.defaultIfBlank(e.getUpdaterId(), "system");
+        String opD = RequestOperatorIds.operationLogOperator(requestOperator, e.getUpdaterId());
         operationLogAppService.logDictRowDelete(
                 new OperationLogAppService.LogDictRowDeleteInput(
                         OperationLogAppService.BIZ_TABLE_VERSION_FEATURE_DICT,

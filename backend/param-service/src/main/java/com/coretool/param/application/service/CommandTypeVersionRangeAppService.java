@@ -1,6 +1,7 @@
 package com.coretool.param.application.service;
 
 import com.coretool.param.application.support.ImportResultCollector;
+import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.domain.command.CommandTypeVersionRange;
 import com.coretool.param.domain.command.service.CommandTypeDefinitionDomainService;
 import com.coretool.param.domain.command.service.CommandTypeVersionRangeDomainService;
@@ -178,11 +179,23 @@ public class CommandTypeVersionRangeAppService {
      */
     @Transactional
     public void disable(String productId, String rangeId) {
+        disable(productId, rangeId, null);
+    }
+
+    /**
+     * 禁用版本区段（可携带请求侧操作人）。
+     *
+     * @param productId       产品 ID
+     * @param rangeId         区段 ID
+     * @param requestOperator 请求中的操作人（可为 {@code null}）
+     */
+    @Transactional
+    public void disable(String productId, String rangeId, String requestOperator) {
         CommandTypeVersionRange pre = rangeRepository.findById(rangeId).orElse(null);
         String label = pre == null ? rangeId : StringUtils.defaultIfBlank(pre.getRangeDescription(), rangeId);
         var disabled = domainService.disable(productId, rangeId, LocalDateTime.now());
         rangeRepository.update(disabled);
-        String op = StringUtils.defaultIfBlank(disabled.getUpdaterId(), "system");
+        String op = RequestOperatorIds.operationLogOperator(requestOperator, disabled.getUpdaterId());
         operationLogAppService.logRangeDelete(productId, rangeId, label, op);
     }
 

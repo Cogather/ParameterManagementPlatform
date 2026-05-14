@@ -1,6 +1,7 @@
 package com.coretool.param.application.service;
 
 import com.coretool.param.application.support.ImportResultCollector;
+import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.domain.config.nf.NfConfigEntry;
 import com.coretool.param.domain.config.nf.service.NfConfigDomainService;
 import com.coretool.param.domain.config.nf.repository.NfConfigRepository;
@@ -182,11 +183,23 @@ public class NfConfigAppService {
      */
     @Transactional
     public void disable(String productId, String nfConfigId) {
+        disable(productId, nfConfigId, null);
+    }
+
+    /**
+     * 禁用 NF 配置字典项（可携带请求侧操作人）。
+     *
+     * @param productId       产品 ID
+     * @param nfConfigId      配置 ID
+     * @param requestOperator 请求中的操作人（可为 {@code null}）
+     */
+    @Transactional
+    public void disable(String productId, String nfConfigId, String requestOperator) {
         NfConfigEntry pre = nfConfigRepository.findById(nfConfigId).orElse(null);
         String display = pre == null ? nfConfigId : StringUtils.defaultIfBlank(pre.getNfConfigNameCn(), nfConfigId);
         NfConfigEntry existing = ensureDomain().disable(productId, nfConfigId, LocalDateTime.now());
         nfConfigRepository.update(existing);
-        String opD = StringUtils.defaultIfBlank(existing.getUpdaterId(), "system");
+        String opD = RequestOperatorIds.operationLogOperator(requestOperator, existing.getUpdaterId());
         operationLogAppService.logDictRowDelete(
                 new OperationLogAppService.LogDictRowDeleteInput(
                         OperationLogAppService.BIZ_TABLE_ENTITY_NF_CONFIG_DICT,

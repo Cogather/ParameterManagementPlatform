@@ -40,7 +40,12 @@
           <el-table-column label="责任人" min-width="220">
             <template #default="{ row }">
               <template v-if="editingId === row.productFormId">
-                <user-select v-model="editDraft.ownerList" :maxlength="255" placeholder="英文逗号分隔" />
+                <user-select
+                  :model-value="editDraft.ownerList ?? ''"
+                  :maxlength="255"
+                  placeholder="英文逗号分隔"
+                  @update:model-value="(v) => (editDraft.ownerList = v)"
+                />
               </template>
               <span v-else>{{ row.ownerList || '—' }}</span>
             </template>
@@ -220,7 +225,6 @@ async function saveEdit() {
       productForm: editDraft.value.productForm,
       productSoftParamType: editDraft.value.productSoftParamType,
       ownerList: editDraft.value.ownerList,
-      updaterId: 'web',
     })
     ElMessage.success('已保存')
     cancelEdit()
@@ -266,8 +270,6 @@ async function submitAdd() {
       productForm: addForm.productForm.trim(),
       productSoftParamType: addForm.productSoftParamType,
       ownerList: addForm.ownerList.trim(),
-      creatorId: 'web',
-      updaterId: 'web',
     })
     ElMessage.success('已新增')
     addVisible.value = false

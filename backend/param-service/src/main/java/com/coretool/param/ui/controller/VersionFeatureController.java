@@ -1,6 +1,7 @@
 package com.coretool.param.ui.controller;
 
 import com.coretool.param.application.service.VersionFeatureAppService;
+import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.infrastructure.persistence.entity.VersionFeatureDictPo;
 import com.coretool.param.infrastructure.util.ExcelHelper;
 import com.coretool.param.ui.response.BatchImportResult;
@@ -102,14 +103,19 @@ public class VersionFeatureController {
      * @param productId 产品 ID
      * @param versionId 版本 ID
      * @param featureId 特性 ID
+     * @param updaterId 操作人（可选 query）
+     * @param creatorId 操作人（可选 query）
      * @return 操作结果
      */
     @DeleteMapping(value = "/{featureId}", produces = "application/json; charset=utf-8")
     public ResponseObject<Void> disable(
             @PathVariable("productId") String productId,
             @PathVariable("versionId") String versionId,
-            @PathVariable("featureId") String featureId) {
-        versionFeatureAppService.disable(productId, versionId, featureId);
+            @PathVariable("featureId") String featureId,
+            @RequestParam(value = "updaterId", required = false) String updaterId,
+            @RequestParam(value = "creatorId", required = false) String creatorId) {
+        versionFeatureAppService.disable(
+                productId, versionId, featureId, RequestOperatorIds.firstNonBlank(updaterId, creatorId));
         return new ResponseObject<Void>().success("已禁用");
     }
 

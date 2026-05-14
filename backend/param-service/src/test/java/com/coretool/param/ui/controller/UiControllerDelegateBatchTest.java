@@ -135,8 +135,8 @@ class UiControllerDelegateBatchTest {
         PageResponse<EntityVersionInfoPo> page = new PageResponse<>();
         when(versionAppService.page("p", q)).thenReturn(page);
         assertThat(c.page("p", q).getData()).isSameAs(page);
-        c.disable("p", "v1");
-        verify(versionAppService).disable("p", "v1");
+        c.disable("p", "v1", null, null);
+        verify(versionAppService).disable("p", "v1", null);
     }
 
     @Test

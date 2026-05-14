@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.coretool.param.application.support.ImportResultCollector;
 import com.coretool.param.application.support.ParameterDefaults;
+import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.domain.config.keyword.repository.ChangeSourceKeywordRepository;
 import com.coretool.param.domain.exception.BlacklistViolationException;
 import com.coretool.param.domain.exception.DomainRuleException;
@@ -367,9 +368,22 @@ public class ParameterAppService {
      */
     @Transactional
     public void delete(String productId, String versionId, Integer parameterId) {
+        delete(productId, versionId, parameterId, null);
+    }
+
+    /**
+     * 删除参数（版本维度，可携带请求侧操作人）。
+     *
+     * @param productId       产品 ID
+     * @param versionId       版本 ID
+     * @param parameterId     参数 ID
+     * @param requestOperator 请求中的操作人（可为 {@code null}）
+     */
+    @Transactional
+    public void delete(String productId, String versionId, Integer parameterId, String requestOperator) {
         SystemParameterPo existing = requireParameter(productId, versionId, parameterId);
         ParameterAssembler.toDomain(existing).assertWritable();
-        String opD = StringUtils.defaultIfBlank(existing.getUpdaterId(), "system");
+        String opD = RequestOperatorIds.operationLogOperator(requestOperator, existing.getUpdaterId());
         operationLogAppService.logSystemParameterDelete(existing, opD);
         deleteDescriptionsByParameter(parameterId);
         systemParameterMapper.deleteById(parameterId);
