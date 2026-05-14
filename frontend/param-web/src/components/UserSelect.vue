@@ -27,7 +27,13 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { searchUserSuggestions, type UserSuggestItem } from '../api/user-suggest'
+import { searchUserSuggestions } from '../api/user-suggest'
+
+/** 与 GET /detail 返回列表项一致，须含 value、label 供 el-option 使用 */
+interface SuggestionRow {
+  value: string
+  label: string
+}
 
 const props = withDefaults(
   defineProps<{
@@ -55,7 +61,7 @@ const emit = defineEmits<{
 }>()
 
 const loading = ref(false)
-const suggestionList = ref<UserSuggestItem[]>([])
+const suggestionList = ref<SuggestionRow[]>([])
 
 function parseOwnerList(raw: string): string[] {
   return (raw || '')
@@ -83,8 +89,8 @@ function capByMaxLength(ids: string[], maxLen: number): string[] {
 
 const selectedIds = computed(() => parseOwnerList(props.modelValue))
 
-const mergedOptions = computed((): UserSuggestItem[] => {
-  const map = new Map<string, UserSuggestItem>()
+const mergedOptions = computed((): SuggestionRow[] => {
+  const map = new Map<string, SuggestionRow>()
   for (const o of suggestionList.value) {
     map.set(o.value, o)
   }
@@ -99,7 +105,8 @@ const mergedOptions = computed((): UserSuggestItem[] => {
 async function onRemoteQuery(query: string): Promise<void> {
   loading.value = true
   try {
-    suggestionList.value = await searchUserSuggestions(query.trim())
+    const data = await searchUserSuggestions(query.trim())
+    suggestionList.value = Array.isArray(data) ? (data as SuggestionRow[]) : []
   } catch {
     suggestionList.value = []
   } finally {
