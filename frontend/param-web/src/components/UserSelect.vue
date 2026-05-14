@@ -5,8 +5,6 @@
     multiple
     filterable
     remote
-    allow-create
-    default-first-option
     :reserve-keyword="false"
     :remote-method="onRemoteQuery"
     :loading="loading"
@@ -29,15 +27,46 @@
 import { computed, ref } from 'vue'
 import { searchUserSuggestions } from '../api/user-suggest'
 
-/** 与 GET /user/detail 返回列表项一致，须含 value、label 供 el-option 使用 */
+/** el-option 使用：value 存 name，label 展示「name dept」 */
 interface SuggestionRow {
   value: string
   label: string
 }
 
+function formatPersonLabel(name: string, dept: string): string {
+  const n = name.trim()
+  const d = dept.trim()
+  if (n && d) {
+    return `${n} ${d}`
+  }
+  return n || d
+}
+
+function mapUserDetailToOptions(data: unknown): SuggestionRow[] {
+  if (!Array.isArray(data)) {
+    return []
+  }
+  const out: SuggestionRow[] = []
+  const seen = new Set<string>()
+  for (const item of data) {
+    if (!item || typeof item !== 'object') {
+      continue
+    }
+    const rec = item as Record<string, unknown>
+    const name = String(rec.name ?? '').trim()
+    if (!name || seen.has(name)) {
+      continue
+    }
+    seen.add(name)
+    const dept = String(rec.dept ?? '')
+    out.push({ value: name, label: formatPersonLabel(name, dept) })
+  }
+  return out
+}
+
 const props = withDefaults(
   defineProps<{
-    /** 与后端一致：英文逗号分隔的工号/账号串 */
+    /** 与后端一致：英文逗号分隔的责任人 name 串 */
     modelValue: string
     placeholder?: string
     /** 拼接后整体最大长度（与后端字段长度对齐，超出会截断尾部责任人） */
@@ -48,7 +77,7 @@ const props = withDefaults(
     multipleLimit?: number
   }>(),
   {
-    placeholder: '搜索或选择责任人，可多选；支持回车自定义工号',
+    placeholder: '请搜索后从列表中选择责任人，可多选',
     maxlength: 255,
     disabled: false,
     clearable: true,
@@ -106,7 +135,7 @@ async function onRemoteQuery(query: string): Promise<void> {
   loading.value = true
   try {
     const data = await searchUserSuggestions(query.trim())
-    suggestionList.value = Array.isArray(data) ? (data as SuggestionRow[]) : []
+    suggestionList.value = mapUserDetailToOptions(data)
   } catch {
     suggestionList.value = []
   } finally {
