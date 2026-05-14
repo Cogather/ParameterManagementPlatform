@@ -8,8 +8,8 @@
     :update-url="(id) => `/products/${encodeURIComponent(productId)}/versions/${encodeURIComponent(id)}`"
     :delete-url="(id) => `/products/${encodeURIComponent(productId)}/versions/${encodeURIComponent(id)}`"
     :import-url="`/products/${encodeURIComponent(productId)}/versions/imports`"
-    :template-url="`/api/v1/products/${encodeURIComponent(productId)}/versions/import-templates`"
-    :export-url="`/api/v1/products/${encodeURIComponent(productId)}/versions/exports?page=1&size=5000`"
+    :template-url="resolveParamApiUrl(`/products/${encodeURIComponent(productId)}/versions/import-templates`)"
+    :export-url="resolveParamApiUrl(`/products/${encodeURIComponent(productId)}/versions/exports?page=1&size=5000`)"
     id-field="versionId"
     status-key="versionStatus"
     :default-form="defaultForm"
@@ -47,8 +47,10 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{ productId: string }>()
+import { resolveParamApiUrl } from '../../../api/api-config'
 import DictCrudTable from '../components/DictCrudTable.vue'
+
+const props = defineProps<{ productId: string }>()
 
 /** 与 entity_version_info.version_type 枚举一致（中文入库） */
 const versionTypeOptions = ['在研', '补丁'] as const

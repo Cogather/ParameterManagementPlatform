@@ -8,8 +8,8 @@
     :update-url="(id) => `/products/${encodeURIComponent(productId)}/change-source-keywords/${encodeURIComponent(id)}`"
     :delete-url="(id) => `/products/${encodeURIComponent(productId)}/change-source-keywords/${encodeURIComponent(id)}`"
     :import-url="`/products/${encodeURIComponent(productId)}/change-source-keywords/imports`"
-    :template-url="`/api/v1/products/${encodeURIComponent(productId)}/change-source-keywords/import-templates`"
-    :export-url="`/api/v1/products/${encodeURIComponent(productId)}/change-source-keywords/exports?page=1&size=5000`"
+    :template-url="resolveParamApiUrl(`/products/${encodeURIComponent(productId)}/change-source-keywords/import-templates`)"
+    :export-url="resolveParamApiUrl(`/products/${encodeURIComponent(productId)}/change-source-keywords/exports?page=1&size=5000`)"
     id-field="keywordId"
     status-key="keywordStatus"
     :default-form="defaultForm"
@@ -32,8 +32,10 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{ productId: string }>()
+import { resolveParamApiUrl } from '../../../api/api-config'
 import DictCrudTable from '../components/DictCrudTable.vue'
+
+const props = defineProps<{ productId: string }>()
 
 const columns = [{ prop: 'keywordRegex', label: '正则', minWidth: 220, showOverflowTooltip: true }]
 

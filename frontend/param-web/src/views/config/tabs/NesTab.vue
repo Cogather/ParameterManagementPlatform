@@ -8,8 +8,8 @@
     :update-url="(id) => `/products/${encodeURIComponent(productId)}/applicable-nes/${encodeURIComponent(id)}`"
     :delete-url="(id) => `/products/${encodeURIComponent(productId)}/applicable-nes/${encodeURIComponent(id)}`"
     :import-url="`/products/${encodeURIComponent(productId)}/applicable-nes/imports`"
-    :template-url="`/api/v1/products/${encodeURIComponent(productId)}/applicable-nes/import-templates`"
-    :export-url="`/api/v1/products/${encodeURIComponent(productId)}/applicable-nes/exports?page=1&size=5000`"
+    :template-url="resolveParamApiUrl(`/products/${encodeURIComponent(productId)}/applicable-nes/import-templates`)"
+    :export-url="resolveParamApiUrl(`/products/${encodeURIComponent(productId)}/applicable-nes/exports?page=1&size=5000`)"
     id-field="neTypeId"
     status-key="neTypeStatus"
     :default-form="defaultForm"
@@ -35,6 +35,7 @@
 </template>
 
 <script setup lang="ts">
+import { resolveParamApiUrl } from '../../../api/api-config'
 import DictCrudTable from '../components/DictCrudTable.vue'
 
 defineProps<{ productId: string }>()

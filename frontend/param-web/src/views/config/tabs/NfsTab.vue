@@ -8,8 +8,8 @@
     :update-url="(id) => `/products/${encodeURIComponent(productId)}/nf-configs/${encodeURIComponent(id)}`"
     :delete-url="(id) => `/products/${encodeURIComponent(productId)}/nf-configs/${encodeURIComponent(id)}`"
     :import-url="`/products/${encodeURIComponent(productId)}/nf-configs/imports`"
-    :template-url="`/api/v1/products/${encodeURIComponent(productId)}/nf-configs/import-templates`"
-    :export-url="`/api/v1/products/${encodeURIComponent(productId)}/nf-configs/exports?page=1&size=5000`"
+    :template-url="resolveParamApiUrl(`/products/${encodeURIComponent(productId)}/nf-configs/import-templates`)"
+    :export-url="resolveParamApiUrl(`/products/${encodeURIComponent(productId)}/nf-configs/exports?page=1&size=5000`)"
     id-field="nfConfigId"
     status-key="nfConfigStatus"
     :default-form="defaultForm"
@@ -32,6 +32,7 @@
 </template>
 
 <script setup lang="ts">
+import { resolveParamApiUrl } from '../../../api/api-config'
 import DictCrudTable from '../components/DictCrudTable.vue'
 
 defineProps<{ productId: string }>()

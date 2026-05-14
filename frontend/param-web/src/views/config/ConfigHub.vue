@@ -23,7 +23,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { fetchConfigVersions } from '../../api/config'
 import { useProductContextStore } from '../../stores/productContext'
 import { useVersionContextStore } from '../../stores/versionContext'
 import VersionsTab from './tabs/VersionsTab.vue'
@@ -42,6 +43,10 @@ const versionContext = useVersionContextStore()
 /** 与 Header 产品选择器共用 Pinia，须响应式订阅，否则仅首屏有值、切换产品后按钮仍禁用 */
 const selectedProductId = computed(() => productContext.ownedProductId || '')
 const activeTab = ref('versions')
+
+onMounted(() => {
+  void fetchConfigVersions().catch(() => undefined)
+})
 
 // 产品选择器已提升到全局 Header；本页仅消费上下文
 versionContext.setVersionId('')

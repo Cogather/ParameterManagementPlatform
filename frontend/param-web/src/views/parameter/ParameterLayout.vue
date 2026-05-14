@@ -663,6 +663,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { resolveParamApiUrl } from '../../api/api-config'
 import { request } from '../../api/http'
 import {
   fetchApplicableNes,
@@ -702,7 +703,6 @@ import OperationLogDrawer from '../../components/OperationLogDrawer.vue'
 
 const TYPE_NEW_PARAMETER_CN = '新增参数'
 const BASELINE = '已基线'
-const apiV1Prefix = '/api/v1'
 const typeOptions = ['BIT', 'BYTE', 'DWORD', 'STRING', 'INT']
 
 const typeBits = ref<Record<string, number>>({})
@@ -866,7 +866,9 @@ const changeTypeSelectOptions = computed(() => {
 
 const templateUrl = computed(() => {
   if (!selectedProductId.value || !versionId.value || isAllVersionsView.value) return ''
-  return `${apiV1Prefix}/products/${encodeURIComponent(selectedProductId.value)}/versions/${encodeURIComponent(versionId.value)}/parameters/import-templates`
+  return resolveParamApiUrl(
+    `/products/${encodeURIComponent(selectedProductId.value)}/versions/${encodeURIComponent(versionId.value)}/parameters/import-templates`,
+  )
 })
 
 const exportUrl = computed(() => {
@@ -875,7 +877,9 @@ const exportUrl = computed(() => {
   if (filterCommandId.value) q.set('commandId', filterCommandId.value)
   if (filterCommandType.value) q.set('commandTypeId', filterCommandType.value)
   const qs = q.toString()
-  return `${apiV1Prefix}/products/${encodeURIComponent(selectedProductId.value)}/versions/${encodeURIComponent(versionId.value)}/parameters/export${qs ? `?${qs}` : ''}`
+  return resolveParamApiUrl(
+    `/products/${encodeURIComponent(selectedProductId.value)}/versions/${encodeURIComponent(versionId.value)}/parameters/export${qs ? `?${qs}` : ''}`,
+  )
 })
 
 const bitCheckboxRange = computed(() => {

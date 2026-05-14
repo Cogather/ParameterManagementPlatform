@@ -8,8 +8,8 @@
     :update-url="(id) => `/products/${encodeURIComponent(productId)}/effective-modes/${encodeURIComponent(id)}`"
     :delete-url="(id) => `/products/${encodeURIComponent(productId)}/effective-modes/${encodeURIComponent(id)}`"
     :import-url="`/products/${encodeURIComponent(productId)}/effective-modes/imports`"
-    :template-url="`/api/v1/products/${encodeURIComponent(productId)}/effective-modes/import-templates`"
-    :export-url="`/api/v1/products/${encodeURIComponent(productId)}/effective-modes/exports?page=1&size=5000`"
+    :template-url="resolveParamApiUrl(`/products/${encodeURIComponent(productId)}/effective-modes/import-templates`)"
+    :export-url="resolveParamApiUrl(`/products/${encodeURIComponent(productId)}/effective-modes/exports?page=1&size=5000`)"
     id-field="effectiveModeId"
     status-key="effectiveModeStatus"
     :default-form="defaultForm"
@@ -35,6 +35,7 @@
 </template>
 
 <script setup lang="ts">
+import { resolveParamApiUrl } from '../../../api/api-config'
 import DictCrudTable from '../components/DictCrudTable.vue'
 
 defineProps<{ productId: string }>()

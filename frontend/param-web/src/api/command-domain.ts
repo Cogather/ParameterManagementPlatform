@@ -1,3 +1,4 @@
+import { resolveParamApiUrl } from './api-config'
 import { request } from './http'
 import type { BatchImportResult, PageResponse } from '../types/api-response'
 
@@ -64,13 +65,13 @@ export async function importCommands(productId: string, file: File): Promise<Bat
 }
 
 export function commandsTemplateUrl(productId: string) {
-  return `/api/v1${commandsBase(productId)}/import-templates`
+  return resolveParamApiUrl(`${commandsBase(productId)}/import-templates`)
 }
 
 export function commandsExportUrl(productId: string, params: { keyword?: string }) {
   const q = new URLSearchParams()
   if (params.keyword) q.set('keyword', params.keyword)
-  return `/api/v1${commandsBase(productId)}/export?${q.toString()}`
+  return resolveParamApiUrl(`${commandsBase(productId)}/export?${q.toString()}`)
 }
 
 export async function fetchCommandTypes(
@@ -115,13 +116,13 @@ export async function importCommandTypes(productId: string, file: File): Promise
 }
 
 export function commandTypesTemplateUrl(productId: string) {
-  return `/api/v1${typesBase(productId)}/import-templates`
+  return resolveParamApiUrl(`${typesBase(productId)}/import-templates`)
 }
 
 export function commandTypesExportUrl(productId: string, params: { keyword?: string }) {
   const q = new URLSearchParams()
   if (params.keyword) q.set('keyword', params.keyword)
-  return `/api/v1${typesBase(productId)}/export?${q.toString()}`
+  return resolveParamApiUrl(`${typesBase(productId)}/export?${q.toString()}`)
 }
 
 export async function fetchRanges(
@@ -173,13 +174,13 @@ export async function importRanges(productId: string, file: File): Promise<Batch
 }
 
 export function rangesTemplateUrl(productId: string) {
-  return `/api/v1${rangesBase(productId)}/import-templates`
+  return resolveParamApiUrl(`${rangesBase(productId)}/import-templates`)
 }
 
 export function rangesExportUrl(productId: string, params: { ownedTypeId?: string }) {
   const q = new URLSearchParams()
   if (params.ownedTypeId) q.set('ownedTypeId', params.ownedTypeId)
   const qs = q.toString()
-  return `/api/v1${rangesBase(productId)}/export${qs ? `?${qs}` : ''}`
+  return resolveParamApiUrl(`${rangesBase(productId)}/export${qs ? `?${qs}` : ''}`)
 }
 

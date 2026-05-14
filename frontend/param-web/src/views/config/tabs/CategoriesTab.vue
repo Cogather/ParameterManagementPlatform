@@ -8,8 +8,8 @@
     :update-url="(id) => `/products/${encodeURIComponent(productId)}/business-categories/${encodeURIComponent(id)}`"
     :delete-url="(id) => `/products/${encodeURIComponent(productId)}/business-categories/${encodeURIComponent(id)}`"
     :import-url="`/products/${encodeURIComponent(productId)}/business-categories/imports`"
-    :template-url="`/api/v1/products/${encodeURIComponent(productId)}/business-categories/import-templates`"
-    :export-url="`/api/v1/products/${encodeURIComponent(productId)}/business-categories/exports?page=1&size=5000`"
+    :template-url="resolveParamApiUrl(`/products/${encodeURIComponent(productId)}/business-categories/import-templates`)"
+    :export-url="resolveParamApiUrl(`/products/${encodeURIComponent(productId)}/business-categories/exports?page=1&size=5000`)"
     id-field="categoryId"
     status-key="categoryStatus"
     :default-form="defaultForm"
@@ -38,8 +38,10 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{ productId: string }>()
+import { resolveParamApiUrl } from '../../../api/api-config'
 import DictCrudTable from '../components/DictCrudTable.vue'
+
+const props = defineProps<{ productId: string }>()
 
 const columns = [
   { prop: 'categoryNameCn', label: '名称（中）', minWidth: 160 },

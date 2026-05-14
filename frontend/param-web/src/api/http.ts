@@ -1,5 +1,6 @@
-import axios from 'axios'
+import axios, { type AxiosInstance } from 'axios'
 import type { ResponseObject } from '../types/api-response'
+import { getApiBaseUrl, type ApiServiceKey } from './api-config'
 
 function formatUserMessage(raw: unknown, fallback: string) {
   const s = typeof raw === 'string' ? raw.trim() : ''
@@ -9,28 +10,43 @@ function formatUserMessage(raw: unknown, fallback: string) {
   return base.replace(/^[A-Z0-9_]+[：:]\s*/u, '')
 }
 
+function attachResponseInterceptor(client: AxiosInstance) {
+  client.interceptors.response.use(
+    (resp) => {
+      const data = resp.data as unknown as Partial<ResponseObject<unknown>>
+      if (data && typeof data === 'object' && data.success === false) {
+        const message = formatUserMessage(data.message, '业务处理失败')
+        return Promise.reject(Object.assign(new Error(message), { response: resp }))
+      }
+      return resp
+    },
+    (error) => {
+      const message = formatUserMessage(error?.response?.data?.message || error?.message, '网络请求失败')
+      return Promise.reject(Object.assign(new Error(message), { cause: error }))
+    },
+  )
+}
+
 export const http = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
+  baseURL: getApiBaseUrl('param'),
   timeout: 30_000,
 })
+attachResponseInterceptor(http)
 
-http.interceptors.response.use(
-  (resp) => {
-    const data = resp.data as unknown as Partial<ResponseObject<unknown>>
-    if (data && typeof data === 'object' && data.success === false) {
-      const message = formatUserMessage(data.message, '业务处理失败')
-      return Promise.reject(Object.assign(new Error(message), { response: resp }))
-    }
-    return resp
-  },
-  (error) => {
-    const message = formatUserMessage(error?.response?.data?.message || error?.message, '网络请求失败')
-    return Promise.reject(Object.assign(new Error(message), { cause: error }))
-  },
-)
+/**
+ * 为其他后端创建独立 axios 实例（与 param 相同的业务错误解析）。
+ * 需先在 `api-config` 的 `API_SERVICE_REGISTRY` 登记服务键与对应 `VITE_*` 变量。
+ */
+export function createServiceHttp(service: ApiServiceKey): AxiosInstance {
+  const client = axios.create({
+    baseURL: getApiBaseUrl(service),
+    timeout: 30_000,
+  })
+  attachResponseInterceptor(client)
+  return client
+}
 
 export async function request<T>(config: Parameters<typeof http.request>[0]) {
   const resp = await http.request<ResponseObject<T>>(config)
   return resp.data
 }
-
