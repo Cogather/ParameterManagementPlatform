@@ -19,7 +19,9 @@
     @update:model-value="onSelectChange"
     @visible-change="onVisibleChange"
   >
-    <el-option v-for="o in mergedOptions" :key="o.value" :label="o.label" :value="o.value" />
+    <el-option v-for="o in mergedOptions" :key="o.value" :label="o.label" :value="o.value">
+      <span>{{ o.dropdownLabel }}</span>
+    </el-option>
   </el-select>
 </template>
 
@@ -27,10 +29,11 @@
 import { computed, ref } from 'vue'
 import { searchUserSuggestions } from '../api/user-suggest'
 
-/** el-option 使用：value 存 name，label 展示「name dept」 */
+/** el-option：value 存 name；label 仅 name（选中标签）；dropdownLabel 为下拉行「name dept」 */
 interface SuggestionRow {
   value: string
   label: string
+  dropdownLabel: string
 }
 
 function formatPersonLabel(name: string, dept: string): string {
@@ -59,7 +62,11 @@ function mapUserDetailToOptions(data: unknown): SuggestionRow[] {
     }
     seen.add(name)
     const dept = String(rec.dept ?? '')
-    out.push({ value: name, label: formatPersonLabel(name, dept) })
+    out.push({
+      value: name,
+      label: name,
+      dropdownLabel: formatPersonLabel(name, dept),
+    })
   }
   return out
 }
@@ -125,7 +132,7 @@ const mergedOptions = computed((): SuggestionRow[] => {
   }
   for (const id of selectedIds.value) {
     if (!map.has(id)) {
-      map.set(id, { value: id, label: id })
+      map.set(id, { value: id, label: id, dropdownLabel: id })
     }
   }
   return [...map.values()]
