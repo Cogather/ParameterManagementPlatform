@@ -6,7 +6,7 @@ import { request } from './http'
  * 返回体为接口 `data` 原文，不做结构转换。
  */
 export async function searchUserSuggestions(keyword: string): Promise<unknown> {
-  const origin = import.meta.env.VITE_PARAM_GATEWAY_ORIGIN；
+  const origin = import.meta.env.VITE_PARAM_GATEWAY_ORIGIN;
   const ro = await request<unknown>({
     ...(origin ? { baseURL: origin } : {}),
     url: '/user/detail',
