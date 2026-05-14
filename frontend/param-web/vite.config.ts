@@ -15,6 +15,10 @@ export default defineConfig(({ mode }) => {
           target: proxyTarget,
           changeOrigin: true,
         },
+        '/user': {
+          target: proxyTarget,
+          changeOrigin: true,
+        },
         '/core_config/v2': {
           target: configProxyTarget,
           changeOrigin: true,

@@ -29,7 +29,7 @@
 import { computed, ref } from 'vue'
 import { searchUserSuggestions } from '../api/user-suggest'
 
-/** 与 GET /detail 返回列表项一致，须含 value、label 供 el-option 使用 */
+/** 与 GET /user/detail 返回列表项一致，须含 value、label 供 el-option 使用 */
 interface SuggestionRow {
   value: string
   label: string
