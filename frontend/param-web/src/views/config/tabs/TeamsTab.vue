@@ -28,13 +28,14 @@
         <el-input v-model="form.teamDescription" type="textarea" :rows="2" />
       </el-form-item>
       <el-form-item label="责任人" required>
-        <el-input v-model="form.ownerList" placeholder="多人可用逗号分隔" />
+        <user-select v-model="form.ownerList" placeholder="多人可用逗号分隔" />
       </el-form-item>
     </template>
   </dict-crud-table>
 </template>
 
 <script setup lang="ts">
+import UserSelect from '../../../components/UserSelect.vue'
 import { resolveParamApiUrl } from '../../../api/api-config'
 import DictCrudTable from '../components/DictCrudTable.vue'
 

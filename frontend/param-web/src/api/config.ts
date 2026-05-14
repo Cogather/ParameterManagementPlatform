@@ -4,7 +4,7 @@ import { createServiceHttp } from './http'
 const httpConfig = createServiceHttp('config')
 
 /**
- * 拉取配置中心版本列表（GET /config/versions，无查询参数）。
+ * 拉取配置中心版本列表（GET /core_config/v2/versions，无查询参数）。
  * 响应体形状由配置网关约定；此处保持宽松类型。
  */
 export async function fetchConfigVersions(): Promise<unknown> {

@@ -40,7 +40,7 @@
           <el-table-column label="责任人" min-width="220">
             <template #default="{ row }">
               <template v-if="editingId === row.productFormId">
-                <el-input v-model="editDraft.ownerList" maxlength="255" placeholder="英文逗号分隔" clearable />
+                <user-select v-model="editDraft.ownerList" :maxlength="255" placeholder="英文逗号分隔" />
               </template>
               <span v-else>{{ row.ownerList || '—' }}</span>
             </template>
@@ -83,7 +83,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="责任人" prop="ownerList">
-          <el-input v-model="addForm.ownerList" maxlength="255" placeholder="英文逗号分隔" show-word-limit clearable />
+          <user-select v-model="addForm.ownerList" :maxlength="255" placeholder="英文逗号分隔" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -107,6 +107,7 @@ import {
   updateEntityBasicInfo,
 } from '../../api/entityBasicInfo'
 import OperationLogDrawer from '../../components/OperationLogDrawer.vue'
+import UserSelect from '../../components/UserSelect.vue'
 
 const reloadProductOptions = inject<() => Promise<void>>('reloadProductOptions')
 const productStore = useProductContextStore()

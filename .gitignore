@@ -1,0 +1,5 @@
+.cursor/
+backend/param-service/target/
+frontend/param-web/node_modules/
+frontend/param-web/dist/
+backend/scripts/

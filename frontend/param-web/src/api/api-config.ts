@@ -28,7 +28,7 @@ export const API_SERVICE_REGISTRY = {
   },
   config: {
     envKeys: ['VITE_CONFIG_API_BASE_URL'],
-    defaultBase: '/config',
+    defaultBase: '/core_config/v2',
   },
 } as const
 

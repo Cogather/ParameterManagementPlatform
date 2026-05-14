@@ -64,7 +64,7 @@
             <el-input v-model="form.commandName" placeholder="命令名称（同产品内唯一）" />
           </el-form-item>
           <el-form-item label="责任人(英文逗号)" required>
-            <el-input v-model="form.ownerList" placeholder="a,b,c" />
+            <user-select v-model="form.ownerList" placeholder="a,b,c" />
           </el-form-item>
         </el-form>
         <template #footer>
@@ -78,6 +78,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import UserSelect from '../../../components/UserSelect.vue'
 import DictToolbar from '../../config/DictToolbar.vue'
 import OperationLogDrawer from '../../../components/OperationLogDrawer.vue'
 import { createCommand, disableCommand, fetchCommands, importCommands, updateCommand, commandsExportUrl, commandsTemplateUrl } from '../../../api/command-domain'
