@@ -565,7 +565,7 @@
                       </el-form-item>
                     </el-col>
                   </el-row>
-                  <el-form-item label="parameter_range">
+                  <el-form-item label="参数范围">
                     <el-input v-model="formMain.parameterRange" />
                   </el-form-item>
                 </el-collapse-item>
