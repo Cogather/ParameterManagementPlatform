@@ -188,13 +188,13 @@
         >
           <div v-loading="masterdataLoading" class="param-form-scroll">
             <el-form label-width="150px" @submit.prevent>
-              <el-divider content-position="left">1. 基础标识（spec-03 §3.1）</el-divider>
+              <el-divider content-position="left">1. 基础标识</el-divider>
               <el-row :gutter="16">
                 <el-col :span="12">
                   <el-form-item required>
                     <template #label>
                       <span>参数名称（中）</span>
-                      <el-tooltip content="语义为「参数标题」；示例文案见 function.md §2.3.4" placement="top">
+                      <el-tooltip content="即界面上展示的参数标题（中文）。" placement="top">
                         <span class="label-tip">ⓘ</span>
                       </el-tooltip>
                     </template>
@@ -284,7 +284,7 @@
                   <el-form-item>
                     <template #label>
                       <span>取值说明（中）</span>
-                      <el-tooltip content="示例见 function.md §2.3.4" placement="top">
+                      <el-tooltip content="说明该参数可取值的含义与约束。" placement="top">
                         <span class="label-tip">ⓘ</span>
                       </el-tooltip>
                     </template>
@@ -302,7 +302,7 @@
                   <el-form-item>
                     <template #label>
                       <span>应用场景（中）</span>
-                      <el-tooltip content="示例见 function.md §2.3.4" placement="top">
+                      <el-tooltip content="描述该参数的典型使用场景。" placement="top">
                         <span class="label-tip">ⓘ</span>
                       </el-tooltip>
                     </template>
@@ -474,7 +474,7 @@
                   <el-form-item>
                     <template #label>
                       <span>参数含义（中）</span>
-                      <el-tooltip content="示例见 function.md §2.3.4" placement="top">
+                      <el-tooltip content="阐述参数的业务语义与定义。" placement="top">
                         <span class="label-tip">ⓘ</span>
                       </el-tooltip>
                     </template>
@@ -492,7 +492,7 @@
                   <el-form-item>
                     <template #label>
                       <span>影响说明（中）</span>
-                      <el-tooltip content="示例见 function.md §2.3.4" placement="top">
+                      <el-tooltip content="说明修改或配置该参数可能带来的影响。" placement="top">
                         <span class="label-tip">ⓘ</span>
                       </el-tooltip>
                     </template>
@@ -510,7 +510,7 @@
                   <el-form-item>
                     <template #label>
                       <span>配置举例（中）</span>
-                      <el-tooltip content="示例见 function.md §2.3.4" placement="top">
+                      <el-tooltip content="可填写典型配置示例，便于实施参考。" placement="top">
                         <span class="label-tip">ⓘ</span>
                       </el-tooltip>
                     </template>
@@ -540,7 +540,7 @@
               </el-form-item>
 
               <el-collapse>
-                <el-collapse-item title="扩展字段（enumeration / unit / range，§3.1 预留）" name="ext">
+                <el-collapse-item title="扩展字段（枚举 / 单位 / 范围，可选）" name="ext">
                   <el-row :gutter="16">
                     <el-col :span="12">
                       <el-form-item label="枚举值（中）">
@@ -1653,7 +1653,7 @@ watch(
   () => productContext.ownedProductId,
   async (owned) => {
     const pid = (owned || '').trim()
-    /** 宿主 Query / Pinia 注入的版本；不在此处立即清空 versionContext，避免 App 侧 URL 同步抢先去掉 versionId（spec-04） */
+    /** 宿主 Query / Pinia 注入的版本；不在此处立即清空 versionContext，避免 App 侧 URL 同步抢先去掉 versionId */
     const restoreVid = (versionContext.versionId || '').trim()
     versionId.value = ''
     versionOptions.value = []

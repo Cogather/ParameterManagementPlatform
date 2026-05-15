@@ -3,7 +3,7 @@ import type { PageResponse } from '../types/api-response'
 
 const enc = encodeURIComponent
 
-/** 配置主数据分页拉取（spec-02），用于参数表单下拉 */
+/** 配置主数据分页拉取，用于参数表单下拉 */
 export async function fetchApplicableNes(productId: string, size = 500): Promise<Record<string, unknown>[]> {
   const ro = await request<PageResponse<Record<string, unknown>>>({
     url: `/products/${enc(productId)}/applicable-nes`,

@@ -63,7 +63,7 @@ export async function fetchParameterPageByProduct(
     page: number
     size: number
     commandId?: string
-    /** spec-03 §4：与 commandTypeCode 同义（类型前缀，与 parameter_code 一致）；优先传此字段 */
+    /** 与 commandTypeCode 同义（类型前缀，与 parameter_code 一致）；优先传此字段 */
     commandTypeId?: string
     /** @deprecated 兼容旧 Query，与 commandTypeId 二选一 */
     commandTypeCode?: string
@@ -85,7 +85,7 @@ export async function fetchBaselineCountByProduct(productId: string): Promise<Ba
   return ro.data
 }
 
-/** spec-03 §3.6：变更类型字典 */
+/** 变更类型字典 */
 export async function fetchConfigChangeTypes(): Promise<ConfigChangeTypeItem[]> {
   const ro = await request<ConfigChangeTypeItem[]>({
     url: '/config-change-types',
@@ -94,7 +94,7 @@ export async function fetchConfigChangeTypes(): Promise<ConfigChangeTypeItem[]> 
   return ro.data
 }
 
-/** spec-03 §1.2：命令 → 类型树（按产品） */
+/** 命令 → 类型树（按产品） */
 export async function fetchParameterCommandTree(productId: string): Promise<ParameterCommandTreeNode[]> {
   const ro = await request<ParameterCommandTreeNode[]>({
     url: `/products/${enc(productId)}/parameter-command-tree`,

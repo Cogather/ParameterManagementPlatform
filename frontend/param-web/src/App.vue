@@ -1,6 +1,6 @@
 <template>
   <el-container direction="vertical" :class="['app-shell', { 'app-shell--embedded': isEmbedded }]">
-    <!-- spec-04 §3.1：单行上下文工具条（分段控件 + 产品），避免与宿主顶栏/页签叠套 -->
+    <!-- 单行上下文：模块切换 + 产品选择，嵌入宿主时可与宿主顶栏对齐 -->
     <div class="app-context-bar" role="navigation" aria-label="参数管理子模块">
       <div class="app-context-bar__modules">
         <el-radio-group :model-value="menuActive" @change="onModuleChange">
@@ -38,7 +38,7 @@ const router = useRouter()
 const productContext = useProductContextStore()
 const versionContext = useVersionContextStore()
 
-/** spec-04：宿主嵌入时可通过 Query 注入 productId / versionId / productName（与 Pinia 对齐） */
+/** 嵌入宿主时可通过 URL Query 注入 productId、versionId、productName（与 Pinia 一致） */
 function parseHostQuery(q: typeof route.query) {
   const pick = (k: string) => {
     const v = q[k]

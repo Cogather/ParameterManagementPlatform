@@ -1,5 +1,5 @@
 /**
- * spec-04 §3.1：嵌入宿主时的紧凑模式（宿主无需改代码）
+ * 嵌入宿主时的紧凑布局（由环境或 URL Query 判定）
  */
 export function isEmbeddedFromQuery(query: Record<string, unknown>): boolean {
   const e = query.embed
