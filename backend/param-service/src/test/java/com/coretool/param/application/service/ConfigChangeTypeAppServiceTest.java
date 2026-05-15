@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2012-2026. All rights reserved.
+ */
+
 package com.coretool.param.application.service;
 
 import com.coretool.param.infrastructure.persistence.entity.ConfigChangeTypePo;

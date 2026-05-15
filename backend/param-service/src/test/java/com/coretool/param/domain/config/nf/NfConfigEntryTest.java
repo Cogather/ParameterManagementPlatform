@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2012-2026. All rights reserved.
+ */
+
 package com.coretool.param.domain.config.nf;
 
 import com.coretool.param.domain.exception.DomainRuleException;
