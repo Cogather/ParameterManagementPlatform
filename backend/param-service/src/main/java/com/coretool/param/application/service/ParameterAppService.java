@@ -461,7 +461,7 @@ public class ParameterAppService {
                     po.getParameterId() == null ? null : changeByPid.get(po.getParameterId());
             rows.add(buildParameterExportRow(po, commandNameById, ch));
         }
-        return ExcelHelper.buildWorkbook("parameters", ExcelInstructions.ID_CREATE_UPDATE_HINT, headers, rows);
+        return ExcelHelper.buildWorkbook("parameters", ExcelInstructions.PARAMETER_IMPORT_EXPORT_HINT, headers, rows);
     }
 
     /**
@@ -471,11 +471,12 @@ public class ParameterAppService {
      */
     public byte[] importTemplate() {
         List<String> headers = parameterExportHeadersZh();
-        return ExcelHelper.buildTemplate("parameters", ExcelInstructions.ID_CREATE_UPDATE_HINT, headers);
+        return ExcelHelper.buildTemplate("parameters", ExcelInstructions.PARAMETER_IMPORT_EXPORT_HINT, headers);
     }
 
     private static List<String> parameterExportHeadersZh() {
         return List.of(
+                "参数ID",
                 "参数名称（中）",
                 "参数名称（英）",
                 "归属命令",
@@ -513,7 +514,7 @@ public class ParameterAppService {
                 "枚举值（英）",
                 "参数单位（中）",
                 "参数单位（英）",
-                "parameter_range",
+                "参数范围",
                 "数据状态",
                 "变更类型",
                 "变更原因（中）",
@@ -556,7 +557,9 @@ public class ParameterAppService {
             SystemParameterPo po, Map<String, String> commandNameById, ConfigChangeDescriptionPo ch) {
         String cmdId = StringUtils.defaultString(po.getOwnedCommandId()).trim();
         String cmdName = cmdId.isEmpty() ? "" : StringUtils.defaultIfBlank(commandNameById.get(cmdId), cmdId);
+        String idCell = po.getParameterId() == null ? "" : String.valueOf(po.getParameterId());
         return List.of(
+                idCell,
                 nz(po.getParameterNameCn()),
                 nz(po.getParameterNameEn()),
                 cmdName,
@@ -996,7 +999,7 @@ public class ParameterAppService {
                     findColumn(hi, "enumeration_values_en", "枚举值（英）"),
                     findColumn(hi, "parameter_unit_cn", "参数单位（中）"),
                     findColumn(hi, "parameter_unit_en", "参数单位（英）"),
-                    findColumn(hi, "parameter_range", "parameter_range"),
+                    findColumn(hi, "parameter_range", "参数范围"),
                     findColumn(hi, "data_status", "数据状态"),
                     findColumn(hi, "变更类型"),
                     findColumn(hi, "变更原因（中）"),

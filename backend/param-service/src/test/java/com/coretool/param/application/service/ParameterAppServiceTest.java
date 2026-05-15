@@ -75,6 +75,7 @@ class ParameterAppServiceTest {
     private static byte[] validImportWorkbookBytesWithHeaderOnly() {
         List<String> headers =
                 List.of(
+                        "parameter_id",
                         "parameter_code",
                         "parameter_name_cn",
                         "parameter_name_en",
@@ -177,6 +178,7 @@ class ParameterAppServiceTest {
         // Build a sheet with all required headers using the "code keys" accepted by ImportSheetColumns.fromHeader.
         List<String> headers =
                 List.of(
+                        "parameter_id",
                         "parameter_code",
                         "parameter_name_cn",
                         "parameter_name_en",
