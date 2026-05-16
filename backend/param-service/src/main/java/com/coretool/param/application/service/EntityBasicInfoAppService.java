@@ -118,6 +118,7 @@ public class EntityBasicInfoAppService {
      *
      * @param input 请求体
      * @return 新增后的数据
+     * @throws DomainRuleException 请求体为空或校验失败时
      */
     @Transactional
     public EntityBasicInfoPo create(EntityBasicInfoPo input) {
@@ -151,6 +152,7 @@ public class EntityBasicInfoAppService {
      * @param productFormId 产品形态 ID
      * @param input         请求体
      * @return 更新后的数据
+     * @throws DomainRuleException 主键为空、记录不存在或校验失败时
      */
     @Transactional
     public EntityBasicInfoPo update(String productFormId, EntityBasicInfoPo input) {
@@ -184,6 +186,7 @@ public class EntityBasicInfoAppService {
      * 删除产品主数据（软删除）。
      *
      * @param productFormId 产品形态 ID
+     * @throws DomainRuleException 主键为空或记录不存在时
      */
     @Transactional
     public void softDelete(String productFormId) {
@@ -195,6 +198,7 @@ public class EntityBasicInfoAppService {
      *
      * @param productFormId   产品形态 ID
      * @param requestOperator 请求中的操作人（可为 {@code null}）
+     * @throws DomainRuleException 主键为空或记录不存在时
      */
     @Transactional
     public void softDelete(String productFormId, String requestOperator) {
@@ -213,6 +217,12 @@ public class EntityBasicInfoAppService {
         operationLogAppService.logEntityBasicInfoDelete(existing, op);
     }
 
+    /**
+     * 将源对象中非空可编辑字段合并到目标对象。
+     *
+     * @param target 更新目标
+     * @param src    请求来源
+     */
     private static void mergeUpdate(EntityBasicInfoPo target, EntityBasicInfoPo src) {
         if (StringUtils.isNotBlank(src.getEntityName())) {
             target.setEntityName(src.getEntityName().trim());
@@ -237,6 +247,13 @@ public class EntityBasicInfoAppService {
         }
     }
 
+    /**
+     * 保存前校验产品主数据必填项与枚举取值。
+     *
+     * @param p        待校验实体
+     * @param creating 是否为新建
+     * @throws DomainRuleException 校验不通过时
+     */
     private static void validateForSave(EntityBasicInfoPo p, boolean creating) {
         if (StringUtils.isBlank(p.getEntityName())) {
             throw new DomainRuleException("产品名称不能为空");
@@ -264,6 +281,13 @@ public class EntityBasicInfoAppService {
         }
     }
 
+    /**
+     * 获取非空的产品形态名称。
+     *
+     * @param p 实体
+     * @return 去空白后的产品形态名称
+     * @throws DomainRuleException 产品形态名称为空时
+     */
     private static String requireProductFormName(EntityBasicInfoPo p) {
         if (p == null || StringUtils.isBlank(p.getProductForm())) {
             throw new DomainRuleException("产品形态名称不能为空");
@@ -273,6 +297,11 @@ public class EntityBasicInfoAppService {
 
     /**
      * 同一 {@code product_id} 下启用态的「产品形态」名称唯一（忽略大小写、首尾空白）。
+     *
+     * @param productId             产品 ID
+     * @param productForm           产品形态名称
+     * @param excludeProductFormId  更新时排除的形态 ID（新建传 null）
+     * @throws DomainRuleException 名称重复时
      */
     private void assertProductFormNameUnique(
             String productId, String productForm, String excludeProductFormId) {
@@ -300,6 +329,11 @@ public class EntityBasicInfoAppService {
         }
     }
 
+    /**
+     * 列表/分页查询的启用态范围条件。
+     *
+     * @return 查询条件包装器
+     */
     private LambdaQueryWrapper<EntityBasicInfoPo> pageScope() {
         return Wrappers.<EntityBasicInfoPo>lambdaQuery()
                 .and(

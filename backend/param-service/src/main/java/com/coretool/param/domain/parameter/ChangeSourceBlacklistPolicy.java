@@ -19,9 +19,11 @@ public final class ChangeSourceBlacklistPolicy {
     private ChangeSourceBlacklistPolicy() {}
 
     /**
+     * 检测变更来源是否命中任一启用黑名单正则。
+     *
      * @param rawChangeSource 未 trim 的原文
-     * @param enabledRegexes 当前产品 keyword_status=1 的 keyword_regex 列表
-     * @return 命中的正则原文
+     * @param enabledRegexes  当前产品 keyword_status=1 的 keyword_regex 列表
+     * @return 命中的正则原文；未命中或原文为空时为空
      */
     public static Optional<String> findFirstViolation(String rawChangeSource, List<String> enabledRegexes) {
         if (rawChangeSource == null || rawChangeSource.isBlank()) {

@@ -81,6 +81,9 @@ public class ParameterAppService {
 
     /**
      * 构造应用服务（依赖分两组 {@link ParameterAppPersistenceMappers} / {@link ParameterAppCollaboration}，单组形参 ≤5）。
+     *
+     * @param persistence    持久化 Mapper 分组
+     * @param collaboration  协作依赖（仓储、操作日志等）
      */
     public ParameterAppService(
             ParameterAppPersistenceMappers persistence, ParameterAppCollaboration collaboration) {
@@ -112,10 +115,8 @@ public class ParameterAppService {
         return n != null ? n : 0L;
     }
 
-    /** 全产品维度：不区分版本（版本下拉 ALL 视图） */
-
     /**
-     * 统计产品维度已基线参数数量（不区分版本）。
+     * 统计产品维度已基线参数数量（不区分版本，版本下拉 ALL 视图）。
      *
      * @param productId 产品 ID
      * @return 基线数量
@@ -164,15 +165,19 @@ public class ParameterAppService {
         return resp;
     }
 
-    /** 与 spec-03 一致：优先 commandTypeId，否则 commandTypeCode；可全空。 */
+    /**
+     * 解析类型筛选键：与 spec-03 一致，优先 commandTypeId，否则 commandTypeCode；可全空。
+     *
+     * @param commandTypeId   类型 ID（可选）
+     * @param commandTypeCode 类型编码（可选）
+     * @return 类型键，二者均为空时返回 null
+     */
     private static String optionalCommandTypeKey(String commandTypeId, String commandTypeCode) {
         if (StringUtils.isNotBlank(commandTypeId)) {
             return commandTypeId.trim();
         }
         return commandTypeCode == null ? null : commandTypeCode.trim();
     }
-
-    /** 全产品分页：同一产品下全部版本的参数 */
 
     /**
      * 分页查询产品维度参数列表（同一产品下全部版本）。
@@ -215,6 +220,7 @@ public class ParameterAppService {
      * @param commandId       命令 ID
      * @param commandTypeCode 类型键（必填）
      * @return 可用序号数据
+     * @throws DomainRuleException commandTypeCode 为空时
      */
     public AvailableSequencesData availableSequences(
             String productId, String versionId, String commandId, String commandTypeCode) {
@@ -250,6 +256,7 @@ public class ParameterAppService {
      * @param commandTypeCode 类型键（必填）
      * @param sequence        参数序号
      * @return 可用 BIT 数据
+     * @throws DomainRuleException commandTypeCode 为空时
      */
     public AvailableBitsData availableBits(
             String productId,
@@ -279,6 +286,8 @@ public class ParameterAppService {
      * @param versionId 版本 ID
      * @param request   保存请求（包含 main 与 changeDescriptions）
      * @return 新增后的参数
+     * @throws DomainRuleException       请求体或业务校验失败时
+     * @throws BlacklistViolationException 变更来源命中黑名单时
      */
     @Transactional
     public SystemParameterPo create(String productId, String versionId, ParameterSaveRequest request) {
@@ -320,6 +329,8 @@ public class ParameterAppService {
      * @param parameterId  参数 ID
      * @param request      保存请求（包含 main 与 changeDescriptions）
      * @return 更新后的参数
+     * @throws DomainRuleException       请求体、基线锁定或业务校验失败时
+     * @throws BlacklistViolationException 变更来源命中黑名单时
      */
     @Transactional
     public SystemParameterPo update(
@@ -371,6 +382,7 @@ public class ParameterAppService {
      * @param productId   产品 ID
      * @param versionId   版本 ID
      * @param parameterId 参数 ID
+     * @throws DomainRuleException 参数不存在、不在当前版本或已基线锁定时
      */
     @Transactional
     public void delete(String productId, String versionId, Integer parameterId) {
@@ -384,6 +396,7 @@ public class ParameterAppService {
      * @param versionId       版本 ID
      * @param parameterId     参数 ID
      * @param requestOperator 请求中的操作人（可为 {@code null}）
+     * @throws DomainRuleException 参数不存在、不在当前版本或已基线锁定时
      */
     @Transactional
     public void delete(String productId, String versionId, Integer parameterId, String requestOperator) {
@@ -401,6 +414,7 @@ public class ParameterAppService {
      * @param productId   产品 ID
      * @param versionId   版本 ID
      * @param parameterId 参数 ID
+     * @throws DomainRuleException 参数不存在或不在当前版本下时
      */
     @Transactional
     public void baseline(String productId, String versionId, Integer parameterId) {
@@ -420,6 +434,7 @@ public class ParameterAppService {
      * @param productId   产品 ID
      * @param versionId   版本 ID
      * @param parameterId 参数 ID
+     * @throws DomainRuleException 参数不存在或不在当前版本下时
      */
     @Transactional
     public void unbaseline(String productId, String versionId, Integer parameterId) {
@@ -480,6 +495,11 @@ public class ParameterAppService {
         return ExcelHelper.buildTemplate("parameters", ExcelInstructions.PARAMETER_IMPORT_EXPORT_HINT, headers);
     }
 
+    /**
+     * 参数导出/导入模板的中文表头（与页面列一致）。
+     *
+     * @return 表头列名列表
+     */
     private static List<String> parameterExportHeadersZh() {
         return List.of(
                 "参数ID",
@@ -531,6 +551,13 @@ public class ParameterAppService {
                 "不导出原因");
     }
 
+    /**
+     * 批量解析参数行中的命令 ID 为命令名称。
+     *
+     * @param productId 产品 ID
+     * @param list      参数行
+     * @return commandId → 命令名称
+     */
     private Map<String, String> loadCommandNameMap(String productId, List<SystemParameterPo> list) {
         Set<String> ids = new HashSet<>();
         for (SystemParameterPo p : list) {
@@ -559,6 +586,14 @@ public class ParameterAppService {
         return out;
     }
 
+    /**
+     * 构造单行参数导出单元格。
+     *
+     * @param po              参数主表行
+     * @param commandNameById 命令 ID → 名称
+     * @param ch              首条变更说明（可为 null）
+     * @return 导出列值列表
+     */
     private List<String> buildParameterExportRow(
             SystemParameterPo po, Map<String, String> commandNameById, ConfigChangeDescriptionPo ch) {
         String cmdId = StringUtils.defaultString(po.getOwnedCommandId()).trim();
@@ -616,6 +651,9 @@ public class ParameterAppService {
 
     /**
      * 为导出填充「首条」变更说明：按更新时间倒序取一条。
+     *
+     * @param list 参数行列表
+     * @return parameterId → 变更说明
      */
     private Map<Integer, ConfigChangeDescriptionPo> loadFirstChangeByParameterId(List<SystemParameterPo> list) {
         Map<Integer, ConfigChangeDescriptionPo> out = new HashMap<>();
@@ -648,6 +686,15 @@ public class ParameterAppService {
 
     /**
      * 导入参数：按行落库，汇总成功/失败；与导出表头及新增表单主字段一致（含首条变更说明各列时可同步写入子表）。
+     *
+     * @param productId       产品 ID
+     * @param versionId       版本 ID
+     * @param mode            导入模式：FULL 或 INCREMENTAL
+     * @param commandId       命令 ID（必填）
+     * @param commandTypeCode 类型键（可选，用于缩小全量删除作用域）
+     * @param fileBytes       Excel 文件字节
+     * @return 导入结果
+     * @throws DomainRuleException 文件无内容、表头缺失、mode 非法或 commandId 为空时
      */
     @Transactional
     public BatchImportResult importParameters(
@@ -709,6 +756,13 @@ public class ParameterAppService {
         return c.build(dataRows);
     }
 
+    /**
+     * 按类型键前缀过滤导入全量作用域内的既有参数。
+     *
+     * @param scopeExisting   命令下既有参数
+     * @param commandTypeCode 类型键（空则不过滤）
+     * @return 过滤后的列表
+     */
     private static List<SystemParameterPo> filterScopeByCommandTypePrefix(
             List<SystemParameterPo> scopeExisting, String commandTypeCode) {
         if (StringUtils.isBlank(commandTypeCode)) {
@@ -720,6 +774,11 @@ public class ParameterAppService {
                 .toList();
     }
 
+    /**
+     * 全量导入前删除作用域内既有参数及变更说明。
+     *
+     * @param scopeExisting 待清理参数列表
+     */
     private void purgeFullImportScope(List<SystemParameterPo> scopeExisting) {
         for (SystemParameterPo p : scopeExisting) {
             Integer pid = p.getParameterId();
@@ -733,6 +792,20 @@ public class ParameterAppService {
         }
     }
 
+    /**
+     * 处理导入文件中的一行参数数据。
+     *
+     * @param productId        产品 ID
+     * @param versionId        版本 ID
+     * @param commandId        命令 ID
+     * @param peersForBitCheck 当前命令下用于 BIT 校验的同行参数
+     * @param line             当前行单元格
+     * @param dataRowNumber    Excel 行号（用于结果反馈）
+     * @param cols             列映射
+     * @param colCode          参数编码列索引
+     * @param c                导入结果收集器
+     * @return 更新后的同行参数列表
+     */
     private List<SystemParameterPo> handleImportParameterRow(
             String productId,
             String versionId,
@@ -768,6 +841,20 @@ public class ParameterAppService {
         }
     }
 
+    /**
+     * 根据是否匹配既有参数决定新建或更新导入行。
+     *
+     * @param productId        产品 ID
+     * @param versionId        版本 ID
+     * @param commandId        命令 ID
+     * @param peersForBitCheck 同行参数（BIT 校验）
+     * @param line             当前行
+     * @param dataRowNumber    行号
+     * @param cols             列映射
+     * @param code             参数编码
+     * @param c                结果收集器
+     * @return 更新后的同行参数列表
+     */
     private List<SystemParameterPo> applyImportRowWithMatchedDecision(
             String productId,
             String versionId,
@@ -801,6 +888,22 @@ public class ParameterAppService {
                 productId, versionId, commandId, line, dataRowNumber, cols, matched, code, c);
     }
 
+    /**
+     * 导入场景新建参数行。
+     *
+     * @param productId        产品 ID
+     * @param versionId        版本 ID
+     * @param commandId        命令 ID
+     * @param peersForBitCheck 同行参数
+     * @param line             当前行
+     * @param dataRowNumber    行号
+     * @param cols             列映射
+     * @param incoming         从表解析的主表对象
+     * @param c                结果收集器
+     * @return 刷新后的同行参数列表
+     * @throws DomainRuleException       业务校验失败时
+     * @throws BlacklistViolationException 黑名单命中时
+     */
     private List<SystemParameterPo> importParameterRowCreate(
             String productId,
             String versionId,
@@ -832,6 +935,22 @@ public class ParameterAppService {
         return loadParametersForCommand(productId, versionId, commandId);
     }
 
+    /**
+     * 导入场景更新已匹配参数行。
+     *
+     * @param productId     产品 ID
+     * @param versionId     版本 ID
+     * @param commandId     命令 ID
+     * @param line          当前行
+     * @param dataRowNumber 行号
+     * @param cols          列映射
+     * @param matched       匹配到的既有参数
+     * @param code          参数编码
+     * @param c             结果收集器
+     * @return 刷新后的同行参数列表
+     * @throws DomainRuleException       业务校验失败时
+     * @throws BlacklistViolationException 黑名单命中时
+     */
     private List<SystemParameterPo> importParameterRowUpdate(
             String productId,
             String versionId,
@@ -870,6 +989,13 @@ public class ParameterAppService {
         return loadParametersForCommand(productId, versionId, commandId);
     }
 
+    /**
+     * 更新导入时构造 BIT 校验行（排除自身）。
+     *
+     * @param peers    命令下全部参数
+     * @param incoming 待更新参数
+     * @return BIT 校验行列表
+     */
     private static List<ParameterSaveInvariant.ParameterRowForBitCheck> bitRowsForUpdateExcludingSelf(
             List<SystemParameterPo> peers, SystemParameterPo incoming) {
         List<ParameterSaveInvariant.ParameterRowForBitCheck> bitRows = new ArrayList<>();
@@ -884,6 +1010,16 @@ public class ParameterAppService {
         return bitRows;
     }
 
+    /**
+     * 导入行若含变更说明列则替换该参数下的变更说明子表。
+     *
+     * @param isNewParameter 是否为新建参数
+     * @param parameterId    参数 ID
+     * @param cols           列映射
+     * @param line           当前行
+     * @param now            写入时间戳
+     * @throws DomainRuleException 变更说明校验失败时
+     */
     private void importReplaceChangeDescriptionIfPresent(
             boolean isNewParameter,
             Integer parameterId,
@@ -906,6 +1042,13 @@ public class ParameterAppService {
         insertChangeDescriptions(parameterId, List.of(d), now);
     }
 
+    /**
+     * 读取并 trim 指定列单元格。
+     *
+     * @param line 行数据
+     * @param col  列索引（负表示空串）
+     * @return 单元格文本
+     */
     private static String trimCell(List<String> line, int col) {
         if (col < 0) {
             return "";
@@ -1056,6 +1199,12 @@ public class ParameterAppService {
             this.colNoExportReason = colNoExportReason;
         }
 
+        /**
+         * 根据表头映射构造列索引。
+         *
+         * @param hi 表头名 → 列索引
+         * @return 列映射对象
+         */
         private static ImportSheetColumns fromHeader(Map<String, Integer> hi) {
             return new ImportSheetColumns(
                     findColumn(hi, "parameter_code", "参数编码"),
@@ -1105,6 +1254,12 @@ public class ParameterAppService {
                     findColumn(hi, "不导出原因", "no_export_reason"));
         }
 
+        /**
+         * 判断当前行是否包含任一变更说明列内容。
+         *
+         * @param line 当前行
+         * @return 是否含变更说明载荷
+         */
         private boolean hasChangePayload(List<String> line) {
             return StringUtils.isNotBlank(trimCell(line, colChType))
                     || StringUtils.isNotBlank(trimCell(line, colChReasonCn))
@@ -1115,6 +1270,17 @@ public class ParameterAppService {
                     || StringUtils.isNotBlank(trimCell(line, colNoExportReason));
         }
 
+        /**
+         * 从导入行填充参数主表字段。
+         *
+         * @param productId     产品 ID
+         * @param versionId     版本 ID
+         * @param commandId     命令 ID
+         * @param parameterCode 参数编码
+         * @param target        待填充主表对象
+         * @param line          当前行
+         * @throws DomainRuleException parameter_sequence 非法时
+         */
         private void applyMainFromLine(
                 String productId,
                 String versionId,
@@ -1177,6 +1343,13 @@ public class ParameterAppService {
         }
     }
 
+    /**
+     * 若列存在且非空则写入字符串字段。
+     *
+     * @param line   行数据
+     * @param col    列索引
+     * @param setter 字段 setter
+     */
     private static void applyOptionalString(List<String> line, int col, Consumer<String> setter) {
         if (col < 0) {
             return;
@@ -1188,6 +1361,13 @@ public class ParameterAppService {
         setter.accept(v);
     }
 
+    /**
+     * 在同行参数中按编码（及 bit_usage）匹配导入目标行。
+     *
+     * @param peers    命令下既有参数
+     * @param incoming 导入解析出的参数
+     * @return 匹配到的参数，无匹配时 null
+     */
     private static SystemParameterPo findImportMatch(List<SystemParameterPo> peers, SystemParameterPo incoming) {
         String code = StringUtils.defaultString(incoming.getParameterCode()).trim();
         if (code.isEmpty()) {
@@ -1214,6 +1394,13 @@ public class ParameterAppService {
         return sameCode.get(0);
     }
 
+    /**
+     * 在表头索引中按候选列名查找列号。
+     *
+     * @param hi    表头索引
+     * @param names 候选列名（按优先级）
+     * @return 列索引，未找到为 -1
+     */
     private static int findColumn(Map<String, Integer> hi, String... names) {
         for (String n : names) {
             Integer ix = hi.get(n);
@@ -1224,6 +1411,13 @@ public class ParameterAppService {
         return -1;
     }
 
+    /**
+     * 读取指定列单元格原文（不 trim）。
+     *
+     * @param line 行数据
+     * @param col  列索引
+     * @return 单元格内容，越界或负索引时为空串
+     */
     private static String cell(List<String> line, int col) {
         if (col < 0 || col >= line.size()) {
             return "";
@@ -1231,10 +1425,23 @@ public class ParameterAppService {
         return line.get(col);
     }
 
+    /**
+     * null 安全转空串。
+     *
+     * @param s 原字符串
+     * @return 非 null 字符串
+     */
     private static String nz(String s) {
         return s == null ? "" : s;
     }
 
+    /**
+     * 校验变更说明类型与必填中英字段。
+     *
+     * @param isCreate      是否为新建参数
+     * @param descriptions  变更说明列表
+     * @throws DomainRuleException 校验不通过时
+     */
     private void validateChangeDescriptions(boolean isCreate, List<ConfigChangeDescriptionPo> descriptions) {
         List<ConfigChangeDescriptionPo> rows = descriptions == null ? List.of() : descriptions;
         List<String> typeNames =
@@ -1256,6 +1463,13 @@ public class ParameterAppService {
         }
     }
 
+    /**
+     * 校验变更来源黑名单；通过时将空值规范为空串。
+     *
+     * @param productId 产品 ID
+     * @param main        参数主表
+     * @throws BlacklistViolationException 命中黑名单时
+     */
     private void validateAndApplyBlacklist(String productId, SystemParameterPo main) {
         String cs = main.getChangeSource();
         if (cs == null || cs.isBlank()) {
@@ -1270,6 +1484,15 @@ public class ParameterAppService {
         }
     }
 
+    /**
+     * 加载指定产品、版本、命令下的全部参数。
+     *
+     * @param productId 产品 ID
+     * @param versionId 版本 ID
+     * @param commandId 命令 ID
+     * @return 参数列表
+     * @throws DomainRuleException commandId 为空时
+     */
     private List<SystemParameterPo> loadParametersForCommand(
             String productId, String versionId, String commandId) {
         if (StringUtils.isBlank(commandId)) {
@@ -1282,6 +1505,12 @@ public class ParameterAppService {
                         .eq(SystemParameterPo::getOwnedCommandId, commandId));
     }
 
+    /**
+     * 将参数主表行转为 BIT 不相交校验行。
+     *
+     * @param list 参数列表
+     * @return BIT 校验行列表
+     */
     private List<ParameterSaveInvariant.ParameterRowForBitCheck> toBitRows(List<SystemParameterPo> list) {
         List<ParameterSaveInvariant.ParameterRowForBitCheck> rows = new ArrayList<>();
         for (SystemParameterPo p : list) {
@@ -1292,6 +1521,13 @@ public class ParameterAppService {
         return rows;
     }
 
+    /**
+     * 批量插入变更说明子表行。
+     *
+     * @param parameterId   参数 ID
+     * @param descriptions  变更说明列表（可为 null）
+     * @param now           写入时间戳
+     */
     private void insertChangeDescriptions(
             Integer parameterId, List<ConfigChangeDescriptionPo> descriptions, LocalDateTime now) {
         if (descriptions == null) {
@@ -1307,12 +1543,26 @@ public class ParameterAppService {
         }
     }
 
+    /**
+     * 按参数 ID 删除全部变更说明。
+     *
+     * @param parameterId 参数 ID
+     */
     private void deleteDescriptionsByParameter(Integer parameterId) {
         configChangeDescriptionMapper.delete(
                 new LambdaQueryWrapper<ConfigChangeDescriptionPo>()
                         .eq(ConfigChangeDescriptionPo::getParameterId, parameterId));
     }
 
+    /**
+     * 加载并校验参数属于指定产品版本。
+     *
+     * @param productId   产品 ID
+     * @param versionId   版本 ID
+     * @param parameterId 参数 ID
+     * @return 参数主表行
+     * @throws DomainRuleException 不存在或不在当前产品版本下时
+     */
     private SystemParameterPo requireParameter(String productId, String versionId, Integer parameterId) {
         SystemParameterPo po = systemParameterMapper.selectById(parameterId);
         if (po == null
@@ -1323,6 +1573,16 @@ public class ParameterAppService {
         return po;
     }
 
+    /**
+     * 解析类型在指定版本下的可用序号区间；无区段定义时返回默认 1～32。
+     *
+     * @param productId 产品 ID
+     * @param versionId 版本 ID
+     * @param commandId 命令 ID
+     * @param typeKey   类型键
+     * @return 长度为 2 的数组：{@code [min, max]}
+     * @throws DomainRuleException 版本不存在时
+     */
     private int[] resolveSequenceRange(
             String productId, String versionId, String commandId, String typeKey) {
         EntityVersionInfoPo ver = entityVersionInfoMapper.selectById(versionId);
@@ -1357,7 +1617,12 @@ public class ParameterAppService {
     }
 
     /**
-     * typeKey 可为 {@code command_type_id}，或与 {@code command_type} 枚举（如 BIT）一致。
+     * 按类型键查找类型定义；typeKey 可为 command_type_id 或 command_type 枚举。
+     *
+     * @param productId 产品 ID
+     * @param commandId 命令 ID
+     * @param typeKey   类型键
+     * @return 类型定义 PO，任一主键为空或未找到时 null
      */
     private CommandTypeDefinitionPo findTypeDefinitionForAllocation(
             String productId, String commandId, String typeKey) {
@@ -1375,7 +1640,14 @@ public class ParameterAppService {
                                                 .eq(CommandTypeDefinitionPo::getCommandType, typeKey.trim())));
     }
 
-    /** 将 command_type_id 或枚举解析为 {@code command_type}，供位宽等规则使用。 */
+    /**
+     * 将 command_type_id 或枚举解析为 {@code command_type}，供位宽等规则使用。
+     *
+     * @param productId 产品 ID
+     * @param commandId 命令 ID
+     * @param typeKey   类型键
+     * @return 类型枚举字符串
+     */
     private String resolveTypeEnumForAllocation(String productId, String commandId, String typeKey) {
         CommandTypeDefinitionPo def = findTypeDefinitionForAllocation(productId, commandId, typeKey);
         if (def != null && StringUtils.isNotBlank(def.getCommandType())) {

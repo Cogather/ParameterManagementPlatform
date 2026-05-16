@@ -60,8 +60,9 @@ public class CommandTypeDefinitionAppService {
     /**
      * 构造函数。
      *
-     * @param repository             类型定义仓储
-     * @param operationLogAppService 操作日志应用服务
+     * @param repository                 类型定义仓储
+     * @param operationLogAppService     操作日志应用服务
+     * @param entityCommandMappingMapper 命令映射 Mapper（导入时解析归属命令）
      */
     public CommandTypeDefinitionAppService(
             CommandTypeDefinitionRepository repository,
@@ -102,6 +103,7 @@ public class CommandTypeDefinitionAppService {
      * @param productId 产品 ID
      * @param input     请求体
      * @return 新增后的数据
+     * @throws DomainRuleException 请求体为空或必填字段缺失时
      */
     @Transactional
     public CommandTypeDefinitionPo create(String productId, CommandTypeDefinitionPo input) {
@@ -183,6 +185,7 @@ public class CommandTypeDefinitionAppService {
      * @param commandTypeId 类型 ID
      * @param input         请求体
      * @return 更新后的数据
+     * @throws DomainRuleException 类型不存在或不属于该产品时
      */
     @Transactional
     public CommandTypeDefinitionPo update(String productId, String commandTypeId, CommandTypeDefinitionPo input) {
@@ -317,6 +320,12 @@ public class CommandTypeDefinitionAppService {
         return ExcelHelper.buildTemplate("类型定义", INSTRUCTION, HEADERS_CN);
     }
 
+    /**
+     * 加载产品下启用命令的名称 → ID 映射（导入解析归属命令用）。
+     *
+     * @param productId 产品 ID
+     * @return 命令名称 → 命令 ID
+     */
     private Map<String, String> loadCommandIdByName(String productId) {
         List<EntityCommandMappingPo> cmds =
                 entityCommandMappingMapper.selectList(
@@ -331,6 +340,13 @@ public class CommandTypeDefinitionAppService {
                         (a, b) -> a));
     }
 
+    /**
+     * 批量解析命令 ID → 命令名称（导出展示用）。
+     *
+     * @param productId  产品 ID
+     * @param commandIds 命令 ID 集合
+     * @return 命令 ID → 名称
+     */
     private Map<String, String> loadCommandNameById(String productId, java.util.Set<String> commandIds) {
         if (commandIds == null || commandIds.isEmpty()) {
             return Map.of();
@@ -348,6 +364,14 @@ public class CommandTypeDefinitionAppService {
                         (a, b) -> a));
     }
 
+    /**
+     * 将 Excel 单元格中的命令名称解析为命令 ID。
+     *
+     * @param commandIdByName 名称 → ID 映射
+     * @param cell            单元格原文
+     * @return 命令 ID，单元格为空时 null
+     * @throws BizException 名称无法解析时
+     */
     private static String resolveCommandId(Map<String, String> commandIdByName, String cell) {
         String v = StringUtils.defaultString(cell).trim();
         if (v.isEmpty()) {
@@ -360,6 +384,14 @@ public class CommandTypeDefinitionAppService {
         return id;
     }
 
+    /**
+     * 按多个候选中文表头读取单元格。
+     *
+     * @param cols      行数据
+     * @param idx       表头索引
+     * @param headerCns 候选表头名
+     * @return 单元格文本（trim），均未命中时空串
+     */
     private static String colAny(List<String> cols, Map<String, Integer> idx, String... headerCns) {
         for (String h : headerCns) {
             if (h == null) {
@@ -380,11 +412,18 @@ public class CommandTypeDefinitionAppService {
      * @param productId     产品 ID
      * @param commandTypeId 类型 ID
      * @return 类型定义领域对象
+     * @throws DomainRuleException 不存在或不属于该产品时
      */
     public CommandTypeDefinition requireOwned(String productId, String commandTypeId) {
         return domainService.requireOwned(productId, commandTypeId);
     }
 
+    /**
+     * 解析可空整数。
+     *
+     * @param s 文本
+     * @return 整数或 null
+     */
     private static Integer parseIntNullable(String s) {
         if (StringUtils.isBlank(s)) {
             return null;
@@ -392,6 +431,13 @@ public class CommandTypeDefinitionAppService {
         return Integer.valueOf(s.trim());
     }
 
+    /**
+     * 解析整数，空白时返回默认值。
+     *
+     * @param s   文本
+     * @param def 默认值
+     * @return 解析结果
+     */
     private static int parseIntDefault(String s, int def) {
         if (StringUtils.isBlank(s)) {
             return def;
@@ -399,6 +445,14 @@ public class CommandTypeDefinitionAppService {
         return Integer.parseInt(s.trim());
     }
 
+    /**
+     * 按中文表头读取单元格。
+     *
+     * @param cols     行数据
+     * @param idx      表头索引
+     * @param headerCn 表头名
+     * @return 单元格文本（trim），未命中时空串
+     */
     private static String col(List<String> cols, Map<String, Integer> idx, String headerCn) {
         Integer i = idx.get(headerCn);
         if (i == null || i < 0 || i >= cols.size()) {
@@ -407,6 +461,11 @@ public class CommandTypeDefinitionAppService {
         return cols.get(i) == null ? "" : cols.get(i).trim();
     }
 
+    /**
+     * 构造空导入结果。
+     *
+     * @return 零行导入结果
+     */
     private static BatchImportResult emptyResult() {
         BatchImportResult empty = new BatchImportResult();
         empty.setTotalRows(0);

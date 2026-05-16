@@ -17,7 +17,14 @@ public class ListPageWithKeywordQuery {
     private int size = 20;
     private String keyword;
 
-    /** 供导出/全量拉取等场景从分页参数构造。 */
+    /**
+     * 供导出/全量拉取等场景从分页参数构造查询对象。
+     *
+     * @param page    页码（从 1 开始）
+     * @param size    页大小
+     * @param keyword 关键字（可为 null）
+     * @return 查询对象
+     */
     public static ListPageWithKeywordQuery of(int page, int size, String keyword) {
         ListPageWithKeywordQuery q = new ListPageWithKeywordQuery();
         q.setPage(page);

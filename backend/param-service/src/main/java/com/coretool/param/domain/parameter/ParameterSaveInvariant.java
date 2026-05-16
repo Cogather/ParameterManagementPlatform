@@ -27,6 +27,7 @@ public final class ParameterSaveInvariant {
      *
      * @param parameterCode     参数编码
      * @param parameterSequence 参数序号
+     * @throws DomainRuleException 序号与编码不一致时
      */
     public static void assertSequenceMatchesCode(String parameterCode, Integer parameterSequence) {
         ParameterCode.Parsed parsed = ParameterCode.parse(parameterCode);
@@ -37,6 +38,10 @@ public final class ParameterSaveInvariant {
 
     /**
      * 同一版本+命令下，按「类型+序号」分组校验 BIT 集合两两不相交；{@code excludeParameterId} 更新时排除自身。
+     *
+     * @param excludeParameterId 更新时排除的参数 ID（新建传 null）
+     * @param rows               参与校验的参数行
+     * @throws DomainRuleException BIT 占用冲突时
      */
     public static void assertBitDisjointAcrossVersionCommand(
             Integer excludeParameterId,
@@ -62,9 +67,11 @@ public final class ParameterSaveInvariant {
     }
 
     /**
-     * bit_usage 为空时按“全占用”处理：
-     * - 解决历史数据/请求未填 bit_usage 导致的冲突校验绕过
-     * - 满足“同序号不允许重复，除非 BIT 位不同”的业务期望
+     * bit_usage 为空时按“全占用”处理，避免未填 bit_usage 绕过冲突校验。
+     *
+     * @param bitUsageComma   bit_usage 逗号分隔串（可为空）
+     * @param maxBitInclusive 类型允许的最大 BIT 位（含）
+     * @return 解析后的 BIT 下标集合
      */
     private static Set<Integer> parseOrAssumeFullUsage(String bitUsageComma, int maxBitInclusive) {
         Set<Integer> parsed = BitUsage.parseIndexes(bitUsageComma, maxBitInclusive);

@@ -187,9 +187,12 @@ public class ParameterController {
     /**
      * 导入参数（文件上传）。
      *
-     * @param productId 产品 ID
-     * @param versionId 版本 ID
-     * @param file      上传文件
+     * @param productId        产品 ID
+     * @param versionId        版本 ID
+     * @param mode             导入模式：FULL 或 INCREMENTAL
+     * @param commandId        命令 ID
+     * @param commandTypeCode  类型编码（可选）
+     * @param file             上传文件
      * @return 导入结果
      * @throws Exception 文件解析或导入异常
      */

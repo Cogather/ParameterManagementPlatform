@@ -638,7 +638,9 @@ public class OperationLogAppService {
         this.operationLogMapper = operationLogMapper;
     }
 
-    /** 导入用：同一次请求内多行写审计共享同一 log_batch_id（详设 §1.7.4.1 可选） */
+    /**
+     * 开始导入批次：同一次请求内多行写审计共享同一 log_batch_id（详设 §1.7.4.1 可选）。
+     */
     public void beginImportBatch() {
         IMPORT_LOG_BATCH.set(IdGenerator.operationLogId());
     }

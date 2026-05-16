@@ -126,7 +126,6 @@ public class Command {
      * 按补丁更新可编辑字段与审计时间；补丁为 null 时不做任何修改。
      *
      * @param patch 可编辑字段补丁（可为 null）
-     * @return 无
      */
     public void applyEditablePatch(EditablePatch patch) {
         if (patch == null) {
@@ -151,7 +150,6 @@ public class Command {
      * 将命令置为禁用状态。
      *
      * @param now 当前时间
-     * @return 无
      */
     public void disable(LocalDateTime now) {
         this.commandStatus = 0;
