@@ -8,6 +8,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * 主数据 ID 生成器单元测试。
+ *
+ * @since 2026-04-28
+ */
 class IdGeneratorTest {
 
     @Test

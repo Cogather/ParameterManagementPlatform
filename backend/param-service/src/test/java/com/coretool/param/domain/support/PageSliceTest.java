@@ -10,6 +10,11 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * 领域分页切片单元测试。
+ *
+ * @since 2026-04-28
+ */
 class PageSliceTest {
 
     @Test

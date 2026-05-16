@@ -27,6 +27,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.lenient;
 
+/**
+ * NF 配置字典应用服务单元测试。
+ *
+ * @since 2026-04-28
+ */
 @ExtendWith(MockitoExtension.class)
 class NfConfigAppServiceTest {
 

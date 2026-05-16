@@ -22,6 +22,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+/**
+ * NF 配置领域服务单元测试。
+ *
+ * @since 2026-04-28
+ */
 @ExtendWith(MockitoExtension.class)
 class NfConfigDomainServiceTest {
 

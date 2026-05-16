@@ -10,6 +10,11 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * 参数序号与 BIT 分配领域服务单元测试。
+ *
+ * @since 2026-04-28
+ */
 class ParameterAllocationDomainServiceTest {
 
     private static final String CID = "cmd-1";

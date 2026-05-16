@@ -15,6 +15,11 @@ import org.springframework.http.ResponseEntity;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+/**
+ * 全局异常处理黑名单契约单元测试。
+ *
+ * @since 2026-04-28
+ */
 class ExceptionHandlerBlacklistContractTest {
 
     @Test

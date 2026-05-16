@@ -8,6 +8,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * 领域规则异常单元测试。
+ *
+ * @since 2026-04-28
+ */
 class DomainRuleExceptionTest {
 
     @Test

@@ -14,6 +14,11 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * 变更说明类型规则单元测试。
+ *
+ * @since 2026-04-28
+ */
 class ChangeDescriptionTypeRulesTest {
 
     private static final Set<String> ALLOWED = Set.of("新增参数", "修改参数含义");

@@ -30,6 +30,11 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * 适用网元字典应用服务单元测试。
+ *
+ * @since 2026-04-28
+ */
 @ExtendWith(MockitoExtension.class)
 class ApplicableNeAppServiceTest {
 

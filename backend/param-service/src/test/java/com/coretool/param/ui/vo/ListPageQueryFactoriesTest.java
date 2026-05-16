@@ -8,6 +8,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * 列表分页查询工厂方法单元测试。
+ *
+ * @since 2026-04-28
+ */
 class ListPageQueryFactoriesTest {
 
     @Test

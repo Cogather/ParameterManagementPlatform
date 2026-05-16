@@ -24,6 +24,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * 变更类型接口 MockMvc 冒烟测试。
+ *
+ * @since 2026-04-28
+ */
 @ExtendWith(MockitoExtension.class)
 class ConfigChangeTypeControllerWebMvcTest {
 

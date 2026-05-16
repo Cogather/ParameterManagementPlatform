@@ -42,6 +42,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * 配置类控制器委托批量场景 MockMvc 测试。
+ *
+ * @since 2026-04-28
+ */
 @ExtendWith(MockitoExtension.class)
 class UiControllerDelegateBatchTest {
 

@@ -8,6 +8,11 @@ import com.coretool.param.infrastructure.util.ExcelHelper;
 
 import java.util.List;
 
+/**
+ * 应用服务层 Excel 导入导出测试辅助工具。
+ *
+ * @since 2026-04-28
+ */
 final class ExcelTestHelper {
     private ExcelTestHelper() {}
 

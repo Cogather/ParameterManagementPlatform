@@ -30,6 +30,11 @@ import com.coretool.param.domain.exception.DomainRuleException;
 
 import org.mockito.ArgumentMatchers;
 
+/**
+ * 产品基础信息应用服务单元测试。
+ *
+ * @since 2026-04-28
+ */
 @ExtendWith(MockitoExtension.class)
 class EntityBasicInfoAppServiceTest {
 

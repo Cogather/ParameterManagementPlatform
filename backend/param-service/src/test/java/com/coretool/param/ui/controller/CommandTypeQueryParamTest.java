@@ -9,6 +9,11 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * 命令类型查询参数解析单元测试。
+ *
+ * @since 2026-04-28
+ */
 class CommandTypeQueryParamTest {
 
     @Test

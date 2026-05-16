@@ -14,6 +14,11 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * 参数 BIT 占用值对象单元测试。
+ *
+ * @since 2026-04-28
+ */
 class BitUsageTest {
 
     @Test

@@ -8,6 +8,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * 参数基线锁定策略单元测试。
+ *
+ * @since 2026-04-28
+ */
 class ParameterBaselinePolicyTest {
 
     @Test

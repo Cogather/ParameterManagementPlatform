@@ -14,6 +14,11 @@ import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * CSV 下载工具类单元测试。
+ *
+ * @since 2026-04-28
+ */
 class CsvDownloadTest {
 
     @Test

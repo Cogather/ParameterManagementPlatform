@@ -8,6 +8,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * 黑名单违规异常单元测试。
+ *
+ * @since 2026-04-28
+ */
 class BlacklistViolationExceptionTest {
 
     @Test

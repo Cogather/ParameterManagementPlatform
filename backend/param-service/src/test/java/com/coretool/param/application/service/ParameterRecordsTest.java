@@ -17,6 +17,11 @@ import org.mockito.Mockito;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * 参数应用服务 Record 构造与字段访问单元测试。
+ *
+ * @since 2026-04-28
+ */
 class ParameterRecordsTest {
 
     @Test

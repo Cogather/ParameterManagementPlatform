@@ -10,6 +10,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * 统一响应对象单元测试。
+ *
+ * @since 2026-04-28
+ */
 class ResponseObjectTest {
 
     @Test

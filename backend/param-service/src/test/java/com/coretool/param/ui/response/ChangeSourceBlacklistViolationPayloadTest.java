@@ -8,6 +8,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * 变更来源黑名单违规响应载荷单元测试。
+ *
+ * @since 2026-04-28
+ */
 class ChangeSourceBlacklistViolationPayloadTest {
 
     @Test

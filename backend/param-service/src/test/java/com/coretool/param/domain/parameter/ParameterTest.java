@@ -11,6 +11,11 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * 参数领域实体单元测试。
+ *
+ * @since 2026-04-28
+ */
 class ParameterTest {
 
     @Test

@@ -11,6 +11,11 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+/**
+ * 批量导入结果契约单元测试。
+ *
+ * @since 2026-04-28
+ */
 class ImportResultContractTest {
 
     @Test
