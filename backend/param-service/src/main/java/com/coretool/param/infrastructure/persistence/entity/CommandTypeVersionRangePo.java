@@ -22,6 +22,7 @@ public class CommandTypeVersionRangePo {
 
     private String ownedProductId;
     private String ownedCommandId;
+
     /** 关联 command_type_definition.command_type_id */
     private String ownedTypeId;
 
@@ -32,6 +33,7 @@ public class CommandTypeVersionRangePo {
     private Integer endIndex;
     private String rangeDescription;
     private String rangeType;
+
     /** 版本场景下存 version_id */
     private String ownedVersionOrBusinessId;
     private Integer rangeStatus;

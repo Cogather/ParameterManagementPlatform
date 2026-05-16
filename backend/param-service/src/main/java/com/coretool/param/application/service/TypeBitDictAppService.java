@@ -33,6 +33,7 @@ public class TypeBitDictAppService {
     }
 
     /** 只读：按 type_enum 排序返回 */
+
     /**
      * 查询全部类型 BIT 字典项（按 type_enum 排序）。
      *

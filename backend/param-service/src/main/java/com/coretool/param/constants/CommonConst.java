@@ -15,12 +15,10 @@ public class CommonConst {
     /**
      * 字段「OK」。
      */
-
     public static final String OK = "OK";
 
     /**
      * 字段「ERROR」。
      */
-
     public static final String ERROR = "ERROR";
 }

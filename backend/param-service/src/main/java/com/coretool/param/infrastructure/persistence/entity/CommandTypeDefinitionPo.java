@@ -27,6 +27,7 @@ public class CommandTypeDefinitionPo {
     private String commandTypeId;
 
     private String commandTypeName;
+
     /** 类型枚举：BIT / BYTE / DWORD / STRING 等 */
     private String commandType;
     private Integer minValue;

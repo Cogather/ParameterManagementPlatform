@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 public class CommandTypeVersionRangeAppService {
 
     private static final String INSTRUCTION = ExcelInstructions.ID_CREATE_UPDATE_HINT;
+
     /**
      * 导入/导出字段以页面展示为准：不包含状态、审计字段。
      *

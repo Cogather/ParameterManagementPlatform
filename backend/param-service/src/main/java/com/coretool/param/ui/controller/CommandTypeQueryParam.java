@@ -15,8 +15,8 @@ import org.apache.commons.lang3.StringUtils;
 public final class CommandTypeQueryParam {
 
     private CommandTypeQueryParam() {}
-
     /** 优先 {@code commandTypeId}，否则 {@code commandTypeCode}。可全空（表示不按类型筛）。 */
+
     /**
      * 解析类型筛选键（可空）。
      *
@@ -32,8 +32,8 @@ public final class CommandTypeQueryParam {
         }
         return commandTypeCode == null ? null : commandTypeCode.trim();
     }
-
     /** 列表/available-* 等必填其一时的类型键。 */
+
     /**
      * 解析必填的类型键（至少传入其一）。
      *
