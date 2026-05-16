@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.coretool.param.application.service.OperationLogAppService;
 import com.coretool.param.infrastructure.persistence.entity.OperationLogPo;
 import com.coretool.param.ui.response.PageResponse;
+import com.coretool.param.ui.vo.OperationLogPageQuery;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,19 +55,7 @@ class OperationLogControllerWebMvcTest {
         page.setTotal(0L);
         page.setPage(1);
         page.setSize(20);
-        when(operationLogAppService.page(
-                        argThat(
-                                q ->
-                                        "p1".equals(q.getProductId())
-                                                && "entity_command_mapping".equals(q.getBizTable())
-                                                && q.getVersionId() == null
-                                                && q.getResourceId() == null
-                                                && q.getOperatedFrom() == null
-                                                && q.getOperatedTo() == null
-                                                && q.getSort() == null
-                                                && q.getPage() == 1
-                                                && q.getSize() == 20
-                                                && !q.isIgnoreVersionFilter())))
+        when(operationLogAppService.page(argThat(OperationLogControllerWebMvcTest::matchesBasicPage)))
                 .thenReturn(page);
 
         mockMvc.perform(
@@ -90,19 +79,7 @@ class OperationLogControllerWebMvcTest {
         page.setSize(10);
         LocalDateTime from = LocalDateTime.of(2026, 1, 1, 0, 0);
         LocalDateTime to = LocalDateTime.of(2026, 1, 2, 23, 59);
-        when(operationLogAppService.page(
-                        argThat(
-                                q ->
-                                        "p1".equals(q.getProductId())
-                                                && "command_type_definition".equals(q.getBizTable())
-                                                && q.getVersionId() == null
-                                                && q.getResourceId() == null
-                                                && from.equals(q.getOperatedFrom())
-                                                && to.equals(q.getOperatedTo())
-                                                && "operatedAt,asc".equals(q.getSort())
-                                                && q.getPage() == 1
-                                                && q.getSize() == 10
-                                                && !q.isIgnoreVersionFilter())))
+        when(operationLogAppService.page(argThat(q -> matchesTimeRangePage(q, from, to))))
                 .thenReturn(page);
 
         mockMvc.perform(
@@ -118,19 +95,69 @@ class OperationLogControllerWebMvcTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
 
-        verify(operationLogAppService)
-                .page(
-                        argThat(
-                                q ->
-                                        "p1".equals(q.getProductId())
-                                                && "command_type_definition".equals(q.getBizTable())
-                                                && q.getVersionId() == null
-                                                && q.getResourceId() == null
-                                                && from.equals(q.getOperatedFrom())
-                                                && to.equals(q.getOperatedTo())
-                                                && "operatedAt,asc".equals(q.getSort())
-                                                && q.getPage() == 1
-                                                && q.getSize() == 10
-                                                && !q.isIgnoreVersionFilter()));
+        verify(operationLogAppService).page(argThat(q -> matchesTimeRangePage(q, from, to)));
+    }
+
+    private static boolean matchesBasicPage(OperationLogPageQuery q) {
+        if (!"p1".equals(q.getProductId())) {
+            return false;
+        }
+        if (!"entity_command_mapping".equals(q.getBizTable())) {
+            return false;
+        }
+        if (q.getVersionId() != null) {
+            return false;
+        }
+        if (q.getResourceId() != null) {
+            return false;
+        }
+        if (q.getOperatedFrom() != null) {
+            return false;
+        }
+        if (q.getOperatedTo() != null) {
+            return false;
+        }
+        if (q.getSort() != null) {
+            return false;
+        }
+        if (q.getPage() != 1) {
+            return false;
+        }
+        if (q.getSize() != 20) {
+            return false;
+        }
+        return !q.isIgnoreVersionFilter();
+    }
+
+    private static boolean matchesTimeRangePage(
+            OperationLogPageQuery q, LocalDateTime from, LocalDateTime to) {
+        if (!"p1".equals(q.getProductId())) {
+            return false;
+        }
+        if (!"command_type_definition".equals(q.getBizTable())) {
+            return false;
+        }
+        if (q.getVersionId() != null) {
+            return false;
+        }
+        if (q.getResourceId() != null) {
+            return false;
+        }
+        if (!from.equals(q.getOperatedFrom())) {
+            return false;
+        }
+        if (!to.equals(q.getOperatedTo())) {
+            return false;
+        }
+        if (!"operatedAt,asc".equals(q.getSort())) {
+            return false;
+        }
+        if (q.getPage() != 1) {
+            return false;
+        }
+        if (q.getSize() != 10) {
+            return false;
+        }
+        return !q.isIgnoreVersionFilter();
     }
 }

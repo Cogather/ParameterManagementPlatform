@@ -30,9 +30,9 @@ public final class ExcelHelper {
 
     private ExcelHelper() {}
 
-/**
- * 字段「XLSX_CONTENT_TYPE」。
- */
+    /**
+     * 字段「XLSX_CONTENT_TYPE」。
+     */
 
     public static final String XLSX_CONTENT_TYPE =
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -184,6 +184,7 @@ public final class ExcelHelper {
     /**
      * Excel 解析结果：sheet 名称与行数据。
      *
+     * @since 2026-04-28
      * @param sheetName sheet 名称
      * @param rows      行数据（每行是列字符串列表）
      */

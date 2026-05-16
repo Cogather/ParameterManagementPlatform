@@ -172,18 +172,27 @@ public class ApplicableNeAppService {
                 throw new DomainRuleException("NE_NAME_DUPLICATE: 同一产品下网元名称已存在");
             }
         }
-        if (StringUtils.isNotBlank(nameCn)
-                || (input != null && input.getNeTypeDescription() != null)
-                || (input != null && input.getNeTypeStatus() != null)
-                || (input != null && input.getProductForm() != null)
-                || StringUtils.isNotBlank(input == null ? null : input.getUpdaterId())) {
+        boolean patchHasName = StringUtils.isNotBlank(nameCn);
+        boolean patchHasDescription =
+                input != null && input.getNeTypeDescription() != null;
+        boolean patchHasStatus = input != null && input.getNeTypeStatus() != null;
+        boolean patchHasProductForm = input != null && input.getProductForm() != null;
+        String updaterForPatch = input == null ? null : input.getUpdaterId();
+        boolean patchHasUpdater = StringUtils.isNotBlank(updaterForPatch);
+        boolean shouldApplyPatch =
+                patchHasName
+                        || patchHasDescription
+                        || patchHasStatus
+                        || patchHasProductForm
+                        || patchHasUpdater;
+        if (shouldApplyPatch) {
             existing.applyPatch(
                     new ApplicableNe.Patch(
                             nameCn,
                             input == null ? null : input.getNeTypeDescription(),
                             input == null ? null : input.getNeTypeStatus(),
                             input == null ? null : input.getProductForm(),
-                            input == null ? null : input.getUpdaterId(),
+                            updaterForPatch,
                             now));
         } else {
             existing.touch(now);

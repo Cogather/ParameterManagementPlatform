@@ -26,8 +26,10 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ParameterAppServiceTest {
@@ -131,28 +133,24 @@ class ParameterAppServiceTest {
     @Test
     void importParameters_shouldValidateModeAndCommandId() {
         ParameterAppService svc = newSvc();
+        byte[] sheet = validImportWorkbookBytesWithHeaderOnly();
 
-        assertThatThrownBy(
-                        () ->
-                                svc.importParameters(
-                                        "p1",
-                                        "v1",
-                                        "BAD",
-                                        "c1",
-                                        null,
-                                        validImportWorkbookBytesWithHeaderOnly()))
-                .isInstanceOf(DomainRuleException.class);
+        assertThatThrownBy(() -> svc.importParameters("p1", "v1", "BAD", "c1", null, sheet))
+                .isInstanceOf(DomainRuleException.class)
+                .hasMessageContaining("mode");
 
-        assertThatThrownBy(
-                        () ->
-                                svc.importParameters(
-                                        "p1",
-                                        "v1",
-                                        "FULL",
-                                        " ",
-                                        null,
-                                        validImportWorkbookBytesWithHeaderOnly()))
-                .isInstanceOf(DomainRuleException.class);
+        assertThatThrownBy(() -> svc.importParameters("p1", "v1", "FULL", " ", null, sheet))
+                .isInstanceOf(DomainRuleException.class)
+                .hasMessageContaining("commandId");
+    }
+
+    @Test
+    void importParameters_shouldRejectEmptyFileBytes() {
+        ParameterAppService svc = newSvc();
+
+        assertThatThrownBy(() -> svc.importParameters("p1", "v1", "FULL", "c1", null, new byte[0]))
+                .isInstanceOf(DomainRuleException.class)
+                .hasMessageContaining("文件为空");
     }
 
     @Test
@@ -168,7 +166,7 @@ class ParameterAppServiceTest {
         lenient().when(changeSourceKeywordRepository.listEnabledRegexesByProduct("p1")).thenReturn(List.of());
         lenient().doNothing().when(configChangeTypeAppService).validateChangeTypesForParameterSave(any(Boolean.class), any());
 
-        // scopeExisting + peersForBitCheck
+        // FULL：先按 scope 查询并删除，再为 BIT 冲突多次加载命令下参数列表；空库时均为空列表。
         when(systemParameterMapper.selectList(any())).thenReturn(List.of());
 
         lenient().doAnswer(inv -> {
@@ -245,6 +243,8 @@ class ParameterAppServiceTest {
         assertThat(out.getTotalRows()).isGreaterThanOrEqualTo(1);
         assertThat(out.getSuccessCount() + out.getFailureCount()).isGreaterThanOrEqualTo(1);
         assertThat(out.getSuccessCount() + out.getFailureCount()).isLessThanOrEqualTo(out.getTotalRows());
+        // importParameters 拆分后仍会多次 loadParametersForCommand（scope / peers / 行后刷新等）
+        verify(systemParameterMapper, atLeast(2)).selectList(any());
     }
 
     @Test

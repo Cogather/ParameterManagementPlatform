@@ -11,14 +11,16 @@ package com.coretool.param.constants;
  */
 
 public class CommonConst {
-/**
- * 字段「OK」。
- */
+
+    /**
+     * 字段「OK」。
+     */
 
     public static final String OK = "OK";
-/**
- * 字段「ERROR」。
- */
+
+    /**
+     * 字段「ERROR」。
+     */
 
     public static final String ERROR = "ERROR";
 }

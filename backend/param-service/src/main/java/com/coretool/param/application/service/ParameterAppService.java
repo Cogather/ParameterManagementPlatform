@@ -679,118 +679,207 @@ public class ParameterAppService {
             throw new DomainRuleException("commandId 必填");
         }
 
-        // 作用域：当前版本 + 命令 + 可选类型前缀（参数编码前缀）
-        List<SystemParameterPo> scopeExisting = loadParametersForCommand(productId, versionId, commandId);
-        if (StringUtils.isNotBlank(commandTypeCode)) {
-            String prefix = commandTypeCode.trim() + "_";
-            scopeExisting =
-                    scopeExisting.stream()
-                            .filter(p -> StringUtils.defaultString(p.getParameterCode()).startsWith(prefix))
-                            .toList();
-        }
+        List<SystemParameterPo> scopeExisting =
+                filterScopeByCommandTypePrefix(
+                        loadParametersForCommand(productId, versionId, commandId), commandTypeCode);
 
-        // 全量导入：先删后导（按 scope 删除）
         if ("FULL".equals(importMode)) {
-            for (SystemParameterPo p : scopeExisting) {
-                Integer pid = p.getParameterId();
-                if (pid == null) {
-                    continue;
-                }
-                String opD = StringUtils.defaultIfBlank(p.getUpdaterId(), "system");
-                operationLogAppService.logSystemParameterDelete(p, opD);
-                deleteDescriptionsByParameter(pid);
-                systemParameterMapper.deleteById(pid);
-            }
-            scopeExisting = List.of();
+            purgeFullImportScope(scopeExisting);
         }
 
-        // 增量导入：已基线参数不做更改，但仍参与 BIT 冲突校验（占用）
         List<SystemParameterPo> peersForBitCheck = loadParametersForCommand(productId, versionId, commandId);
 
         for (int i = headerIdx + 1; i < rows.size(); i++) {
             List<String> line = rows.get(i);
             int dataRowNumber = i + 1;
-            try {
-                String code = cell(line, colCode);
-                if (StringUtils.isBlank(code)) {
-                    c.failure(dataRowNumber, "parameter_code 为空");
-                } else {
-                    SystemParameterPo fromSheet = new SystemParameterPo();
-                    cols.applyMainFromLine(productId, versionId, commandId, code, fromSheet, line);
-                    // 与 parameter_code 对应的既有行（多行同码时优先按 bit_usage 匹配），此处不做创建默认值，避免误伤更新行
-                    SystemParameterPo matched = findImportMatch(peersForBitCheck, fromSheet);
-                    if (matched != null && ParameterBaselinePolicy.isBaselineLocked(matched.getDataStatus())) {
-                        c.failure(dataRowNumber, "已基线参数不会做更改，已跳过");
-                        continue;
-                    }
-                    if (matched == null) {
-                        SystemParameterPo incoming = fromSheet;
-                        ParameterDefaults.applyForCreate(incoming);
-                        applyOptionalString(line, cols.colDataStatus, incoming::setDataStatus);
-                        validateAndApplyBlacklist(productId, incoming);
-                        ParameterSaveInvariant.assertSequenceMatchesCode(
-                                incoming.getParameterCode(), incoming.getParameterSequence());
-                        // 新增：BIT 冲突（在 peers 基础上加上新行）
-                        List<ParameterSaveInvariant.ParameterRowForBitCheck> bitRows = toBitRows(peersForBitCheck);
-                        bitRows.add(
-                                new ParameterSaveInvariant.ParameterRowForBitCheck(
-                                        null, incoming.getParameterCode(), incoming.getBitUsage()));
-                        ParameterSaveInvariant.assertBitDisjointAcrossVersionCommand(null, bitRows);
-                        LocalDateTime now = LocalDateTime.now();
-                        incoming.setCreationTimestamp(now);
-                        incoming.setUpdateTimestamp(now);
-                        systemParameterMapper.insert(incoming);
-                        String who = StringUtils.defaultIfBlank(incoming.getCreatorId(), "system");
-                        operationLogAppService.logSystemParameterCreate(incoming, who);
-                        importReplaceChangeDescriptionIfPresent(
-                                true, incoming.getParameterId(), cols, line, now);
-                        peersForBitCheck = loadParametersForCommand(productId, versionId, commandId);
-                        c.success(dataRowNumber);
-                    } else {
-                        SystemParameterPo incoming = new SystemParameterPo();
-                        BeanUtils.copyProperties(matched, incoming);
-                        cols.applyMainFromLine(productId, versionId, commandId, code, incoming, line);
-                        applyOptionalString(line, cols.colDataStatus, incoming::setDataStatus);
-                        validateAndApplyBlacklist(productId, incoming);
-                        ParameterSaveInvariant.assertSequenceMatchesCode(
-                                incoming.getParameterCode(), incoming.getParameterSequence());
-                        SystemParameterPo before = new SystemParameterPo();
-                        BeanUtils.copyProperties(matched, before);
-                        incoming.setParameterId(matched.getParameterId());
-                        incoming.setCreationTimestamp(matched.getCreationTimestamp());
-                        LocalDateTime now = LocalDateTime.now();
-                        incoming.setUpdateTimestamp(now);
-                        // 修改：BIT 校验，排除自己
-                        List<SystemParameterPo> peers = loadParametersForCommand(productId, versionId, commandId);
-                        List<ParameterSaveInvariant.ParameterRowForBitCheck> bitRows = new ArrayList<>();
-                        for (SystemParameterPo p : peers) {
-                            if (incoming.getParameterId().equals(p.getParameterId())) {
-                                continue;
-                            }
-                            bitRows.add(
-                                    new ParameterSaveInvariant.ParameterRowForBitCheck(
-                                            p.getParameterId(), p.getParameterCode(), p.getBitUsage()));
-                        }
-                        bitRows.add(
-                                new ParameterSaveInvariant.ParameterRowForBitCheck(
-                                        incoming.getParameterId(), incoming.getParameterCode(), incoming.getBitUsage()));
-                        ParameterSaveInvariant.assertBitDisjointAcrossVersionCommand(null, bitRows);
-                        systemParameterMapper.updateById(incoming);
-                        importReplaceChangeDescriptionIfPresent(
-                                false, incoming.getParameterId(), cols, line, now);
-                        String opU = StringUtils.defaultIfBlank(incoming.getUpdaterId(), "system");
-                        operationLogAppService.logSystemParameterUpdate(before, incoming, opU);
-                        peersForBitCheck = loadParametersForCommand(productId, versionId, commandId);
-                        c.success(dataRowNumber);
-                    }
-                }
-            } catch (BlacklistViolationException e) {
-                c.failure(dataRowNumber, e.getMessage());
-            } catch (DomainRuleException e) {
-                c.failure(dataRowNumber, e.getMessage());
-            }
+            peersForBitCheck =
+                    handleImportParameterRow(
+                            productId,
+                            versionId,
+                            commandId,
+                            peersForBitCheck,
+                            line,
+                            dataRowNumber,
+                            cols,
+                            colCode,
+                            c);
         }
         return c.build(dataRows);
+    }
+
+    private static List<SystemParameterPo> filterScopeByCommandTypePrefix(
+            List<SystemParameterPo> scopeExisting, String commandTypeCode) {
+        if (StringUtils.isBlank(commandTypeCode)) {
+            return scopeExisting;
+        }
+        String prefix = commandTypeCode.trim() + "_";
+        return scopeExisting.stream()
+                .filter(p -> StringUtils.defaultString(p.getParameterCode()).startsWith(prefix))
+                .toList();
+    }
+
+    private void purgeFullImportScope(List<SystemParameterPo> scopeExisting) {
+        for (SystemParameterPo p : scopeExisting) {
+            Integer pid = p.getParameterId();
+            if (pid == null) {
+                continue;
+            }
+            String opD = StringUtils.defaultIfBlank(p.getUpdaterId(), "system");
+            operationLogAppService.logSystemParameterDelete(p, opD);
+            deleteDescriptionsByParameter(pid);
+            systemParameterMapper.deleteById(pid);
+        }
+    }
+
+    private List<SystemParameterPo> handleImportParameterRow(
+            String productId,
+            String versionId,
+            String commandId,
+            List<SystemParameterPo> peersForBitCheck,
+            List<String> line,
+            int dataRowNumber,
+            ImportSheetColumns cols,
+            int colCode,
+            ImportResultCollector c) {
+        String code = cell(line, colCode);
+        if (StringUtils.isBlank(code)) {
+            c.failure(dataRowNumber, "parameter_code 为空");
+            return peersForBitCheck;
+        }
+        try {
+            return applyImportRowWithMatchedDecision(
+                    productId,
+                    versionId,
+                    commandId,
+                    peersForBitCheck,
+                    line,
+                    dataRowNumber,
+                    cols,
+                    code,
+                    c);
+        } catch (BlacklistViolationException e) {
+            c.failure(dataRowNumber, e.getMessage());
+            return peersForBitCheck;
+        } catch (DomainRuleException e) {
+            c.failure(dataRowNumber, e.getMessage());
+            return peersForBitCheck;
+        }
+    }
+
+    private List<SystemParameterPo> applyImportRowWithMatchedDecision(
+            String productId,
+            String versionId,
+            String commandId,
+            List<SystemParameterPo> peersForBitCheck,
+            List<String> line,
+            int dataRowNumber,
+            ImportSheetColumns cols,
+            String code,
+            ImportResultCollector c) {
+        SystemParameterPo fromSheet = new SystemParameterPo();
+        cols.applyMainFromLine(productId, versionId, commandId, code, fromSheet, line);
+        SystemParameterPo matched = findImportMatch(peersForBitCheck, fromSheet);
+        if (matched != null && ParameterBaselinePolicy.isBaselineLocked(matched.getDataStatus())) {
+            c.failure(dataRowNumber, "已基线参数不会做更改，已跳过");
+            return peersForBitCheck;
+        }
+        if (matched == null) {
+            return importParameterRowCreate(
+                    productId,
+                    versionId,
+                    commandId,
+                    peersForBitCheck,
+                    line,
+                    dataRowNumber,
+                    cols,
+                    fromSheet,
+                    c);
+        }
+        return importParameterRowUpdate(
+                productId, versionId, commandId, line, dataRowNumber, cols, matched, code, c);
+    }
+
+    private List<SystemParameterPo> importParameterRowCreate(
+            String productId,
+            String versionId,
+            String commandId,
+            List<SystemParameterPo> peersForBitCheck,
+            List<String> line,
+            int dataRowNumber,
+            ImportSheetColumns cols,
+            SystemParameterPo incoming,
+            ImportResultCollector c) {
+        ParameterDefaults.applyForCreate(incoming);
+        applyOptionalString(line, cols.colDataStatus, incoming::setDataStatus);
+        validateAndApplyBlacklist(productId, incoming);
+        ParameterSaveInvariant.assertSequenceMatchesCode(
+                incoming.getParameterCode(), incoming.getParameterSequence());
+        List<ParameterSaveInvariant.ParameterRowForBitCheck> bitRows = toBitRows(peersForBitCheck);
+        bitRows.add(
+                new ParameterSaveInvariant.ParameterRowForBitCheck(
+                        null, incoming.getParameterCode(), incoming.getBitUsage()));
+        ParameterSaveInvariant.assertBitDisjointAcrossVersionCommand(null, bitRows);
+        LocalDateTime now = LocalDateTime.now();
+        incoming.setCreationTimestamp(now);
+        incoming.setUpdateTimestamp(now);
+        systemParameterMapper.insert(incoming);
+        String who = StringUtils.defaultIfBlank(incoming.getCreatorId(), "system");
+        operationLogAppService.logSystemParameterCreate(incoming, who);
+        importReplaceChangeDescriptionIfPresent(true, incoming.getParameterId(), cols, line, now);
+        c.success(dataRowNumber);
+        return loadParametersForCommand(productId, versionId, commandId);
+    }
+
+    private List<SystemParameterPo> importParameterRowUpdate(
+            String productId,
+            String versionId,
+            String commandId,
+            List<String> line,
+            int dataRowNumber,
+            ImportSheetColumns cols,
+            SystemParameterPo matched,
+            String code,
+            ImportResultCollector c) {
+        SystemParameterPo incoming = new SystemParameterPo();
+        BeanUtils.copyProperties(matched, incoming);
+        cols.applyMainFromLine(productId, versionId, commandId, code, incoming, line);
+        applyOptionalString(line, cols.colDataStatus, incoming::setDataStatus);
+        validateAndApplyBlacklist(productId, incoming);
+        ParameterSaveInvariant.assertSequenceMatchesCode(
+                incoming.getParameterCode(), incoming.getParameterSequence());
+        SystemParameterPo before = new SystemParameterPo();
+        BeanUtils.copyProperties(matched, before);
+        incoming.setParameterId(matched.getParameterId());
+        incoming.setCreationTimestamp(matched.getCreationTimestamp());
+        LocalDateTime now = LocalDateTime.now();
+        incoming.setUpdateTimestamp(now);
+        List<SystemParameterPo> peers = loadParametersForCommand(productId, versionId, commandId);
+        List<ParameterSaveInvariant.ParameterRowForBitCheck> bitRows =
+                bitRowsForUpdateExcludingSelf(peers, incoming);
+        bitRows.add(
+                new ParameterSaveInvariant.ParameterRowForBitCheck(
+                        incoming.getParameterId(), incoming.getParameterCode(), incoming.getBitUsage()));
+        ParameterSaveInvariant.assertBitDisjointAcrossVersionCommand(null, bitRows);
+        systemParameterMapper.updateById(incoming);
+        importReplaceChangeDescriptionIfPresent(false, incoming.getParameterId(), cols, line, now);
+        String opU = StringUtils.defaultIfBlank(incoming.getUpdaterId(), "system");
+        operationLogAppService.logSystemParameterUpdate(before, incoming, opU);
+        c.success(dataRowNumber);
+        return loadParametersForCommand(productId, versionId, commandId);
+    }
+
+    private static List<ParameterSaveInvariant.ParameterRowForBitCheck> bitRowsForUpdateExcludingSelf(
+            List<SystemParameterPo> peers, SystemParameterPo incoming) {
+        List<ParameterSaveInvariant.ParameterRowForBitCheck> bitRows = new ArrayList<>();
+        for (SystemParameterPo p : peers) {
+            if (incoming.getParameterId().equals(p.getParameterId())) {
+                continue;
+            }
+            bitRows.add(
+                    new ParameterSaveInvariant.ParameterRowForBitCheck(
+                            p.getParameterId(), p.getParameterCode(), p.getBitUsage()));
+        }
+        return bitRows;
     }
 
     private void importReplaceChangeDescriptionIfPresent(
