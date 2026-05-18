@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
  *
  * @since 2026-04-28
  */
+
 @Component
 public record ParameterAppPersistenceMappers(
         SystemParameterMapper systemParameterMapper,

@@ -224,47 +224,54 @@ public class CommandTypeVersionRangeAppService {
             ImportResultCollector c = new ImportResultCollector();
             int dataRows = rows.size() - headerIdx - 1;
             for (int i = headerIdx + 1; i < rows.size(); i++) {
-                int line = i + 1;
-                try {
-                    List<String> cols = rows.get(i);
-                    CommandTypeVersionRangePo po = new CommandTypeVersionRangePo();
-                    po.setOwnedCommandId(StringUtils.trimToNull(col(cols, idx, "归属命令ID")));
-                    po.setOwnedTypeId(StringUtils.trimToNull(col(cols, idx, "类型ID")));
-                    po.setVersionRangeId(StringUtils.trimToNull(col(cols, idx, "区段ID")));
-                    po.setStartIndex(parseIntNullable(col(cols, idx, "起始序号")));
-                    po.setEndIndex(parseIntNullable(col(cols, idx, "结束序号")));
-                    po.setRangeDescription(StringUtils.trimToNull(col(cols, idx, "说明")));
-                    po.setRangeType(StringUtils.trimToNull(col(cols, idx, "区段划分类型")));
-                    po.setOwnedVersionOrBusinessId(StringUtils.trimToNull(col(cols, idx, "归属版本ID")));
-                    po.setRangeStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
-                    if (StringUtils.isAnyBlank(
-                            po.getOwnedCommandId(), po.getOwnedTypeId(), po.getOwnedVersionOrBusinessId())) {
-                        throw new BizException("归属命令ID、类型ID、归属版本ID不能为空");
-                    }
-                    if (StringUtils.isBlank(po.getVersionRangeId())) {
-                        create(productId, po);
-                    } else {
-                        CommandTypeVersionRange ex = rangeRepository.findById(po.getVersionRangeId()).orElse(null);
-                        if (ex == null) {
-                            create(productId, po);
-                            c.success(line);
-                            continue;
-                        }
-                        if (!ex.belongsToProduct(productId)) {
-                            throw new BizException("区段ID与其他产品冲突");
-                        }
-                        po.setUpdaterId("system");
-                        update(productId, po.getVersionRangeId(), po);
-                    }
-                    c.success(line);
-                } catch (Exception ex) {
-                    c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
-                }
+                importRow(productId, rows.get(i), idx, i + 1, c);
             }
             return c.build(dataRows);
         } finally {
             operationLogAppService.endImportBatch();
         }
+    }
+
+    private void importRow(
+            String productId, List<String> cols, Map<String, Integer> idx, int line, ImportResultCollector c) {
+        try {
+            CommandTypeVersionRangePo po = parseImportRow(cols, idx);
+            if (StringUtils.isAnyBlank(po.getOwnedCommandId(), po.getOwnedTypeId(), po.getOwnedVersionOrBusinessId())) {
+                throw new BizException("归属命令ID、类型ID、归属版本ID不能为空");
+            }
+            if (StringUtils.isBlank(po.getVersionRangeId())) {
+                create(productId, po);
+            } else {
+                CommandTypeVersionRange ex = rangeRepository.findById(po.getVersionRangeId()).orElse(null);
+                if (ex == null) {
+                    create(productId, po);
+                    c.success(line);
+                    return;
+                }
+                if (!ex.belongsToProduct(productId)) {
+                    throw new BizException("区段ID与其他产品冲突");
+                }
+                po.setUpdaterId("system");
+                update(productId, po.getVersionRangeId(), po);
+            }
+            c.success(line);
+        } catch (Exception ex) {
+            c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
+        }
+    }
+
+    private CommandTypeVersionRangePo parseImportRow(List<String> cols, Map<String, Integer> idx) {
+        CommandTypeVersionRangePo po = new CommandTypeVersionRangePo();
+        po.setOwnedCommandId(StringUtils.trimToNull(col(cols, idx, "归属命令ID")));
+        po.setOwnedTypeId(StringUtils.trimToNull(col(cols, idx, "类型ID")));
+        po.setVersionRangeId(StringUtils.trimToNull(col(cols, idx, "区段ID")));
+        po.setStartIndex(parseIntNullable(col(cols, idx, "起始序号")));
+        po.setEndIndex(parseIntNullable(col(cols, idx, "结束序号")));
+        po.setRangeDescription(StringUtils.trimToNull(col(cols, idx, "说明")));
+        po.setRangeType(StringUtils.trimToNull(col(cols, idx, "区段划分类型")));
+        po.setOwnedVersionOrBusinessId(StringUtils.trimToNull(col(cols, idx, "归属版本ID")));
+        po.setRangeStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
+        return po;
     }
 
     /**

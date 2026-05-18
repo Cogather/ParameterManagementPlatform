@@ -1127,63 +1127,72 @@ public class OperationLogAppService {
         if (p == null || p.getParameterId() == null) {
             return;
         }
-        String op = StringUtils.defaultIfBlank(operatorId, "system");
-        String batch = IMPORT_LOG_BATCH.get();
-        LocalDateTime now = LocalDateTime.now();
-        String productId = p.getOwnedProductId();
-        String versionId = p.getOwnedVersionId();
-        String rid = String.valueOf(p.getParameterId());
+        LogSessionContext ctx = systemParameterLogContext(p, operatorId);
         RESOURCE_NAME.set(StringUtils.trimToNull(p.getParameterCode()));
         List<OperationLogPo> rows = new ArrayList<>();
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_CODE, p.getParameterCode());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_NAME_CN, p.getParameterNameCn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_NAME_EN, p.getParameterNameEn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_CMD, p.getOwnedCommandId());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_STATUS, p.getDataStatus());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_SEQ, intStr(p.getParameterSequence()));
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_INTRO, p.getIntroduceType());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_INHERIT, p.getInheritReferenceVersionId());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_VALUE_RANGE, p.getValueRange());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_BIT_USAGE, p.getBitUsage());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_VALUE_DESC_CN, p.getValueDescriptionCn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_VALUE_DESC_EN, p.getValueDescriptionEn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_SCENE_CN, p.getApplicationScenarioCn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_SCENE_EN, p.getApplicationScenarioEn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_DEFAULT, p.getParameterDefaultValue());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_RECOMMEND, p.getParameterRecommendedValue());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_NE, p.getApplicableNe());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_FEATURE, p.getFeature());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_FEATURE_ID, p.getFeatureId());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_BIZ_CLASS, p.getBusinessClassification());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_CATEGORY_ID, p.getCategoryId());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_TAKE_EFFECT, p.getTakeEffectImmediately());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_EM_CN, p.getEffectiveModeCn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_EM_EN, p.getEffectiveModeEn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_EF_CN, p.getEffectiveFormCn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_EF_EN, p.getEffectiveFormEn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_TEAM, p.getProjectTeam());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_MODULE, p.getBelongingModule());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_PATCH, p.getPatchVersion());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_INTRO_VER, p.getIntroducedVersion());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_PARAM_DESC_CN, p.getParameterDescriptionCn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_PARAM_DESC_EN, p.getParameterDescriptionEn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_IMPACT_CN, p.getImpactDescriptionCn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_IMPACT_EN, p.getImpactDescriptionEn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_EXAMPLE_CN, p.getConfigurationExampleCn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_EXAMPLE_EN, p.getConfigurationExampleEn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_RELATED_DESC_CN, p.getRelatedParameterDescriptionCn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_RELATED_DESC_EN, p.getRelatedParameterDescriptionEn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_REMARK, p.getRemark());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_ENUM_CN, p.getEnumerationValuesCn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_ENUM_EN, p.getEnumerationValuesEn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_UNIT_CN, p.getParameterUnitCn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_UNIT_EN, p.getParameterUnitEn());
-        addCreateStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_PARAM_RANGE, p.getParameterRange());
+        appendSystemParameterCreateCore(rows, ctx, p);
+        appendSystemParameterCreateExtended(rows, ctx, p);
         try {
             insertAll(rows);
         } finally {
             RESOURCE_NAME.remove();
         }
+    }
+
+    private LogSessionContext systemParameterLogContext(SystemParameterPo p, String operatorId) {
+        String op = StringUtils.defaultIfBlank(operatorId, "system");
+        return new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, p.getOwnedProductId(), p.getOwnedVersionId(),
+                String.valueOf(p.getParameterId()), op, LocalDateTime.now(), IMPORT_LOG_BATCH.get());
+    }
+
+    private void appendSystemParameterCreateCore(List<OperationLogPo> rows, LogSessionContext ctx, SystemParameterPo p) {
+        addCreateStr(rows, ctx, P_LABEL_CODE, p.getParameterCode());
+        addCreateStr(rows, ctx, P_LABEL_NAME_CN, p.getParameterNameCn());
+        addCreateStr(rows, ctx, P_LABEL_NAME_EN, p.getParameterNameEn());
+        addCreateStr(rows, ctx, P_LABEL_CMD, p.getOwnedCommandId());
+        addCreateStr(rows, ctx, P_LABEL_STATUS, p.getDataStatus());
+        addCreateStr(rows, ctx, P_LABEL_SEQ, intStr(p.getParameterSequence()));
+        addCreateStr(rows, ctx, P_LABEL_INTRO, p.getIntroduceType());
+        addCreateStr(rows, ctx, P_LABEL_INHERIT, p.getInheritReferenceVersionId());
+        addCreateStr(rows, ctx, P_LABEL_VALUE_RANGE, p.getValueRange());
+        addCreateStr(rows, ctx, P_LABEL_BIT_USAGE, p.getBitUsage());
+        addCreateStr(rows, ctx, P_LABEL_VALUE_DESC_CN, p.getValueDescriptionCn());
+        addCreateStr(rows, ctx, P_LABEL_VALUE_DESC_EN, p.getValueDescriptionEn());
+        addCreateStr(rows, ctx, P_LABEL_SCENE_CN, p.getApplicationScenarioCn());
+        addCreateStr(rows, ctx, P_LABEL_SCENE_EN, p.getApplicationScenarioEn());
+        addCreateStr(rows, ctx, P_LABEL_DEFAULT, p.getParameterDefaultValue());
+        addCreateStr(rows, ctx, P_LABEL_RECOMMEND, p.getParameterRecommendedValue());
+    }
+
+    private void appendSystemParameterCreateExtended(List<OperationLogPo> rows, LogSessionContext ctx, SystemParameterPo p) {
+        addCreateStr(rows, ctx, P_LABEL_NE, p.getApplicableNe());
+        addCreateStr(rows, ctx, P_LABEL_FEATURE, p.getFeature());
+        addCreateStr(rows, ctx, P_LABEL_FEATURE_ID, p.getFeatureId());
+        addCreateStr(rows, ctx, P_LABEL_BIZ_CLASS, p.getBusinessClassification());
+        addCreateStr(rows, ctx, P_LABEL_CATEGORY_ID, p.getCategoryId());
+        addCreateStr(rows, ctx, P_LABEL_TAKE_EFFECT, p.getTakeEffectImmediately());
+        addCreateStr(rows, ctx, P_LABEL_EM_CN, p.getEffectiveModeCn());
+        addCreateStr(rows, ctx, P_LABEL_EM_EN, p.getEffectiveModeEn());
+        addCreateStr(rows, ctx, P_LABEL_EF_CN, p.getEffectiveFormCn());
+        addCreateStr(rows, ctx, P_LABEL_EF_EN, p.getEffectiveFormEn());
+        addCreateStr(rows, ctx, P_LABEL_TEAM, p.getProjectTeam());
+        addCreateStr(rows, ctx, P_LABEL_MODULE, p.getBelongingModule());
+        addCreateStr(rows, ctx, P_LABEL_PATCH, p.getPatchVersion());
+        addCreateStr(rows, ctx, P_LABEL_INTRO_VER, p.getIntroducedVersion());
+        addCreateStr(rows, ctx, P_LABEL_PARAM_DESC_CN, p.getParameterDescriptionCn());
+        addCreateStr(rows, ctx, P_LABEL_PARAM_DESC_EN, p.getParameterDescriptionEn());
+        addCreateStr(rows, ctx, P_LABEL_IMPACT_CN, p.getImpactDescriptionCn());
+        addCreateStr(rows, ctx, P_LABEL_IMPACT_EN, p.getImpactDescriptionEn());
+        addCreateStr(rows, ctx, P_LABEL_EXAMPLE_CN, p.getConfigurationExampleCn());
+        addCreateStr(rows, ctx, P_LABEL_EXAMPLE_EN, p.getConfigurationExampleEn());
+        addCreateStr(rows, ctx, P_LABEL_RELATED_DESC_CN, p.getRelatedParameterDescriptionCn());
+        addCreateStr(rows, ctx, P_LABEL_RELATED_DESC_EN, p.getRelatedParameterDescriptionEn());
+        addCreateStr(rows, ctx, P_LABEL_REMARK, p.getRemark());
+        addCreateStr(rows, ctx, P_LABEL_ENUM_CN, p.getEnumerationValuesCn());
+        addCreateStr(rows, ctx, P_LABEL_ENUM_EN, p.getEnumerationValuesEn());
+        addCreateStr(rows, ctx, P_LABEL_UNIT_CN, p.getParameterUnitCn());
+        addCreateStr(rows, ctx, P_LABEL_UNIT_EN, p.getParameterUnitEn());
+        addCreateStr(rows, ctx, P_LABEL_PARAM_RANGE, p.getParameterRange());
     }
 
     /**
@@ -1197,63 +1206,76 @@ public class OperationLogAppService {
         if (before == null || after == null) {
             return;
         }
-        String op = StringUtils.defaultIfBlank(operatorId, "system");
-        String batch = IMPORT_LOG_BATCH.get();
-        LocalDateTime now = LocalDateTime.now();
-        String productId = after.getOwnedProductId();
-        String versionId = after.getOwnedVersionId();
-        String rid = String.valueOf(after.getParameterId());
+        LogSessionContext ctx = systemParameterUpdateLogContext(after, operatorId);
         RESOURCE_NAME.set(StringUtils.trimToNull(after.getParameterCode()));
         List<OperationLogPo> rows = new ArrayList<>();
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_CODE, before.getParameterCode(), after.getParameterCode());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_NAME_CN, before.getParameterNameCn(), after.getParameterNameCn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_NAME_EN, before.getParameterNameEn(), after.getParameterNameEn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_CMD, before.getOwnedCommandId(), after.getOwnedCommandId());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_STATUS, before.getDataStatus(), after.getDataStatus());
-        diffInt(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_SEQ, before.getParameterSequence(), after.getParameterSequence());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_INTRO, before.getIntroduceType(), after.getIntroduceType());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_INHERIT, before.getInheritReferenceVersionId(), after.getInheritReferenceVersionId());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_VALUE_RANGE, before.getValueRange(), after.getValueRange());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_BIT_USAGE, before.getBitUsage(), after.getBitUsage());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_VALUE_DESC_CN, before.getValueDescriptionCn(), after.getValueDescriptionCn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_VALUE_DESC_EN, before.getValueDescriptionEn(), after.getValueDescriptionEn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_SCENE_CN, before.getApplicationScenarioCn(), after.getApplicationScenarioCn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_SCENE_EN, before.getApplicationScenarioEn(), after.getApplicationScenarioEn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_DEFAULT, before.getParameterDefaultValue(), after.getParameterDefaultValue());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_RECOMMEND, before.getParameterRecommendedValue(), after.getParameterRecommendedValue());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_NE, before.getApplicableNe(), after.getApplicableNe());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_FEATURE, before.getFeature(), after.getFeature());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_FEATURE_ID, before.getFeatureId(), after.getFeatureId());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_BIZ_CLASS, before.getBusinessClassification(), after.getBusinessClassification());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_CATEGORY_ID, before.getCategoryId(), after.getCategoryId());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_TAKE_EFFECT, before.getTakeEffectImmediately(), after.getTakeEffectImmediately());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_EM_CN, before.getEffectiveModeCn(), after.getEffectiveModeCn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_EM_EN, before.getEffectiveModeEn(), after.getEffectiveModeEn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_EF_CN, before.getEffectiveFormCn(), after.getEffectiveFormCn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_EF_EN, before.getEffectiveFormEn(), after.getEffectiveFormEn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_TEAM, before.getProjectTeam(), after.getProjectTeam());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_MODULE, before.getBelongingModule(), after.getBelongingModule());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_PATCH, before.getPatchVersion(), after.getPatchVersion());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_INTRO_VER, before.getIntroducedVersion(), after.getIntroducedVersion());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_PARAM_DESC_CN, before.getParameterDescriptionCn(), after.getParameterDescriptionCn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_PARAM_DESC_EN, before.getParameterDescriptionEn(), after.getParameterDescriptionEn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_IMPACT_CN, before.getImpactDescriptionCn(), after.getImpactDescriptionCn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_IMPACT_EN, before.getImpactDescriptionEn(), after.getImpactDescriptionEn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_EXAMPLE_CN, before.getConfigurationExampleCn(), after.getConfigurationExampleCn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_EXAMPLE_EN, before.getConfigurationExampleEn(), after.getConfigurationExampleEn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_RELATED_DESC_CN, before.getRelatedParameterDescriptionCn(), after.getRelatedParameterDescriptionCn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_RELATED_DESC_EN, before.getRelatedParameterDescriptionEn(), after.getRelatedParameterDescriptionEn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_REMARK, before.getRemark(), after.getRemark());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_ENUM_CN, before.getEnumerationValuesCn(), after.getEnumerationValuesCn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_ENUM_EN, before.getEnumerationValuesEn(), after.getEnumerationValuesEn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_UNIT_CN, before.getParameterUnitCn(), after.getParameterUnitCn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_UNIT_EN, before.getParameterUnitEn(), after.getParameterUnitEn());
-        diffStr(rows, new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, productId, versionId, rid, op, now, batch), P_LABEL_PARAM_RANGE, before.getParameterRange(), after.getParameterRange());
+        appendSystemParameterUpdateCore(rows, ctx, before, after);
+        appendSystemParameterUpdateExtended(rows, ctx, before, after);
         try {
             insertAll(rows);
         } finally {
             RESOURCE_NAME.remove();
         }
+    }
+
+    private LogSessionContext systemParameterUpdateLogContext(SystemParameterPo after, String operatorId) {
+        String op = StringUtils.defaultIfBlank(operatorId, "system");
+        return new LogSessionContext(BIZ_TABLE_SYSTEM_PARAMETER, after.getOwnedProductId(), after.getOwnedVersionId(),
+                String.valueOf(after.getParameterId()), op, LocalDateTime.now(), IMPORT_LOG_BATCH.get());
+    }
+
+    private void appendSystemParameterUpdateCore(List<OperationLogPo> rows, LogSessionContext ctx,
+            SystemParameterPo before, SystemParameterPo after) {
+        diffStr(rows, ctx, P_LABEL_CODE, before.getParameterCode(), after.getParameterCode());
+        diffStr(rows, ctx, P_LABEL_NAME_CN, before.getParameterNameCn(), after.getParameterNameCn());
+        diffStr(rows, ctx, P_LABEL_NAME_EN, before.getParameterNameEn(), after.getParameterNameEn());
+        diffStr(rows, ctx, P_LABEL_CMD, before.getOwnedCommandId(), after.getOwnedCommandId());
+        diffStr(rows, ctx, P_LABEL_STATUS, before.getDataStatus(), after.getDataStatus());
+        diffInt(rows, ctx, P_LABEL_SEQ, before.getParameterSequence(), after.getParameterSequence());
+        diffStr(rows, ctx, P_LABEL_INTRO, before.getIntroduceType(), after.getIntroduceType());
+        diffStr(rows, ctx, P_LABEL_INHERIT, before.getInheritReferenceVersionId(), after.getInheritReferenceVersionId());
+        diffStr(rows, ctx, P_LABEL_VALUE_RANGE, before.getValueRange(), after.getValueRange());
+        diffStr(rows, ctx, P_LABEL_BIT_USAGE, before.getBitUsage(), after.getBitUsage());
+        diffStr(rows, ctx, P_LABEL_VALUE_DESC_CN, before.getValueDescriptionCn(), after.getValueDescriptionCn());
+        diffStr(rows, ctx, P_LABEL_VALUE_DESC_EN, before.getValueDescriptionEn(), after.getValueDescriptionEn());
+        diffStr(rows, ctx, P_LABEL_SCENE_CN, before.getApplicationScenarioCn(), after.getApplicationScenarioCn());
+        diffStr(rows, ctx, P_LABEL_SCENE_EN, before.getApplicationScenarioEn(), after.getApplicationScenarioEn());
+        diffStr(rows, ctx, P_LABEL_DEFAULT, before.getParameterDefaultValue(), after.getParameterDefaultValue());
+        diffStr(rows, ctx, P_LABEL_RECOMMEND, before.getParameterRecommendedValue(), after.getParameterRecommendedValue());
+    }
+
+    private void appendSystemParameterUpdateExtended(List<OperationLogPo> rows, LogSessionContext ctx,
+            SystemParameterPo before, SystemParameterPo after) {
+        diffStr(rows, ctx, P_LABEL_NE, before.getApplicableNe(), after.getApplicableNe());
+        diffStr(rows, ctx, P_LABEL_FEATURE, before.getFeature(), after.getFeature());
+        diffStr(rows, ctx, P_LABEL_FEATURE_ID, before.getFeatureId(), after.getFeatureId());
+        diffStr(rows, ctx, P_LABEL_BIZ_CLASS, before.getBusinessClassification(), after.getBusinessClassification());
+        diffStr(rows, ctx, P_LABEL_CATEGORY_ID, before.getCategoryId(), after.getCategoryId());
+        diffStr(rows, ctx, P_LABEL_TAKE_EFFECT, before.getTakeEffectImmediately(), after.getTakeEffectImmediately());
+        diffStr(rows, ctx, P_LABEL_EM_CN, before.getEffectiveModeCn(), after.getEffectiveModeCn());
+        diffStr(rows, ctx, P_LABEL_EM_EN, before.getEffectiveModeEn(), after.getEffectiveModeEn());
+        diffStr(rows, ctx, P_LABEL_EF_CN, before.getEffectiveFormCn(), after.getEffectiveFormCn());
+        diffStr(rows, ctx, P_LABEL_EF_EN, before.getEffectiveFormEn(), after.getEffectiveFormEn());
+        diffStr(rows, ctx, P_LABEL_TEAM, before.getProjectTeam(), after.getProjectTeam());
+        diffStr(rows, ctx, P_LABEL_MODULE, before.getBelongingModule(), after.getBelongingModule());
+        diffStr(rows, ctx, P_LABEL_PATCH, before.getPatchVersion(), after.getPatchVersion());
+        diffStr(rows, ctx, P_LABEL_INTRO_VER, before.getIntroducedVersion(), after.getIntroducedVersion());
+        diffStr(rows, ctx, P_LABEL_PARAM_DESC_CN, before.getParameterDescriptionCn(), after.getParameterDescriptionCn());
+        diffStr(rows, ctx, P_LABEL_PARAM_DESC_EN, before.getParameterDescriptionEn(), after.getParameterDescriptionEn());
+        diffStr(rows, ctx, P_LABEL_IMPACT_CN, before.getImpactDescriptionCn(), after.getImpactDescriptionCn());
+        diffStr(rows, ctx, P_LABEL_IMPACT_EN, before.getImpactDescriptionEn(), after.getImpactDescriptionEn());
+        diffStr(rows, ctx, P_LABEL_EXAMPLE_CN, before.getConfigurationExampleCn(), after.getConfigurationExampleCn());
+        diffStr(rows, ctx, P_LABEL_EXAMPLE_EN, before.getConfigurationExampleEn(), after.getConfigurationExampleEn());
+        diffStr(rows, ctx, P_LABEL_RELATED_DESC_CN, before.getRelatedParameterDescriptionCn(),
+                after.getRelatedParameterDescriptionCn());
+        diffStr(rows, ctx, P_LABEL_RELATED_DESC_EN, before.getRelatedParameterDescriptionEn(),
+                after.getRelatedParameterDescriptionEn());
+        diffStr(rows, ctx, P_LABEL_REMARK, before.getRemark(), after.getRemark());
+        diffStr(rows, ctx, P_LABEL_ENUM_CN, before.getEnumerationValuesCn(), after.getEnumerationValuesCn());
+        diffStr(rows, ctx, P_LABEL_ENUM_EN, before.getEnumerationValuesEn(), after.getEnumerationValuesEn());
+        diffStr(rows, ctx, P_LABEL_UNIT_CN, before.getParameterUnitCn(), after.getParameterUnitCn());
+        diffStr(rows, ctx, P_LABEL_UNIT_EN, before.getParameterUnitEn(), after.getParameterUnitEn());
+        diffStr(rows, ctx, P_LABEL_PARAM_RANGE, before.getParameterRange(), after.getParameterRange());
     }
 
     /**

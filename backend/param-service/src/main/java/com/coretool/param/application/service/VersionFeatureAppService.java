@@ -104,37 +104,24 @@ public class VersionFeatureAppService {
         String nameCn = input.getFeatureNameCn() == null ? "" : input.getFeatureNameCn().trim();
         VersionFeature disabled = featureRepository.findDisabledByNameCnInScope(productId, versionId, nameCn).orElse(null);
         if (disabled != null) {
-            VersionFeature before =
-                    VersionFeature.rehydrate(
-                            new VersionFeature.Snapshot(
-                                    disabled.getOwnedProductPbiId(),
-                                    disabled.getOwnedVersionId(),
-                                    disabled.getFeatureId(),
-                                    disabled.getFeatureCode(),
-                                    disabled.getFeatureNameCn(),
-                                    disabled.getFeatureNameEn(),
-                                    disabled.getIntroduceType(),
-                                    disabled.getInheritReferenceVersionId(),
-                                    disabled.getFeatureStatus(),
-                                    disabled.getCreatorId(),
-                                    disabled.getCreationTimestamp(),
-                                    disabled.getUpdaterId(),
-                                    disabled.getUpdateTimestamp()));
-            disabled.applyPatch(
-                    new VersionFeature.Patch(
-                            null,
-                            nameCn,
-                            input.getFeatureNameEn(),
-                            input.getIntroduceType(),
-                            input.getInheritReferenceVersionId(),
-                            1,
-                            StringUtils.defaultIfBlank(input.getUpdaterId(), "system"),
-                            LocalDateTime.now()));
-            featureRepository.update(disabled);
-            String opR = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
-            operationLogAppService.logVersionFeatureUpdate(before, disabled, opR);
-            return VersionFeatureAssembler.toPo(disabled);
+            return reactivateDisabled(productId, versionId, input, disabled, nameCn);
         }
+        return insertNew(productId, versionId, input);
+    }
+
+    private VersionFeatureDictPo reactivateDisabled(
+            String productId, String versionId, VersionFeatureDictPo input, VersionFeature disabled, String nameCn) {
+        VersionFeature before = VersionFeature.rehydrate(snapshotOf(disabled));
+        disabled.applyPatch(new VersionFeature.Patch(null, nameCn, input.getFeatureNameEn(), input.getIntroduceType(),
+                input.getInheritReferenceVersionId(), 1, StringUtils.defaultIfBlank(input.getUpdaterId(), "system"),
+                LocalDateTime.now()));
+        featureRepository.update(disabled);
+        String opR = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
+        operationLogAppService.logVersionFeatureUpdate(before, disabled, opR);
+        return VersionFeatureAssembler.toPo(disabled);
+    }
+
+    private VersionFeatureDictPo insertNew(String productId, String versionId, VersionFeatureDictPo input) {
         if (StringUtils.isBlank(input.getFeatureId())) {
             input.setFeatureId(IdGenerator.featureId());
         }
@@ -143,31 +130,24 @@ public class VersionFeatureAppService {
         }
         input.setFeatureStatus(1);
         LocalDateTime now = LocalDateTime.now();
-        VersionFeature f =
-                ensureDomain()
-                        .createNew(
-                                new VersionFeatureDomainService.CreateCommand(
-                                        productId,
-                                        versionId,
-                                        input.getFeatureId(),
-                                        input.getFeatureCode(),
-                                        input.getFeatureNameCn(),
-                                        input.getFeatureNameEn(),
-                                        input.getIntroduceType(),
-                                        input.getInheritReferenceVersionId(),
-                                        input.getFeatureStatus(),
-                                        input.getCreatorId(),
-                                        input.getUpdaterId(),
-                                        now));
+        VersionFeature f = ensureDomain().createNew(new VersionFeatureDomainService.CreateCommand(productId,
+                versionId, input.getFeatureId(), input.getFeatureCode(), input.getFeatureNameCn(),
+                input.getFeatureNameEn(), input.getIntroduceType(), input.getInheritReferenceVersionId(),
+                input.getFeatureStatus(), input.getCreatorId(), input.getUpdaterId(), now));
         featureRepository.insert(f);
         VersionFeatureDictPo out = VersionFeatureAssembler.toPo(f);
-        String w =
-                StringUtils.defaultIfBlank(
-                        StringUtils.firstNonBlank(
-                                input.getCreatorId(), input.getUpdaterId(), f.getCreatorId()),
-                        "system");
+        String w = StringUtils.defaultIfBlank(StringUtils.firstNonBlank(
+                input.getCreatorId(), input.getUpdaterId(), f.getCreatorId()), "system");
         operationLogAppService.logVersionFeatureCreate(productId, versionId, out, w);
         return out;
+    }
+
+    private static VersionFeature.Snapshot snapshotOf(VersionFeature disabled) {
+        return new VersionFeature.Snapshot(disabled.getOwnedProductPbiId(), disabled.getOwnedVersionId(),
+                disabled.getFeatureId(), disabled.getFeatureCode(), disabled.getFeatureNameCn(),
+                disabled.getFeatureNameEn(), disabled.getIntroduceType(), disabled.getInheritReferenceVersionId(),
+                disabled.getFeatureStatus(), disabled.getCreatorId(), disabled.getCreationTimestamp(),
+                disabled.getUpdaterId(), disabled.getUpdateTimestamp());
     }
 
     /**
@@ -263,52 +243,64 @@ public class VersionFeatureAppService {
             ExcelHelper.ParsedSheet sheet = ExcelHelper.parseFirstSheet(bytes);
             List<List<String>> rows = sheet.rows();
             if (rows.size() <= 1) {
-                BatchImportResult empty = new BatchImportResult();
-                empty.setTotalRows(0);
-                empty.setSuccessCount(0);
-                empty.setFailureCount(0);
-                empty.setSuccessRowNumbers(List.of());
-                empty.setFailures(List.of());
-                return empty;
+                return emptyImportResult();
             }
             int headerIdx = ExcelHelper.detectHeaderRowIndex(rows);
             Map<String, Integer> idx = ExcelHelper.headerIndex(rows.get(headerIdx));
             ImportResultCollector c = new ImportResultCollector();
             int dataRows = rows.size() - headerIdx - 1;
             for (int i = headerIdx + 1; i < rows.size(); i++) {
-                int line = i + 1;
-                try {
-                    List<String> cols = rows.get(i);
-                    VersionFeatureDictPo po = new VersionFeatureDictPo();
-                    po.setFeatureId(StringUtils.trimToNull(col(cols, idx, "ID")));
-                    po.setFeatureCode(col(cols, idx, "特性 ID"));
-                    po.setFeatureNameCn(col(cols, idx, "中文名称"));
-                    po.setFeatureNameEn(col(cols, idx, "英文名称"));
-                    po.setIntroduceType(col(cols, idx, "引入类型"));
-                    po.setInheritReferenceVersionId(StringUtils.trimToNull(col(cols, idx, "继承/引用版本 ID")));
-                    po.setFeatureStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
-                    if (StringUtils.isBlank(po.getFeatureId())) {
-                        create(productId, versionId, po);
-                    } else {
-                        VersionFeature ex = featureRepository.findByFeatureId(po.getFeatureId()).orElse(null);
-                        if (ex == null) {
-                            create(productId, versionId, po);
-                            c.success(line);
-                            continue;
-                        }
-                        ensureDomain().requireOwned(productId, versionId, po.getFeatureId());
-                        po.setUpdaterId("system");
-                        update(productId, versionId, po.getFeatureId(), po);
-                    }
-                    c.success(line);
-                } catch (Exception ex) {
-                    c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
-                }
+                importFeatureRow(productId, versionId, rows.get(i), idx, i + 1, c);
             }
             return c.build(dataRows);
         } finally {
             operationLogAppService.endImportBatch();
         }
+    }
+
+    private void importFeatureRow(String productId, String versionId, List<String> cols, Map<String, Integer> idx,
+            int line, ImportResultCollector c) {
+        try {
+            VersionFeatureDictPo po = parseFeatureImportRow(cols, idx);
+            if (StringUtils.isBlank(po.getFeatureId())) {
+                create(productId, versionId, po);
+            } else {
+                VersionFeature ex = featureRepository.findByFeatureId(po.getFeatureId()).orElse(null);
+                if (ex == null) {
+                    create(productId, versionId, po);
+                    c.success(line);
+                    return;
+                }
+                ensureDomain().requireOwned(productId, versionId, po.getFeatureId());
+                po.setUpdaterId("system");
+                update(productId, versionId, po.getFeatureId(), po);
+            }
+            c.success(line);
+        } catch (Exception ex) {
+            c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
+        }
+    }
+
+    private VersionFeatureDictPo parseFeatureImportRow(List<String> cols, Map<String, Integer> idx) {
+        VersionFeatureDictPo po = new VersionFeatureDictPo();
+        po.setFeatureId(StringUtils.trimToNull(col(cols, idx, "ID")));
+        po.setFeatureCode(col(cols, idx, "特性 ID"));
+        po.setFeatureNameCn(col(cols, idx, "中文名称"));
+        po.setFeatureNameEn(col(cols, idx, "英文名称"));
+        po.setIntroduceType(col(cols, idx, "引入类型"));
+        po.setInheritReferenceVersionId(StringUtils.trimToNull(col(cols, idx, "继承/引用版本 ID")));
+        po.setFeatureStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
+        return po;
+    }
+
+    private static BatchImportResult emptyImportResult() {
+        BatchImportResult empty = new BatchImportResult();
+        empty.setTotalRows(0);
+        empty.setSuccessCount(0);
+        empty.setFailureCount(0);
+        empty.setSuccessRowNumbers(List.of());
+        empty.setFailures(List.of());
+        return empty;
     }
 
     /**

@@ -95,59 +95,46 @@ public class EffectiveModeAppService {
         String nameCn = input.getEffectiveModeNameCn() == null ? "" : input.getEffectiveModeNameCn().trim();
         EffectiveMode disabled = effectiveModeRepository.findDisabledByNameCnInProduct(productId, nameCn).orElse(null);
         if (disabled != null) {
-            EffectiveMode before =
-                    EffectiveMode.rehydrate(
-                            new EffectiveMode.Snapshot(
-                                    disabled.getOwnedProductId(),
-                                    disabled.getEffectiveModeId(),
-                                    disabled.getEffectiveModeNameCn(),
-                                    disabled.getEffectiveModeNameEn(),
-                                    disabled.getEffectiveModeDescription(),
-                                    disabled.getEffectiveModeStatus(),
-                                    disabled.getCreatorId(),
-                                    disabled.getCreationTimestamp(),
-                                    disabled.getUpdaterId(),
-                                    disabled.getUpdateTimestamp()));
-            disabled.applyPatch(
-                    new EffectiveMode.Patch(
-                            nameCn,
-                            input.getEffectiveModeNameEn(),
-                            input.getEffectiveModeDescription(),
-                            1,
-                            StringUtils.defaultIfBlank(input.getUpdaterId(), "system"),
-                            now));
-            effectiveModeRepository.update(disabled);
-            String opR = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
-            operationLogAppService.logEffectiveModeUpdate(before, disabled, opR);
-            return EffectiveModeAssembler.toPo(disabled);
+            return reactivateDisabled(productId, input, disabled, nameCn, now);
         }
+        return insertNew(productId, input, now);
+    }
 
+    private EntityEffectiveModeDictPo reactivateDisabled(
+            String productId, EntityEffectiveModeDictPo input, EffectiveMode disabled, String nameCn,
+            LocalDateTime now) {
+        EffectiveMode before = EffectiveMode.rehydrate(snapshotOf(disabled));
+        disabled.applyPatch(new EffectiveMode.Patch(nameCn, input.getEffectiveModeNameEn(),
+                input.getEffectiveModeDescription(), 1, StringUtils.defaultIfBlank(input.getUpdaterId(), "system"),
+                now));
+        effectiveModeRepository.update(disabled);
+        String opR = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
+        operationLogAppService.logEffectiveModeUpdate(before, disabled, opR);
+        return EffectiveModeAssembler.toPo(disabled);
+    }
+
+    private EntityEffectiveModeDictPo insertNew(String productId, EntityEffectiveModeDictPo input, LocalDateTime now) {
         if (StringUtils.isBlank(input.getEffectiveModeId())) {
             input.setEffectiveModeId(IdGenerator.effectiveModeId());
         }
         input.setEffectiveModeStatus(1);
-        EffectiveMode m =
-                ensureDomain()
-                        .createNew(
-                                new EffectiveModeDomainService.CreateCommand(
-                                        productId,
-                                        input.getEffectiveModeId(),
-                                        input.getEffectiveModeNameCn(),
-                                        input.getEffectiveModeNameEn(),
-                                        input.getEffectiveModeDescription(),
-                                        input.getEffectiveModeStatus(),
-                                        input.getCreatorId(),
-                                        input.getUpdaterId(),
-                                        now));
+        EffectiveMode m = ensureDomain().createNew(new EffectiveModeDomainService.CreateCommand(productId,
+                input.getEffectiveModeId(), input.getEffectiveModeNameCn(), input.getEffectiveModeNameEn(),
+                input.getEffectiveModeDescription(), input.getEffectiveModeStatus(), input.getCreatorId(),
+                input.getUpdaterId(), now));
         effectiveModeRepository.insert(m);
         EntityEffectiveModeDictPo out = EffectiveModeAssembler.toPo(m);
-        String w =
-                StringUtils.defaultIfBlank(
-                        StringUtils.firstNonBlank(
-                                input.getCreatorId(), input.getUpdaterId(), m.getCreatorId()),
-                        "system");
+        String w = StringUtils.defaultIfBlank(StringUtils.firstNonBlank(
+                input.getCreatorId(), input.getUpdaterId(), m.getCreatorId()), "system");
         operationLogAppService.logEffectiveModeCreate(productId, out, w);
         return out;
+    }
+
+    private static EffectiveMode.Snapshot snapshotOf(EffectiveMode disabled) {
+        return new EffectiveMode.Snapshot(disabled.getOwnedProductId(), disabled.getEffectiveModeId(),
+                disabled.getEffectiveModeNameCn(), disabled.getEffectiveModeNameEn(), disabled.getEffectiveModeDescription(),
+                disabled.getEffectiveModeStatus(), disabled.getCreatorId(), disabled.getCreationTimestamp(),
+                disabled.getUpdaterId(), disabled.getUpdateTimestamp());
     }
 
     /**
@@ -236,50 +223,57 @@ public class EffectiveModeAppService {
             ExcelHelper.ParsedSheet sheet = ExcelHelper.parseFirstSheet(bytes);
             List<List<String>> rows = sheet.rows();
             if (rows.size() <= 1) {
-                BatchImportResult empty = new BatchImportResult();
-                empty.setTotalRows(0);
-                empty.setSuccessCount(0);
-                empty.setFailureCount(0);
-                empty.setSuccessRowNumbers(List.of());
-                empty.setFailures(List.of());
-                return empty;
+                return emptyImportResult();
             }
             int headerIdx = ExcelHelper.detectHeaderRowIndex(rows);
             Map<String, Integer> idx = ExcelHelper.headerIndex(rows.get(headerIdx));
             ImportResultCollector c = new ImportResultCollector();
             int dataRows = rows.size() - headerIdx - 1;
             for (int i = headerIdx + 1; i < rows.size(); i++) {
-                int line = i + 1;
-                try {
-                    List<String> cols = rows.get(i);
-                    EntityEffectiveModeDictPo po = new EntityEffectiveModeDictPo();
-                    po.setEffectiveModeId(StringUtils.trimToNull(col(cols, idx, "ID")));
-                    po.setEffectiveModeNameCn(col(cols, idx, "生效方式（中文）"));
-                    po.setEffectiveModeNameEn(col(cols, idx, "生效方式（英文）"));
-                    po.setEffectiveModeDescription(StringUtils.trimToNull(col(cols, idx, "生效方式描述")));
-                    po.setEffectiveModeStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
-                    if (StringUtils.isBlank(po.getEffectiveModeId())) {
-                        create(productId, po);
-                    } else {
-                        EffectiveMode ex = effectiveModeRepository.findById(po.getEffectiveModeId()).orElse(null);
-                        if (ex == null) {
-                            create(productId, po);
-                            c.success(line);
-                            continue;
-                        }
-                        ensureDomain().requireOwned(productId, po.getEffectiveModeId());
-                        po.setUpdaterId("system");
-                        update(productId, po.getEffectiveModeId(), po);
-                    }
-                    c.success(line);
-                } catch (Exception ex) {
-                    c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
-                }
+                importRow(productId, rows.get(i), idx, i + 1, c);
             }
             return c.build(dataRows);
         } finally {
             operationLogAppService.endImportBatch();
         }
+    }
+
+    private void importRow(
+            String productId, List<String> cols, Map<String, Integer> idx, int line, ImportResultCollector c) {
+        try {
+            EntityEffectiveModeDictPo po = new EntityEffectiveModeDictPo();
+            po.setEffectiveModeId(StringUtils.trimToNull(col(cols, idx, "ID")));
+            po.setEffectiveModeNameCn(col(cols, idx, "生效方式（中文）"));
+            po.setEffectiveModeNameEn(col(cols, idx, "生效方式（英文）"));
+            po.setEffectiveModeDescription(StringUtils.trimToNull(col(cols, idx, "生效方式描述")));
+            po.setEffectiveModeStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
+            if (StringUtils.isBlank(po.getEffectiveModeId())) {
+                create(productId, po);
+            } else {
+                EffectiveMode ex = effectiveModeRepository.findById(po.getEffectiveModeId()).orElse(null);
+                if (ex == null) {
+                    create(productId, po);
+                    c.success(line);
+                    return;
+                }
+                ensureDomain().requireOwned(productId, po.getEffectiveModeId());
+                po.setUpdaterId("system");
+                update(productId, po.getEffectiveModeId(), po);
+            }
+            c.success(line);
+        } catch (Exception ex) {
+            c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
+        }
+    }
+
+    private static BatchImportResult emptyImportResult() {
+        BatchImportResult empty = new BatchImportResult();
+        empty.setTotalRows(0);
+        empty.setSuccessCount(0);
+        empty.setFailureCount(0);
+        empty.setSuccessRowNumbers(List.of());
+        empty.setFailures(List.of());
+        return empty;
     }
 
     /**

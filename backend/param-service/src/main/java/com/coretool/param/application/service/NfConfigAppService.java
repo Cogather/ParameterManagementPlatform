@@ -95,56 +95,43 @@ public class NfConfigAppService {
         String name = input.getNfConfigNameCn() == null ? "" : input.getNfConfigNameCn().trim();
         NfConfigEntry disabled = nfConfigRepository.findDisabledByNameInProduct(productId, name).orElse(null);
         if (disabled != null) {
-            NfConfigEntry before =
-                    NfConfigEntry.rehydrate(
-                            new NfConfigEntry.Snapshot(
-                                    disabled.getOwnedProductId(),
-                                    disabled.getNfConfigId(),
-                                    disabled.getNfConfigNameCn(),
-                                    disabled.getNfConfigDescription(),
-                                    disabled.getNfConfigStatus(),
-                                    disabled.getCreatorId(),
-                                    disabled.getCreationTimestamp(),
-                                    disabled.getUpdaterId(),
-                                    disabled.getUpdateTimestamp()));
-            disabled.applyPatch(
-                    new NfConfigEntry.Patch(
-                            name,
-                            input.getNfConfigDescription(),
-                            1,
-                            StringUtils.defaultIfBlank(input.getUpdaterId(), "system"),
-                            now));
-            nfConfigRepository.update(disabled);
-            String opR = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
-            operationLogAppService.logNfConfigUpdate(before, disabled, opR);
-            return NfConfigEntryAssembler.toPo(disabled);
+            return reactivateDisabled(productId, input, disabled, name, now);
         }
+        return insertNew(productId, input, now);
+    }
 
+    private EntityNfConfigDictPo reactivateDisabled(
+            String productId, EntityNfConfigDictPo input, NfConfigEntry disabled, String name, LocalDateTime now) {
+        NfConfigEntry before = NfConfigEntry.rehydrate(snapshotOf(disabled));
+        disabled.applyPatch(new NfConfigEntry.Patch(name, input.getNfConfigDescription(), 1,
+                StringUtils.defaultIfBlank(input.getUpdaterId(), "system"), now));
+        nfConfigRepository.update(disabled);
+        String opR = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
+        operationLogAppService.logNfConfigUpdate(before, disabled, opR);
+        return NfConfigEntryAssembler.toPo(disabled);
+    }
+
+    private EntityNfConfigDictPo insertNew(String productId, EntityNfConfigDictPo input, LocalDateTime now) {
         if (StringUtils.isBlank(input.getNfConfigId())) {
             input.setNfConfigId(IdGenerator.nfConfigId());
         }
         input.setNfConfigStatus(1);
-        NfConfigEntry entry =
-                ensureDomain()
-                        .createNew(
-                                new NfConfigDomainService.CreateCommand(
-                                        productId,
-                                        input.getNfConfigId(),
-                                        input.getNfConfigNameCn(),
-                                        input.getNfConfigDescription(),
-                                        input.getNfConfigStatus(),
-                                        input.getCreatorId(),
-                                        input.getUpdaterId(),
-                                        now));
+        NfConfigEntry entry = ensureDomain().createNew(new NfConfigDomainService.CreateCommand(productId,
+                input.getNfConfigId(), input.getNfConfigNameCn(), input.getNfConfigDescription(),
+                input.getNfConfigStatus(), input.getCreatorId(), input.getUpdaterId(), now));
         nfConfigRepository.insert(entry);
         EntityNfConfigDictPo out = NfConfigEntryAssembler.toPo(entry);
-        String w =
-                StringUtils.defaultIfBlank(
-                        StringUtils.firstNonBlank(
-                                input.getCreatorId(), input.getUpdaterId(), entry.getCreatorId()),
-                        "system");
+        String w = StringUtils.defaultIfBlank(StringUtils.firstNonBlank(
+                input.getCreatorId(), input.getUpdaterId(), entry.getCreatorId()), "system");
         operationLogAppService.logNfConfigCreate(productId, out, w);
         return out;
+    }
+
+    private static NfConfigEntry.Snapshot snapshotOf(NfConfigEntry disabled) {
+        return new NfConfigEntry.Snapshot(disabled.getOwnedProductId(), disabled.getNfConfigId(),
+                disabled.getNfConfigNameCn(), disabled.getNfConfigDescription(), disabled.getNfConfigStatus(),
+                disabled.getCreatorId(), disabled.getCreationTimestamp(),
+                disabled.getUpdaterId(), disabled.getUpdateTimestamp());
     }
 
     /**
@@ -228,49 +215,56 @@ public class NfConfigAppService {
             ExcelHelper.ParsedSheet sheet = ExcelHelper.parseFirstSheet(bytes);
             List<List<String>> rows = sheet.rows();
             if (rows.size() <= 1) {
-                BatchImportResult e = new BatchImportResult();
-                e.setTotalRows(0);
-                e.setSuccessCount(0);
-                e.setFailureCount(0);
-                e.setSuccessRowNumbers(List.of());
-                e.setFailures(List.of());
-                return e;
+                return emptyImportResult();
             }
             int headerIdx = ExcelHelper.detectHeaderRowIndex(rows);
             Map<String, Integer> idx = ExcelHelper.headerIndex(rows.get(headerIdx));
             ImportResultCollector c = new ImportResultCollector();
             int dataRows = rows.size() - headerIdx - 1;
             for (int i = headerIdx + 1; i < rows.size(); i++) {
-                int line = i + 1;
-                try {
-                    List<String> cols = rows.get(i);
-                    EntityNfConfigDictPo po = new EntityNfConfigDictPo();
-                    po.setNfConfigId(StringUtils.trimToNull(col(cols, idx, "ID")));
-                    po.setNfConfigNameCn(col(cols, idx, "nf 名称"));
-                    po.setNfConfigDescription(StringUtils.trimToNull(col(cols, idx, "nf 配置描述")));
-                    po.setNfConfigStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
-                    if (StringUtils.isBlank(po.getNfConfigId())) {
-                        create(productId, po);
-                    } else {
-                        NfConfigEntry ex = nfConfigRepository.findById(po.getNfConfigId()).orElse(null);
-                        if (ex == null) {
-                            create(productId, po);
-                            c.success(line);
-                            continue;
-                        }
-                        ensureDomain().requireOwned(productId, po.getNfConfigId());
-                        po.setUpdaterId("system");
-                        update(productId, po.getNfConfigId(), po);
-                    }
-                    c.success(line);
-                } catch (Exception ex) {
-                    c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
-                }
+                importRow(productId, rows.get(i), idx, i + 1, c);
             }
             return c.build(dataRows);
         } finally {
             operationLogAppService.endImportBatch();
         }
+    }
+
+    private void importRow(
+            String productId, List<String> cols, Map<String, Integer> idx, int line, ImportResultCollector c) {
+        try {
+            EntityNfConfigDictPo po = new EntityNfConfigDictPo();
+            po.setNfConfigId(StringUtils.trimToNull(col(cols, idx, "ID")));
+            po.setNfConfigNameCn(col(cols, idx, "nf 名称"));
+            po.setNfConfigDescription(StringUtils.trimToNull(col(cols, idx, "nf 配置描述")));
+            po.setNfConfigStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
+            if (StringUtils.isBlank(po.getNfConfigId())) {
+                create(productId, po);
+            } else {
+                NfConfigEntry ex = nfConfigRepository.findById(po.getNfConfigId()).orElse(null);
+                if (ex == null) {
+                    create(productId, po);
+                    c.success(line);
+                    return;
+                }
+                ensureDomain().requireOwned(productId, po.getNfConfigId());
+                po.setUpdaterId("system");
+                update(productId, po.getNfConfigId(), po);
+            }
+            c.success(line);
+        } catch (Exception ex) {
+            c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
+        }
+    }
+
+    private static BatchImportResult emptyImportResult() {
+        BatchImportResult e = new BatchImportResult();
+        e.setTotalRows(0);
+        e.setSuccessCount(0);
+        e.setFailureCount(0);
+        e.setSuccessRowNumbers(List.of());
+        e.setFailures(List.of());
+        return e;
     }
 
     /**

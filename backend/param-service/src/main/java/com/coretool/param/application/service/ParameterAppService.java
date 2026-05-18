@@ -599,54 +599,37 @@ public class ParameterAppService {
         String cmdId = StringUtils.defaultString(po.getOwnedCommandId()).trim();
         String cmdName = cmdId.isEmpty() ? "" : StringUtils.defaultIfBlank(commandNameById.get(cmdId), cmdId);
         String idCell = po.getParameterId() == null ? "" : String.valueOf(po.getParameterId());
+        List<String> row = new ArrayList<>(parameterExportMainCells(po, cmdName, idCell));
+        row.addAll(parameterExportChangeCells(ch));
+        return row;
+    }
+
+    private List<String> parameterExportMainCells(SystemParameterPo po, String cmdName, String idCell) {
         return List.of(
-                idCell,
-                nz(po.getParameterNameCn()),
-                nz(po.getParameterNameEn()),
-                cmdName,
-                nz(po.getParameterCode()),
+                idCell, nz(po.getParameterNameCn()), nz(po.getParameterNameEn()), cmdName, nz(po.getParameterCode()),
                 po.getParameterSequence() == null ? "" : String.valueOf(po.getParameterSequence()),
-                nz(po.getValueRange()),
-                nz(po.getBitUsage()),
-                nz(po.getValueDescriptionCn()),
-                nz(po.getValueDescriptionEn()),
-                nz(po.getApplicationScenarioCn()),
-                nz(po.getApplicationScenarioEn()),
-                nz(po.getParameterDefaultValue()),
-                nz(po.getParameterRecommendedValue()),
-                nz(po.getApplicableNe()),
-                nz(po.getFeature()),
-                nz(po.getBusinessClassification()),
-                nz(po.getTakeEffectImmediately()),
-                nz(po.getEffectiveModeCn()),
-                nz(po.getEffectiveModeEn()),
-                nz(po.getProjectTeam()),
-                nz(po.getBelongingModule()),
-                nz(po.getChangeSource()),
-                nz(po.getPatchVersion()),
-                nz(po.getIntroducedVersion()),
-                nz(po.getParameterDescriptionCn()),
-                nz(po.getParameterDescriptionEn()),
-                nz(po.getImpactDescriptionCn()),
-                nz(po.getImpactDescriptionEn()),
-                nz(po.getConfigurationExampleCn()),
-                nz(po.getConfigurationExampleEn()),
-                nz(po.getRelatedParameterDescriptionCn()),
-                nz(po.getRelatedParameterDescriptionEn()),
-                nz(po.getRemark()),
-                nz(po.getEnumerationValuesCn()),
-                nz(po.getEnumerationValuesEn()),
-                nz(po.getParameterUnitCn()),
-                nz(po.getParameterUnitEn()),
-                nz(po.getParameterRange()),
-                nz(po.getDataStatus()),
-                ch == null ? "" : nz(ch.getChangeType()),
-                ch == null ? "" : nz(ch.getChangeReasonCn()),
-                ch == null ? "" : nz(ch.getChangeImpactCn()),
-                ch == null ? "" : nz(ch.getChangeReasonEn()),
-                ch == null ? "" : nz(ch.getChangeImpactEn()),
-                ch == null ? "" : nz(ch.getExportDelta()),
-                ch == null ? "" : nz(ch.getNoExportReason()));
+                nz(po.getValueRange()), nz(po.getBitUsage()), nz(po.getValueDescriptionCn()),
+                nz(po.getValueDescriptionEn()), nz(po.getApplicationScenarioCn()), nz(po.getApplicationScenarioEn()),
+                nz(po.getParameterDefaultValue()), nz(po.getParameterRecommendedValue()), nz(po.getApplicableNe()),
+                nz(po.getFeature()), nz(po.getBusinessClassification()), nz(po.getTakeEffectImmediately()),
+                nz(po.getEffectiveModeCn()), nz(po.getEffectiveModeEn()), nz(po.getProjectTeam()),
+                nz(po.getBelongingModule()), nz(po.getChangeSource()), nz(po.getPatchVersion()),
+                nz(po.getIntroducedVersion()), nz(po.getParameterDescriptionCn()), nz(po.getParameterDescriptionEn()),
+                nz(po.getImpactDescriptionCn()), nz(po.getImpactDescriptionEn()), nz(po.getConfigurationExampleCn()),
+                nz(po.getConfigurationExampleEn()), nz(po.getRelatedParameterDescriptionCn()),
+                nz(po.getRelatedParameterDescriptionEn()), nz(po.getRemark()), nz(po.getEnumerationValuesCn()),
+                nz(po.getEnumerationValuesEn()), nz(po.getParameterUnitCn()), nz(po.getParameterUnitEn()),
+                nz(po.getParameterRange()), nz(po.getDataStatus()));
+    }
+
+    private static List<String> parameterExportChangeCells(ConfigChangeDescriptionPo ch) {
+        if (ch == null) {
+            return List.of("", "", "", "", "", "", "");
+        }
+        return List.of(
+                nz(ch.getChangeType()), nz(ch.getChangeReasonCn()), nz(ch.getChangeImpactCn()),
+                nz(ch.getChangeReasonEn()), nz(ch.getChangeImpactEn()), nz(ch.getExportDelta()),
+                nz(ch.getNoExportReason()));
     }
 
     /**
@@ -697,13 +680,8 @@ public class ParameterAppService {
      * @throws DomainRuleException 文件无内容、表头缺失、mode 非法或 commandId 为空时
      */
     @Transactional
-    public BatchImportResult importParameters(
-            String productId,
-            String versionId,
-            String mode,
-            String commandId,
-            String commandTypeCode,
-            byte[] fileBytes) {
+    public BatchImportResult importParameters(String productId, String versionId, String mode, String commandId,
+            String commandTypeCode, byte[] fileBytes) {
         ExcelHelper.ParsedSheet sheet = ExcelHelper.parseFirstSheet(fileBytes);
         List<List<String>> rows = sheet.rows();
         if (rows.isEmpty()) {
@@ -713,47 +691,42 @@ public class ParameterAppService {
         if (rows.size() <= headerIdx) {
             throw new DomainRuleException("表头缺失");
         }
-        List<String> header = rows.get(headerIdx);
-        Map<String, Integer> hi = ExcelHelper.headerIndex(header);
-        ImportSheetColumns cols = ImportSheetColumns.fromHeader(hi);
-        int colCode = cols.colCode;
+        ImportSheetColumns cols = ImportSheetColumns.fromHeader(ExcelHelper.headerIndex(rows.get(headerIdx)));
         ImportResultCollector c = new ImportResultCollector();
         int dataRows = rows.size() - headerIdx - 1;
+        String importMode = validateImportMode(mode);
+        validateCommandId(commandId);
+        applyFullImportIfNeeded(productId, versionId, commandId, commandTypeCode, importMode);
+        List<SystemParameterPo> peers = loadParametersForCommand(productId, versionId, commandId);
+        for (int i = headerIdx + 1; i < rows.size(); i++) {
+            peers = handleImportParameterRow(productId, versionId, commandId, peers, rows.get(i), i + 1,
+                    cols, cols.colCode, c);
+        }
+        return c.build(dataRows);
+    }
 
+    private static String validateImportMode(String mode) {
         String importMode = mode == null ? "" : mode.trim().toUpperCase();
         if (!"FULL".equals(importMode) && !"INCREMENTAL".equals(importMode)) {
             throw new DomainRuleException("mode 仅支持 FULL / INCREMENTAL");
         }
+        return importMode;
+    }
+
+    private static void validateCommandId(String commandId) {
         if (StringUtils.isBlank(commandId)) {
             throw new DomainRuleException("commandId 必填");
         }
+    }
 
-        List<SystemParameterPo> scopeExisting =
-                filterScopeByCommandTypePrefix(
-                        loadParametersForCommand(productId, versionId, commandId), commandTypeCode);
-
-        if ("FULL".equals(importMode)) {
-            purgeFullImportScope(scopeExisting);
+    private void applyFullImportIfNeeded(String productId, String versionId, String commandId,
+            String commandTypeCode, String importMode) {
+        if (!"FULL".equals(importMode)) {
+            return;
         }
-
-        List<SystemParameterPo> peersForBitCheck = loadParametersForCommand(productId, versionId, commandId);
-
-        for (int i = headerIdx + 1; i < rows.size(); i++) {
-            List<String> line = rows.get(i);
-            int dataRowNumber = i + 1;
-            peersForBitCheck =
-                    handleImportParameterRow(
-                            productId,
-                            versionId,
-                            commandId,
-                            peersForBitCheck,
-                            line,
-                            dataRowNumber,
-                            cols,
-                            colCode,
-                            c);
-        }
-        return c.build(dataRows);
+        List<SystemParameterPo> scope = filterScopeByCommandTypePrefix(
+                loadParametersForCommand(productId, versionId, commandId), commandTypeCode);
+        purgeFullImportScope(scope);
     }
 
     /**
@@ -1281,13 +1254,14 @@ public class ParameterAppService {
          * @param line          当前行
          * @throws DomainRuleException parameter_sequence 非法时
          */
-        private void applyMainFromLine(
-                String productId,
-                String versionId,
-                String commandId,
-                String parameterCode,
-                SystemParameterPo target,
-                List<String> line) {
+        private void applyMainFromLine(String productId, String versionId, String commandId, String parameterCode,
+                SystemParameterPo target, List<String> line) {
+            applyMainKeysFromLine(productId, versionId, commandId, parameterCode, target, line);
+            applyMainOptionalFieldsFromLine(target, line);
+        }
+
+        private void applyMainKeysFromLine(String productId, String versionId, String commandId, String parameterCode,
+                SystemParameterPo target, List<String> line) {
             target.setOwnedProductId(productId);
             target.setOwnedVersionId(versionId);
             target.setOwnedCommandId(commandId);
@@ -1307,6 +1281,9 @@ public class ParameterAppService {
             if (target.getParameterSequence() == null) {
                 target.setParameterSequence(ParameterCode.parse(parameterCode).sequence());
             }
+        }
+
+        private void applyMainOptionalFieldsFromLine(SystemParameterPo target, List<String> line) {
             applyOptionalString(line, colBit, target::setBitUsage);
             applyOptionalString(line, colCs, target::setChangeSource);
             applyOptionalString(line, colValueRange, target::setValueRange);

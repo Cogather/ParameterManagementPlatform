@@ -95,59 +95,43 @@ public class ProjectTeamAppService {
         String name = input.getTeamName() == null ? "" : input.getTeamName().trim();
         ProjectTeam disabled = projectTeamRepository.findDisabledByNameInProduct(productId, name).orElse(null);
         if (disabled != null) {
-            ProjectTeam before =
-                    ProjectTeam.rehydrate(
-                            new ProjectTeam.Snapshot(
-                                    disabled.getOwnedProductId(),
-                                    disabled.getTeamId(),
-                                    disabled.getTeamName(),
-                                    disabled.getTeamDescription(),
-                                    disabled.getTeamStatus(),
-                                    disabled.getOwnerList(),
-                                    disabled.getCreatorId(),
-                                    disabled.getCreationTimestamp(),
-                                    disabled.getUpdaterId(),
-                                    disabled.getUpdateTimestamp()));
-            disabled.applyPatch(
-                    new ProjectTeam.Patch(
-                            name,
-                            input.getTeamDescription(),
-                            1,
-                            input.getOwnerList(),
-                            StringUtils.defaultIfBlank(input.getUpdaterId(), "system"),
-                            now));
-            projectTeamRepository.update(disabled);
-            String opR = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
-            operationLogAppService.logProjectTeamUpdate(before, disabled, opR);
-            return ProjectTeamAssembler.toPo(disabled);
+            return reactivateDisabled(input, disabled, name, now);
         }
+        return insertNew(productId, input, now);
+    }
 
+    private ProjectTeamDictPo reactivateDisabled(
+            ProjectTeamDictPo input, ProjectTeam disabled, String name, LocalDateTime now) {
+        ProjectTeam before = ProjectTeam.rehydrate(snapshotOf(disabled));
+        disabled.applyPatch(new ProjectTeam.Patch(name, input.getTeamDescription(), 1, input.getOwnerList(),
+                StringUtils.defaultIfBlank(input.getUpdaterId(), "system"), now));
+        projectTeamRepository.update(disabled);
+        String opR = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
+        operationLogAppService.logProjectTeamUpdate(before, disabled, opR);
+        return ProjectTeamAssembler.toPo(disabled);
+    }
+
+    private ProjectTeamDictPo insertNew(String productId, ProjectTeamDictPo input, LocalDateTime now) {
         if (StringUtils.isBlank(input.getTeamId())) {
             input.setTeamId(IdGenerator.teamId());
         }
         input.setTeamStatus(1);
-        ProjectTeam t =
-                ensureDomain()
-                        .createNew(
-                                new ProjectTeamDomainService.CreateCommand(
-                                        productId,
-                                        input.getTeamId(),
-                                        input.getTeamName(),
-                                        input.getTeamDescription(),
-                                        input.getTeamStatus(),
-                                        input.getOwnerList(),
-                                        input.getCreatorId(),
-                                        input.getUpdaterId(),
-                                        now));
+        ProjectTeam t = ensureDomain().createNew(new ProjectTeamDomainService.CreateCommand(productId,
+                input.getTeamId(), input.getTeamName(), input.getTeamDescription(), input.getTeamStatus(),
+                input.getOwnerList(), input.getCreatorId(), input.getUpdaterId(), now));
         projectTeamRepository.insert(t);
         ProjectTeamDictPo out = ProjectTeamAssembler.toPo(t);
-        String w =
-                StringUtils.defaultIfBlank(
-                        StringUtils.firstNonBlank(
-                                input.getCreatorId(), input.getUpdaterId(), t.getCreatorId()),
-                        "system");
+        String w = StringUtils.defaultIfBlank(StringUtils.firstNonBlank(
+                input.getCreatorId(), input.getUpdaterId(), t.getCreatorId()), "system");
         operationLogAppService.logProjectTeamCreate(productId, out, w);
         return out;
+    }
+
+    private static ProjectTeam.Snapshot snapshotOf(ProjectTeam disabled) {
+        return new ProjectTeam.Snapshot(disabled.getOwnedProductId(), disabled.getTeamId(), disabled.getTeamName(),
+                disabled.getTeamDescription(), disabled.getTeamStatus(), disabled.getOwnerList(),
+                disabled.getCreatorId(), disabled.getCreationTimestamp(),
+                disabled.getUpdaterId(), disabled.getUpdateTimestamp());
     }
 
     /**
@@ -227,50 +211,57 @@ public class ProjectTeamAppService {
             ExcelHelper.ParsedSheet sheet = ExcelHelper.parseFirstSheet(bytes);
             List<List<String>> rows = sheet.rows();
             if (rows.size() <= 1) {
-                BatchImportResult empty = new BatchImportResult();
-                empty.setTotalRows(0);
-                empty.setSuccessCount(0);
-                empty.setFailureCount(0);
-                empty.setSuccessRowNumbers(List.of());
-                empty.setFailures(List.of());
-                return empty;
+                return emptyImportResult();
             }
             int headerIdx = ExcelHelper.detectHeaderRowIndex(rows);
             Map<String, Integer> idx = ExcelHelper.headerIndex(rows.get(headerIdx));
             ImportResultCollector c = new ImportResultCollector();
             int dataRows = rows.size() - headerIdx - 1;
             for (int i = headerIdx + 1; i < rows.size(); i++) {
-                int line = i + 1;
-                try {
-                    List<String> cols = rows.get(i);
-                    ProjectTeamDictPo po = new ProjectTeamDictPo();
-                    po.setTeamId(StringUtils.trimToNull(col(cols, idx, "ID")));
-                    po.setTeamName(col(cols, idx, "项目组名称"));
-                    po.setTeamDescription(StringUtils.trimToNull(col(cols, idx, "项目组描述")));
-                    po.setTeamStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
-                    po.setOwnerList(col(cols, idx, "责任人"));
-                    if (StringUtils.isBlank(po.getTeamId())) {
-                        create(productId, po);
-                    } else {
-                        ProjectTeam ex = projectTeamRepository.findByTeamId(po.getTeamId()).orElse(null);
-                        if (ex == null) {
-                            create(productId, po);
-                            c.success(line);
-                            continue;
-                        }
-                        ensureDomain().requireOwned(productId, po.getTeamId());
-                        po.setUpdaterId("system");
-                        update(productId, po.getTeamId(), po);
-                    }
-                    c.success(line);
-                } catch (Exception ex) {
-                    c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
-                }
+                importRow(productId, rows.get(i), idx, i + 1, c);
             }
             return c.build(dataRows);
         } finally {
             operationLogAppService.endImportBatch();
         }
+    }
+
+    private void importRow(
+            String productId, List<String> cols, Map<String, Integer> idx, int line, ImportResultCollector c) {
+        try {
+            ProjectTeamDictPo po = new ProjectTeamDictPo();
+            po.setTeamId(StringUtils.trimToNull(col(cols, idx, "ID")));
+            po.setTeamName(col(cols, idx, "项目组名称"));
+            po.setTeamDescription(StringUtils.trimToNull(col(cols, idx, "项目组描述")));
+            po.setTeamStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
+            po.setOwnerList(col(cols, idx, "责任人"));
+            if (StringUtils.isBlank(po.getTeamId())) {
+                create(productId, po);
+            } else {
+                ProjectTeam ex = projectTeamRepository.findByTeamId(po.getTeamId()).orElse(null);
+                if (ex == null) {
+                    create(productId, po);
+                    c.success(line);
+                    return;
+                }
+                ensureDomain().requireOwned(productId, po.getTeamId());
+                po.setUpdaterId("system");
+                update(productId, po.getTeamId(), po);
+            }
+            c.success(line);
+        } catch (Exception ex) {
+            c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
+        }
+    }
+
+    private static BatchImportResult emptyImportResult() {
+        BatchImportResult empty = new BatchImportResult();
+        empty.setTotalRows(0);
+        empty.setSuccessCount(0);
+        empty.setFailureCount(0);
+        empty.setSuccessRowNumbers(List.of());
+        empty.setFailures(List.of());
+        return empty;
     }
 
     /**

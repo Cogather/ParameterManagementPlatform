@@ -95,27 +95,13 @@ public class ApplicableNeAppService {
         String name = input.getNeTypeNameCn() == null ? "" : input.getNeTypeNameCn().trim();
         ApplicableNe disabled = applicableNeRepository.findDisabledByNameInProduct(productId, name).orElse(null);
         if (disabled != null) {
-            ApplicableNe before =
-                    ApplicableNe.rehydrate(
-                            new ApplicableNe.Snapshot(
-                                    disabled.getOwnedProductId(),
-                                    disabled.getNeTypeId(),
-                                    disabled.getNeTypeNameCn(),
-                                    disabled.getNeTypeDescription(),
-                                    disabled.getNeTypeStatus(),
-                                    disabled.getProductForm(),
-                                    disabled.getCreatorId(),
-                                    disabled.getCreationTimestamp(),
-                                    disabled.getUpdaterId(),
-                                    disabled.getUpdateTimestamp()));
-            disabled.applyPatch(
-                    new ApplicableNe.Patch(
-                            name,
-                            input.getNeTypeDescription(),
-                            1,
-                            input.getProductForm(),
-                            StringUtils.defaultIfBlank(input.getUpdaterId(), "system"),
-                            now));
+            ApplicableNe before = ApplicableNe.rehydrate(
+                new ApplicableNe.Snapshot(disabled.getOwnedProductId(), disabled.getNeTypeId(),
+                disabled.getNeTypeNameCn(), disabled.getNeTypeDescription(), disabled.getNeTypeStatus(),
+                disabled.getProductForm(), disabled.getCreatorId(), disabled.getCreationTimestamp(),
+                disabled.getUpdaterId(), disabled.getUpdateTimestamp()));
+            disabled.applyPatch(new ApplicableNe.Patch(name, input.getNeTypeDescription(), 1,
+                input.getProductForm(), StringUtils.defaultIfBlank(input.getUpdaterId(), "system"), now));
             applicableNeRepository.update(disabled);
             String opR = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
             operationLogAppService.logApplicableNeUpdate(before, disabled, opR);
@@ -126,19 +112,10 @@ public class ApplicableNeAppService {
             input.setNeTypeId(IdGenerator.neTypeId());
         }
         input.setNeTypeStatus(1);
-        ApplicableNe ne =
-                ensureDomain()
-                        .createNew(
-                                new ApplicableNeDomainService.CreateCommand(
-                                        productId,
-                                        input.getNeTypeId(),
-                                        input.getNeTypeNameCn(),
-                                        input.getNeTypeDescription(),
-                                        input.getNeTypeStatus(),
-                                        input.getProductForm(),
-                                        input.getCreatorId(),
-                                        input.getUpdaterId(),
-                                        now));
+        ApplicableNe ne = ensureDomain().createNew(
+            new ApplicableNeDomainService.CreateCommand(productId, input.getNeTypeId(),
+                input.getNeTypeNameCn(), input.getNeTypeDescription(), input.getNeTypeStatus(),
+                input.getProductForm(), input.getCreatorId(), input.getUpdaterId(), now));
         applicableNeRepository.insert(ne);
         EntityApplicableNeDictPo out = ApplicableNeAssembler.toPo(ne);
         String w =

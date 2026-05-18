@@ -95,59 +95,46 @@ public class EffectiveFormAppService {
         String nameCn = input.getEffectiveFormNameCn() == null ? "" : input.getEffectiveFormNameCn().trim();
         EffectiveForm disabled = effectiveFormRepository.findDisabledByNameCnInProduct(productId, nameCn).orElse(null);
         if (disabled != null) {
-            EffectiveForm before =
-                    EffectiveForm.rehydrate(
-                            new EffectiveForm.Snapshot(
-                                    disabled.getOwnedProductId(),
-                                    disabled.getEffectiveFormId(),
-                                    disabled.getEffectiveFormNameCn(),
-                                    disabled.getEffectiveFormNameEn(),
-                                    disabled.getEffectiveFormDescription(),
-                                    disabled.getEffectiveFormStatus(),
-                                    disabled.getCreatorId(),
-                                    disabled.getCreationTimestamp(),
-                                    disabled.getUpdaterId(),
-                                    disabled.getUpdateTimestamp()));
-            disabled.applyPatch(
-                    new EffectiveForm.Patch(
-                            nameCn,
-                            input.getEffectiveFormNameEn(),
-                            input.getEffectiveFormDescription(),
-                            1,
-                            StringUtils.defaultIfBlank(input.getUpdaterId(), "system"),
-                            now));
-            effectiveFormRepository.update(disabled);
-            String opR = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
-            operationLogAppService.logEffectiveFormUpdate(before, disabled, opR);
-            return EffectiveFormAssembler.toPo(disabled);
+            return reactivateDisabled(productId, input, disabled, nameCn, now);
         }
+        return insertNew(productId, input, now);
+    }
 
+    private EntityEffectiveFormDictPo reactivateDisabled(
+            String productId, EntityEffectiveFormDictPo input, EffectiveForm disabled, String nameCn,
+            LocalDateTime now) {
+        EffectiveForm before = EffectiveForm.rehydrate(snapshotOf(disabled));
+        disabled.applyPatch(new EffectiveForm.Patch(nameCn, input.getEffectiveFormNameEn(),
+                input.getEffectiveFormDescription(), 1, StringUtils.defaultIfBlank(input.getUpdaterId(), "system"),
+                now));
+        effectiveFormRepository.update(disabled);
+        String opR = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
+        operationLogAppService.logEffectiveFormUpdate(before, disabled, opR);
+        return EffectiveFormAssembler.toPo(disabled);
+    }
+
+    private EntityEffectiveFormDictPo insertNew(String productId, EntityEffectiveFormDictPo input, LocalDateTime now) {
         if (StringUtils.isBlank(input.getEffectiveFormId())) {
             input.setEffectiveFormId(IdGenerator.effectiveFormId());
         }
         input.setEffectiveFormStatus(1);
-        EffectiveForm f =
-                ensureDomain()
-                        .createNew(
-                                new EffectiveFormDomainService.CreateCommand(
-                                        productId,
-                                        input.getEffectiveFormId(),
-                                        input.getEffectiveFormNameCn(),
-                                        input.getEffectiveFormNameEn(),
-                                        input.getEffectiveFormDescription(),
-                                        input.getEffectiveFormStatus(),
-                                        input.getCreatorId(),
-                                        input.getUpdaterId(),
-                                        now));
+        EffectiveForm f = ensureDomain().createNew(new EffectiveFormDomainService.CreateCommand(productId,
+                input.getEffectiveFormId(), input.getEffectiveFormNameCn(), input.getEffectiveFormNameEn(),
+                input.getEffectiveFormDescription(), input.getEffectiveFormStatus(), input.getCreatorId(),
+                input.getUpdaterId(), now));
         effectiveFormRepository.insert(f);
         EntityEffectiveFormDictPo out = EffectiveFormAssembler.toPo(f);
-        String w =
-                StringUtils.defaultIfBlank(
-                        StringUtils.firstNonBlank(
-                                input.getCreatorId(), input.getUpdaterId(), f.getCreatorId()),
-                        "system");
+        String w = StringUtils.defaultIfBlank(StringUtils.firstNonBlank(
+                input.getCreatorId(), input.getUpdaterId(), f.getCreatorId()), "system");
         operationLogAppService.logEffectiveFormCreate(productId, out, w);
         return out;
+    }
+
+    private static EffectiveForm.Snapshot snapshotOf(EffectiveForm disabled) {
+        return new EffectiveForm.Snapshot(disabled.getOwnedProductId(), disabled.getEffectiveFormId(),
+                disabled.getEffectiveFormNameCn(), disabled.getEffectiveFormNameEn(), disabled.getEffectiveFormDescription(),
+                disabled.getEffectiveFormStatus(), disabled.getCreatorId(), disabled.getCreationTimestamp(),
+                disabled.getUpdaterId(), disabled.getUpdateTimestamp());
     }
 
     /**
@@ -236,50 +223,57 @@ public class EffectiveFormAppService {
             ExcelHelper.ParsedSheet sheet = ExcelHelper.parseFirstSheet(bytes);
             List<List<String>> rows = sheet.rows();
             if (rows.size() <= 1) {
-                BatchImportResult empty = new BatchImportResult();
-                empty.setTotalRows(0);
-                empty.setSuccessCount(0);
-                empty.setFailureCount(0);
-                empty.setSuccessRowNumbers(List.of());
-                empty.setFailures(List.of());
-                return empty;
+                return emptyImportResult();
             }
             int headerIdx = ExcelHelper.detectHeaderRowIndex(rows);
             Map<String, Integer> idx = ExcelHelper.headerIndex(rows.get(headerIdx));
             ImportResultCollector c = new ImportResultCollector();
             int dataRows = rows.size() - headerIdx - 1;
             for (int i = headerIdx + 1; i < rows.size(); i++) {
-                int line = i + 1;
-                try {
-                    List<String> cols = rows.get(i);
-                    EntityEffectiveFormDictPo po = new EntityEffectiveFormDictPo();
-                    po.setEffectiveFormId(StringUtils.trimToNull(col(cols, idx, "ID")));
-                    po.setEffectiveFormNameCn(col(cols, idx, "生效形态（中文）"));
-                    po.setEffectiveFormNameEn(col(cols, idx, "生效形态（英文）"));
-                    po.setEffectiveFormDescription(StringUtils.trimToNull(col(cols, idx, "生效形态描述")));
-                    po.setEffectiveFormStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
-                    if (StringUtils.isBlank(po.getEffectiveFormId())) {
-                        create(productId, po);
-                    } else {
-                        EffectiveForm ex = effectiveFormRepository.findById(po.getEffectiveFormId()).orElse(null);
-                        if (ex == null) {
-                            create(productId, po);
-                            c.success(line);
-                            continue;
-                        }
-                        ensureDomain().requireOwned(productId, po.getEffectiveFormId());
-                        po.setUpdaterId("system");
-                        update(productId, po.getEffectiveFormId(), po);
-                    }
-                    c.success(line);
-                } catch (Exception ex) {
-                    c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
-                }
+                importRow(productId, rows.get(i), idx, i + 1, c);
             }
             return c.build(dataRows);
         } finally {
             operationLogAppService.endImportBatch();
         }
+    }
+
+    private void importRow(
+            String productId, List<String> cols, Map<String, Integer> idx, int line, ImportResultCollector c) {
+        try {
+            EntityEffectiveFormDictPo po = new EntityEffectiveFormDictPo();
+            po.setEffectiveFormId(StringUtils.trimToNull(col(cols, idx, "ID")));
+            po.setEffectiveFormNameCn(col(cols, idx, "生效形态（中文）"));
+            po.setEffectiveFormNameEn(col(cols, idx, "生效形态（英文）"));
+            po.setEffectiveFormDescription(StringUtils.trimToNull(col(cols, idx, "生效形态描述")));
+            po.setEffectiveFormStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
+            if (StringUtils.isBlank(po.getEffectiveFormId())) {
+                create(productId, po);
+            } else {
+                EffectiveForm ex = effectiveFormRepository.findById(po.getEffectiveFormId()).orElse(null);
+                if (ex == null) {
+                    create(productId, po);
+                    c.success(line);
+                    return;
+                }
+                ensureDomain().requireOwned(productId, po.getEffectiveFormId());
+                po.setUpdaterId("system");
+                update(productId, po.getEffectiveFormId(), po);
+            }
+            c.success(line);
+        } catch (Exception ex) {
+            c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
+        }
+    }
+
+    private static BatchImportResult emptyImportResult() {
+        BatchImportResult empty = new BatchImportResult();
+        empty.setTotalRows(0);
+        empty.setSuccessCount(0);
+        empty.setFailureCount(0);
+        empty.setSuccessRowNumbers(List.of());
+        empty.setFailures(List.of());
+        return empty;
     }
 
     /**

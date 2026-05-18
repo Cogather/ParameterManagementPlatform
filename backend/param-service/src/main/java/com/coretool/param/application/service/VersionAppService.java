@@ -103,45 +103,27 @@ public class VersionAppService {
         String name = input.getVersionName() == null ? "" : input.getVersionName().trim();
         ProductVersion disabled = productVersionRepository.findDisabledByNameInProduct(productId, name).orElse(null);
         if (disabled != null) {
-            ProductVersion before =
-                    ProductVersion.rehydrate(
-                            new ProductVersion.Snapshot(
-                                    disabled.getOwnedProductId(),
-                                    disabled.getVersionId(),
-                                    disabled.getVersionName(),
-                                    disabled.getVersionType(),
-                                    disabled.getVersionDescription(),
-                                    disabled.getBaselineVersionId(),
-                                    disabled.getBaselineVersionName(),
-                                    disabled.getVersionDesc(),
-                                    disabled.getApprover(),
-                                    disabled.getIsHidden(),
-                                    disabled.getSupportedVersion(),
-                                    disabled.getIntroducedProductId(),
-                                    disabled.getOwnerList(),
-                                    disabled.getVersionStatus(),
-                                    disabled.getCreatorId(),
-                                    disabled.getCreationTimestamp(),
-                                    disabled.getUpdaterId(),
-                                    disabled.getUpdateTimestamp()));
-            // 恢复已删除版本：启用并更新可编辑字段（名称保持一致即可）
-            if (StringUtils.isNotBlank(name) && !StringUtils.equals(name, disabled.getVersionName())) {
-                // 理论上不会发生（按同名查找），兜底保持一致
-                disabled.rename(name);
-            }
-            disabled.applyAttributePatch(
-                    new ProductVersion.AttributePatch(
-                            input.getSupportedVersion(),
-                            input.getVersionDescription(),
-                            input.getVersionDesc(),
-                            1,
-                            StringUtils.defaultIfBlank(input.getUpdaterId(), "system"),
-                            LocalDateTime.now()));
-            productVersionRepository.update(disabled);
-            String opR = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
-            operationLogAppService.logVersionUpdate(before, disabled, opR);
-            return ProductVersionAssembler.toPo(disabled);
+            return reactivateDisabled(productId, input, disabled, name);
         }
+        return insertNew(productId, input);
+    }
+
+    private EntityVersionInfoPo reactivateDisabled(
+            String productId, EntityVersionInfoPo input, ProductVersion disabled, String name) {
+        ProductVersion before = ProductVersion.rehydrate(snapshotOf(disabled));
+        if (StringUtils.isNotBlank(name) && !StringUtils.equals(name, disabled.getVersionName())) {
+            disabled.rename(name);
+        }
+        disabled.applyAttributePatch(new ProductVersion.AttributePatch(input.getSupportedVersion(),
+                input.getVersionDescription(), input.getVersionDesc(), 1,
+                StringUtils.defaultIfBlank(input.getUpdaterId(), "system"), LocalDateTime.now()));
+        productVersionRepository.update(disabled);
+        String opR = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
+        operationLogAppService.logVersionUpdate(before, disabled, opR);
+        return ProductVersionAssembler.toPo(disabled);
+    }
+
+    private EntityVersionInfoPo insertNew(String productId, EntityVersionInfoPo input) {
         if (StringUtils.isBlank(input.getVersionId())) {
             input.setVersionId(IdGenerator.versionId());
         }
@@ -150,34 +132,27 @@ public class VersionAppService {
             input.setVersionType("在研");
         }
         LocalDateTime now = LocalDateTime.now();
-        ProductVersion v =
-                domainService.createNew(
-                        new ProductVersionDomainService.CreateCommand(
-                                productId,
-                                input.getVersionId(),
-                                input.getVersionName(),
-                                input.getVersionType(),
-                                input.getVersionDescription(),
-                                input.getBaselineVersionId(),
-                                input.getBaselineVersionName(),
-                                input.getVersionDesc(),
-                                input.getApprover(),
-                                input.getIsHidden(),
-                                input.getSupportedVersion(),
-                                input.getIntroducedProductId(),
-                                input.getOwnerList(),
-                                input.getVersionStatus(),
-                                input.getCreatorId(),
-                                input.getUpdaterId(),
-                                now));
+        ProductVersion v = domainService.createNew(new ProductVersionDomainService.CreateCommand(productId,
+                input.getVersionId(), input.getVersionName(), input.getVersionType(), input.getVersionDescription(),
+                input.getBaselineVersionId(), input.getBaselineVersionName(), input.getVersionDesc(),
+                input.getApprover(), input.getIsHidden(), input.getSupportedVersion(), input.getIntroducedProductId(),
+                input.getOwnerList(), input.getVersionStatus(), input.getCreatorId(), input.getUpdaterId(), now));
         productVersionRepository.insert(v);
         EntityVersionInfoPo out = ProductVersionAssembler.toPo(v);
-        String who =
-                StringUtils.defaultIfBlank(
-                        StringUtils.firstNonBlank(input.getCreatorId(), input.getUpdaterId(), v.getCreatorId()),
-                        "system");
+        String who = StringUtils.defaultIfBlank(StringUtils.firstNonBlank(
+                input.getCreatorId(), input.getUpdaterId(), v.getCreatorId()), "system");
         operationLogAppService.logVersionCreate(productId, out, who);
         return out;
+    }
+
+    private static ProductVersion.Snapshot snapshotOf(ProductVersion disabled) {
+        return new ProductVersion.Snapshot(disabled.getOwnedProductId(), disabled.getVersionId(),
+                disabled.getVersionName(), disabled.getVersionType(), disabled.getVersionDescription(),
+                disabled.getBaselineVersionId(), disabled.getBaselineVersionName(), disabled.getVersionDesc(),
+                disabled.getApprover(), disabled.getIsHidden(), disabled.getSupportedVersion(),
+                disabled.getIntroducedProductId(), disabled.getOwnerList(), disabled.getVersionStatus(),
+                disabled.getCreatorId(), disabled.getCreationTimestamp(),
+                disabled.getUpdaterId(), disabled.getUpdateTimestamp());
     }
 
     /**
@@ -284,13 +259,7 @@ public class VersionAppService {
             ExcelHelper.ParsedSheet sheet = ExcelHelper.parseFirstSheet(bytes);
             List<List<String>> rows = sheet.rows();
             if (rows.size() <= 1) {
-                BatchImportResult empty = new BatchImportResult();
-                empty.setTotalRows(0);
-                empty.setSuccessCount(0);
-                empty.setFailureCount(0);
-                empty.setSuccessRowNumbers(List.of());
-                empty.setFailures(List.of());
-                return empty;
+                return emptyImportResult();
             }
             int headerIdx = ExcelHelper.detectHeaderRowIndex(rows);
             if (rows.size() <= headerIdx) {
@@ -300,38 +269,54 @@ public class VersionAppService {
             ImportResultCollector c = new ImportResultCollector();
             int dataRows = rows.size() - headerIdx - 1;
             for (int i = headerIdx + 1; i < rows.size(); i++) {
-                int line = i + 1;
-                try {
-                    List<String> cols = rows.get(i);
-                    EntityVersionInfoPo row = new EntityVersionInfoPo();
-                    String id = col(cols, idx, "版本ID");
-                    row.setVersionId(StringUtils.trimToNull(id));
-                    row.setVersionName(col(cols, idx, "版本名称"));
-                    row.setVersionType(StringUtils.trimToNull(col(cols, idx, "版本类型")));
-                    row.setSupportedVersion(StringUtils.trimToNull(col(cols, idx, "支持版本")));
-                    row.setVersionDescription(StringUtils.trimToNull(col(cols, idx, "版本说明")));
-                    row.setVersionDesc(StringUtils.trimToNull(col(cols, idx, "版本描述")));
-                    row.setOwnerList(StringUtils.trimToNull(col(cols, idx, "责任人")));
-                    row.setVersionStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
-                    if (StringUtils.isBlank(row.getVersionId())) {
-                        create(productId, row);
-                    } else {
-                        productVersionRepository
-                                .findById(row.getVersionId())
-                                .orElseThrow(() -> new DomainRuleException("版本不存在"));
-                        domainService.requireOwned(productId, row.getVersionId());
-                        row.setUpdaterId("system");
-                        update(productId, row.getVersionId(), row);
-                    }
-                    c.success(line);
-                } catch (Exception ex) {
-                    c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
-                }
+                importVersionRow(productId, rows.get(i), idx, i + 1, c);
             }
             return c.build(dataRows);
         } finally {
             operationLogAppService.endImportBatch();
         }
+    }
+
+    private void importVersionRow(
+            String productId, List<String> cols, Map<String, Integer> idx, int line, ImportResultCollector c) {
+        try {
+            EntityVersionInfoPo row = parseVersionImportRow(cols, idx);
+            if (StringUtils.isBlank(row.getVersionId())) {
+                create(productId, row);
+            } else {
+                productVersionRepository.findById(row.getVersionId())
+                        .orElseThrow(() -> new DomainRuleException("版本不存在"));
+                domainService.requireOwned(productId, row.getVersionId());
+                row.setUpdaterId("system");
+                update(productId, row.getVersionId(), row);
+            }
+            c.success(line);
+        } catch (Exception ex) {
+            c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
+        }
+    }
+
+    private EntityVersionInfoPo parseVersionImportRow(List<String> cols, Map<String, Integer> idx) {
+        EntityVersionInfoPo row = new EntityVersionInfoPo();
+        row.setVersionId(StringUtils.trimToNull(col(cols, idx, "版本ID")));
+        row.setVersionName(col(cols, idx, "版本名称"));
+        row.setVersionType(StringUtils.trimToNull(col(cols, idx, "版本类型")));
+        row.setSupportedVersion(StringUtils.trimToNull(col(cols, idx, "支持版本")));
+        row.setVersionDescription(StringUtils.trimToNull(col(cols, idx, "版本说明")));
+        row.setVersionDesc(StringUtils.trimToNull(col(cols, idx, "版本描述")));
+        row.setOwnerList(StringUtils.trimToNull(col(cols, idx, "责任人")));
+        row.setVersionStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
+        return row;
+    }
+
+    private static BatchImportResult emptyImportResult() {
+        BatchImportResult empty = new BatchImportResult();
+        empty.setTotalRows(0);
+        empty.setSuccessCount(0);
+        empty.setFailureCount(0);
+        empty.setSuccessRowNumbers(List.of());
+        empty.setFailures(List.of());
+        return empty;
     }
 
     /**

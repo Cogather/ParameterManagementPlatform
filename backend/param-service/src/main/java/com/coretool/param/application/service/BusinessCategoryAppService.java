@@ -106,61 +106,45 @@ public class BusinessCategoryAppService {
         String nameCn = input.getCategoryNameCn().trim();
         BusinessCategory disabled = categoryRepository.findDisabledByChineseNameInProduct(productId, nameCn).orElse(null);
         if (disabled != null) {
-            BusinessCategory before =
-                    BusinessCategory.rehydrate(
-                            new BusinessCategory.Snapshot(
-                                    disabled.getOwnedProductId(),
-                                    disabled.getCategoryId(),
-                                    disabled.getCategoryNameCn(),
-                                    disabled.getCategoryNameEn(),
-                                    disabled.getFeatureRange(),
-                                    disabled.getCategoryType(),
-                                    disabled.getCategoryStatus(),
-                                    disabled.getCreatorId(),
-                                    disabled.getCreationTimestamp(),
-                                    disabled.getUpdaterId(),
-                                    disabled.getUpdateTimestamp()));
-            disabled.applyEditablePatch(
-                    new BusinessCategory.EditablePatch(
-                            nameCn,
-                            input.getCategoryNameEn(),
-                            input.getFeatureRange(),
-                            input.getCategoryType(),
-                            1,
-                            StringUtils.defaultIfBlank(input.getUpdaterId(), "system"),
-                            LocalDateTime.now()));
-            categoryRepository.update(disabled);
-            String opR = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
-            operationLogAppService.logBusinessCategoryUpdate(before, disabled, opR);
-            return BusinessCategoryAssembler.toPo(disabled);
+            return reactivateDisabled(productId, input, disabled, nameCn);
         }
+        return insertNew(productId, input);
+    }
+
+    private EntityBusinessCategoryPo reactivateDisabled(
+            String productId, EntityBusinessCategoryPo input, BusinessCategory disabled, String nameCn) {
+        BusinessCategory before = BusinessCategory.rehydrate(snapshotOf(disabled));
+        disabled.applyEditablePatch(new BusinessCategory.EditablePatch(nameCn, input.getCategoryNameEn(),
+                input.getFeatureRange(), input.getCategoryType(), 1,
+                StringUtils.defaultIfBlank(input.getUpdaterId(), "system"), LocalDateTime.now()));
+        categoryRepository.update(disabled);
+        String opR = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
+        operationLogAppService.logBusinessCategoryUpdate(before, disabled, opR);
+        return BusinessCategoryAssembler.toPo(disabled);
+    }
+
+    private EntityBusinessCategoryPo insertNew(String productId, EntityBusinessCategoryPo input) {
         if (StringUtils.isBlank(input.getCategoryId())) {
             input.setCategoryId(IdGenerator.categoryId());
         }
         input.setCategoryStatus(1);
         LocalDateTime now = LocalDateTime.now();
-        BusinessCategory c =
-                domainService.createNew(
-                        new BusinessCategoryDomainService.CreateCommand(
-                                productId,
-                                input.getCategoryId(),
-                                input.getCategoryNameCn(),
-                                input.getCategoryNameEn(),
-                                input.getFeatureRange(),
-                                input.getCategoryType(),
-                                input.getCategoryStatus(),
-                                input.getCreatorId(),
-                                input.getUpdaterId(),
-                                now));
+        BusinessCategory c = domainService.createNew(new BusinessCategoryDomainService.CreateCommand(productId,
+                input.getCategoryId(), input.getCategoryNameCn(), input.getCategoryNameEn(), input.getFeatureRange(),
+                input.getCategoryType(), input.getCategoryStatus(), input.getCreatorId(), input.getUpdaterId(), now));
         categoryRepository.insert(c);
         EntityBusinessCategoryPo out = BusinessCategoryAssembler.toPo(c);
-        String w =
-                StringUtils.defaultIfBlank(
-                        StringUtils.firstNonBlank(
-                                input.getCreatorId(), input.getUpdaterId(), c.getCreatorId()),
-                        "system");
+        String w = StringUtils.defaultIfBlank(StringUtils.firstNonBlank(
+                input.getCreatorId(), input.getUpdaterId(), c.getCreatorId()), "system");
         operationLogAppService.logBusinessCategoryCreate(productId, out, w);
         return out;
+    }
+
+    private static BusinessCategory.Snapshot snapshotOf(BusinessCategory disabled) {
+        return new BusinessCategory.Snapshot(disabled.getOwnedProductId(), disabled.getCategoryId(),
+                disabled.getCategoryNameCn(), disabled.getCategoryNameEn(), disabled.getFeatureRange(),
+                disabled.getCategoryType(), disabled.getCategoryStatus(), disabled.getCreatorId(),
+                disabled.getCreationTimestamp(), disabled.getUpdaterId(), disabled.getUpdateTimestamp());
     }
 
     /**

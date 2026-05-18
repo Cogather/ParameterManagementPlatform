@@ -48,42 +48,50 @@ public class ParameterCommandTreeAppService {
         if (StringUtils.isBlank(productId)) {
             return demo();
         }
-
-        List<EntityCommandMappingPo> commands =
-                commandMapper.selectList(
-                        new LambdaQueryWrapper<EntityCommandMappingPo>()
-                                .eq(EntityCommandMappingPo::getOwnedProductId, productId)
-                                .ne(EntityCommandMappingPo::getCommandStatus, 0)
-                                .orderByAsc(EntityCommandMappingPo::getCommandName));
-        if (commands == null || commands.isEmpty()) {
+        List<EntityCommandMappingPo> commands = loadCommands(productId);
+        if (commands.isEmpty()) {
             return demo();
         }
+        Map<String, Map<String, ParameterCommandTreeNode.ParameterTypeNode>> byCommand = indexTypesByCommand(productId);
+        return buildTree(commands, byCommand);
+    }
 
-        List<CommandTypeDefinitionPo> types =
-                typeMapper.selectList(
-                        new LambdaQueryWrapper<CommandTypeDefinitionPo>()
-                                .eq(CommandTypeDefinitionPo::getOwnedProductId, productId)
-                                .ne(CommandTypeDefinitionPo::getCommandTypeStatus, 0));
+    private List<EntityCommandMappingPo> loadCommands(String productId) {
+        List<EntityCommandMappingPo> commands = commandMapper.selectList(
+                new LambdaQueryWrapper<EntityCommandMappingPo>()
+                        .eq(EntityCommandMappingPo::getOwnedProductId, productId)
+                        .ne(EntityCommandMappingPo::getCommandStatus, 0)
+                        .orderByAsc(EntityCommandMappingPo::getCommandName));
+        return commands == null ? List.of() : commands;
+    }
 
-        Map<String, Map<String, ParameterCommandTreeNode.ParameterTypeNode>> byCommand =
-                new LinkedHashMap<>();
-        if (types != null) {
-            for (CommandTypeDefinitionPo t : types) {
-                String ownedCmd = StringUtils.defaultString(t.getOwnedCommandId()).trim();
-                if (ownedCmd.isEmpty()) {
-                    continue;
-                }
-                String codeRaw = StringUtils.defaultString(t.getCommandType()).trim();
-                if (codeRaw.isEmpty()) {
-                    continue;
-                }
-                String code = codeRaw.toUpperCase(Locale.ROOT);
-                String name = StringUtils.defaultIfBlank(t.getCommandTypeName(), code).trim();
-                ParameterCommandTreeNode.ParameterTypeNode node = new ParameterCommandTreeNode.ParameterTypeNode(code, name);
-                byCommand.computeIfAbsent(ownedCmd, k -> new LinkedHashMap<>()).putIfAbsent(code, node);
-            }
+    private Map<String, Map<String, ParameterCommandTreeNode.ParameterTypeNode>> indexTypesByCommand(
+            String productId) {
+        List<CommandTypeDefinitionPo> types = typeMapper.selectList(
+                new LambdaQueryWrapper<CommandTypeDefinitionPo>()
+                        .eq(CommandTypeDefinitionPo::getOwnedProductId, productId)
+                        .ne(CommandTypeDefinitionPo::getCommandTypeStatus, 0));
+        Map<String, Map<String, ParameterCommandTreeNode.ParameterTypeNode>> byCommand = new LinkedHashMap<>();
+        if (types == null) {
+            return byCommand;
         }
+        for (CommandTypeDefinitionPo t : types) {
+            String ownedCmd = StringUtils.defaultString(t.getOwnedCommandId()).trim();
+            String codeRaw = StringUtils.defaultString(t.getCommandType()).trim();
+            if (ownedCmd.isEmpty() || codeRaw.isEmpty()) {
+                continue;
+            }
+            String code = codeRaw.toUpperCase(Locale.ROOT);
+            String name = StringUtils.defaultIfBlank(t.getCommandTypeName(), code).trim();
+            byCommand.computeIfAbsent(ownedCmd, k -> new LinkedHashMap<>())
+                    .putIfAbsent(code, new ParameterCommandTreeNode.ParameterTypeNode(code, name));
+        }
+        return byCommand;
+    }
 
+    private static List<ParameterCommandTreeNode> buildTree(
+            List<EntityCommandMappingPo> commands,
+            Map<String, Map<String, ParameterCommandTreeNode.ParameterTypeNode>> byCommand) {
         List<ParameterCommandTreeNode> out = new ArrayList<>();
         for (EntityCommandMappingPo c : commands) {
             ParameterCommandTreeNode n = new ParameterCommandTreeNode();

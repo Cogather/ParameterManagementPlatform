@@ -114,68 +114,49 @@ public class CommandTypeDefinitionAppService {
             throw new DomainRuleException("归属命令ID不能为空");
         }
         String name = input.getCommandTypeName() == null ? "" : input.getCommandTypeName().trim();
-        // 新增时若与“已删除/未启用”的同名记录冲突，则直接恢复该记录（启用）并更新字段。
         CommandTypeDefinition disabled = repository.findDisabledByNameInProduct(productId, name).orElse(null);
         if (disabled != null) {
-            CommandTypeDefinition before =
-                    CommandTypeDefinition.rehydrate(
-                            new CommandTypeDefinition.Snapshot(
-                                    disabled.getOwnedProductId(),
-                                    disabled.getOwnedCommandId(),
-                                    disabled.getCommandTypeId(),
-                                    disabled.getCommandTypeName(),
-                                    disabled.getCommandType(),
-                                    disabled.getMinValue(),
-                                    disabled.getMaxValue(),
-                                    disabled.getOccupiedSerialNumber(),
-                                    disabled.getCommandTypeStatus(),
-                                    disabled.getCreatorId(),
-                                    disabled.getCreationTimestamp(),
-                                    disabled.getUpdaterId(),
-                                    disabled.getUpdateTimestamp()));
-            disabled.applyEditablePatch(
-                    new CommandTypeDefinition.EditablePatch(
-                            name,
-                            input.getCommandType(),
-                            input.getMinValue(),
-                            input.getMaxValue(),
-                            input.getOccupiedSerialNumber(),
-                            1,
-                            StringUtils.defaultIfBlank(input.getUpdaterId(), "system"),
-                            LocalDateTime.now()));
-            repository.update(disabled);
-            String op = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
-            operationLogAppService.logTypeDefinitionUpdate(before, disabled, op);
-            return CommandTypeDefinitionAssembler.toPo(disabled);
+            return reactivateDisabled(productId, input, disabled, name);
         }
+        return insertNew(productId, input);
+    }
+
+    private CommandTypeDefinitionPo reactivateDisabled(
+            String productId, CommandTypeDefinitionPo input, CommandTypeDefinition disabled, String name) {
+        CommandTypeDefinition before = CommandTypeDefinition.rehydrate(snapshotOf(disabled));
+        disabled.applyEditablePatch(new CommandTypeDefinition.EditablePatch(name, input.getCommandType(),
+                input.getMinValue(), input.getMaxValue(), input.getOccupiedSerialNumber(), 1,
+                StringUtils.defaultIfBlank(input.getUpdaterId(), "system"), LocalDateTime.now()));
+        repository.update(disabled);
+        String op = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
+        operationLogAppService.logTypeDefinitionUpdate(before, disabled, op);
+        return CommandTypeDefinitionAssembler.toPo(disabled);
+    }
+
+    private CommandTypeDefinitionPo insertNew(String productId, CommandTypeDefinitionPo input) {
         if (StringUtils.isBlank(input.getCommandTypeId())) {
             input.setCommandTypeId(IdGenerator.commandTypeId());
         }
         LocalDateTime now = LocalDateTime.now();
-        var t =
-                domainService.createNew(
-                        new CommandTypeDefinitionDomainService.CreateCommand(
-                                productId,
-                                input.getOwnedCommandId(),
-                                input.getCommandTypeId(),
-                                input.getCommandTypeName(),
-                                StringUtils.defaultIfBlank(input.getCommandType(), "BIT"),
-                                input.getMinValue(),
-                                input.getMaxValue(),
-                                input.getOccupiedSerialNumber(),
-                                input.getCommandTypeStatus(),
-                                input.getCreatorId(),
-                                input.getUpdaterId(),
-                                now));
+        var t = domainService.createNew(new CommandTypeDefinitionDomainService.CreateCommand(productId,
+                input.getOwnedCommandId(), input.getCommandTypeId(), input.getCommandTypeName(),
+                StringUtils.defaultIfBlank(input.getCommandType(), "BIT"), input.getMinValue(), input.getMaxValue(),
+                input.getOccupiedSerialNumber(), input.getCommandTypeStatus(), input.getCreatorId(),
+                input.getUpdaterId(), now));
         repository.insert(t);
         CommandTypeDefinitionPo out = CommandTypeDefinitionAssembler.toPo(t);
-        String who =
-                StringUtils.defaultIfBlank(
-                        StringUtils.firstNonBlank(
-                                input.getCreatorId(), input.getUpdaterId(), t.getCreatorId()),
-                        "system");
+        String who = StringUtils.defaultIfBlank(StringUtils.firstNonBlank(
+                input.getCreatorId(), input.getUpdaterId(), t.getCreatorId()), "system");
         operationLogAppService.logTypeDefinitionCreate(productId, out, who);
         return out;
+    }
+
+    private static CommandTypeDefinition.Snapshot snapshotOf(CommandTypeDefinition disabled) {
+        return new CommandTypeDefinition.Snapshot(disabled.getOwnedProductId(), disabled.getOwnedCommandId(),
+                disabled.getCommandTypeId(), disabled.getCommandTypeName(), disabled.getCommandType(),
+                disabled.getMinValue(), disabled.getMaxValue(), disabled.getOccupiedSerialNumber(),
+                disabled.getCommandTypeStatus(), disabled.getCreatorId(), disabled.getCreationTimestamp(),
+                disabled.getUpdaterId(), disabled.getUpdateTimestamp());
     }
 
     /**
@@ -234,44 +215,51 @@ public class CommandTypeDefinitionAppService {
             ImportResultCollector c = new ImportResultCollector();
             int dataRows = rows.size() - headerIdx - 1;
             for (int i = headerIdx + 1; i < rows.size(); i++) {
-                int line = i + 1;
-                try {
-                    List<String> cols = rows.get(i);
-                    CommandTypeDefinitionPo po = new CommandTypeDefinitionPo();
-                    String cmdCell = colAny(cols, idx, "归属命令", "归属命令ID");
-                    po.setOwnedCommandId(resolveCommandId(commandIdByName, cmdCell));
-                    po.setCommandTypeId(StringUtils.trimToNull(col(cols, idx, "类型ID")));
-                    po.setCommandTypeName(col(cols, idx, "类型名称"));
-                    po.setCommandType(StringUtils.trimToNull(col(cols, idx, "类型枚举")));
-                    po.setMinValue(parseIntNullable(col(cols, idx, "最小序号")));
-                    po.setMaxValue(parseIntNullable(col(cols, idx, "最大序号")));
-                    po.setOccupiedSerialNumber(StringUtils.trimToNull(col(cols, idx, "占用序号")));
-                    po.setCommandTypeStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
-                    if (StringUtils.isBlank(po.getOwnedCommandId()) || StringUtils.isBlank(po.getCommandTypeName())) {
-                        throw new BizException("归属命令与类型名称不能为空");
-                    }
-                    CommandTypeDefinition ex =
-                            StringUtils.isNotBlank(po.getCommandTypeId())
-                                    ? repository.findById(po.getCommandTypeId()).orElse(null)
-                                    : null;
-                    if (ex == null) {
-                        create(productId, po);
-                    } else {
-                        if (!ex.belongsToProduct(productId)) {
-                            throw new BizException("类型ID与其他产品冲突");
-                        }
-                        po.setUpdaterId("system");
-                        update(productId, po.getCommandTypeId(), po);
-                    }
-                    c.success(line);
-                } catch (Exception ex) {
-                    c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
-                }
+                importRow(productId, rows.get(i), idx, commandIdByName, i + 1, c);
             }
             return c.build(dataRows);
         } finally {
             operationLogAppService.endImportBatch();
         }
+    }
+
+    private void importRow(String productId, List<String> cols, Map<String, Integer> idx,
+            Map<String, String> commandIdByName, int line, ImportResultCollector c) {
+        try {
+            CommandTypeDefinitionPo po = parseImportRow(cols, idx, commandIdByName);
+            if (StringUtils.isBlank(po.getOwnedCommandId()) || StringUtils.isBlank(po.getCommandTypeName())) {
+                throw new BizException("归属命令与类型名称不能为空");
+            }
+            CommandTypeDefinition ex = StringUtils.isNotBlank(po.getCommandTypeId())
+                    ? repository.findById(po.getCommandTypeId()).orElse(null) : null;
+            if (ex == null) {
+                create(productId, po);
+            } else {
+                if (!ex.belongsToProduct(productId)) {
+                    throw new BizException("类型ID与其他产品冲突");
+                }
+                po.setUpdaterId("system");
+                update(productId, po.getCommandTypeId(), po);
+            }
+            c.success(line);
+        } catch (Exception ex) {
+            c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
+        }
+    }
+
+    private CommandTypeDefinitionPo parseImportRow(
+            List<String> cols, Map<String, Integer> idx, Map<String, String> commandIdByName) {
+        CommandTypeDefinitionPo po = new CommandTypeDefinitionPo();
+        String cmdCell = colAny(cols, idx, "归属命令", "归属命令ID");
+        po.setOwnedCommandId(resolveCommandId(commandIdByName, cmdCell));
+        po.setCommandTypeId(StringUtils.trimToNull(col(cols, idx, "类型ID")));
+        po.setCommandTypeName(col(cols, idx, "类型名称"));
+        po.setCommandType(StringUtils.trimToNull(col(cols, idx, "类型枚举")));
+        po.setMinValue(parseIntNullable(col(cols, idx, "最小序号")));
+        po.setMaxValue(parseIntNullable(col(cols, idx, "最大序号")));
+        po.setOccupiedSerialNumber(StringUtils.trimToNull(col(cols, idx, "占用序号")));
+        po.setCommandTypeStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
+        return po;
     }
 
     /**

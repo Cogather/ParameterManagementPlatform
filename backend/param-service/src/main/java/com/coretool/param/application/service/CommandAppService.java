@@ -102,50 +102,36 @@ public class CommandAppService {
         // 新增时若与“已删除/未启用”的同名记录冲突，则直接恢复该记录（启用）并更新字段。
         Command disabled = commandRepository.findDisabledByNameInProduct(productId, name).orElse(null);
         if (disabled != null) {
-            String op = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
-            String oldName = disabled.getCommandName();
-            String oldOwner = disabled.getOwnerList();
-            Command before =
-                    Command.rehydrate(
-                            new Command.Snapshot(
-                                    disabled.getOwnedProductId(),
-                                    disabled.getCommandId(),
-                                    oldName,
-                                    disabled.getCreatorId(),
-                                    disabled.getCreationTimestamp(),
-                                    disabled.getUpdaterId(),
-                                    disabled.getUpdateTimestamp(),
-                                    oldOwner,
-                                    disabled.getCommandStatus()));
-            disabled.applyEditablePatch(
-                    new Command.EditablePatch(name, input.getOwnerList(), 1, op, now));
-            commandRepository.update(disabled);
-            operationLogAppService.logCommandUpdate(before, disabled, op);
-            return CommandAssembler.toPo(disabled);
+            return reactivateDisabled(input, disabled, name, now);
         }
+        return insertNew(productId, input, now);
+    }
 
+    private EntityCommandMappingPo reactivateDisabled(
+            EntityCommandMappingPo input, Command disabled, String name, LocalDateTime now) {
+        String op = StringUtils.defaultIfBlank(input.getUpdaterId(), "system");
+        Command before = Command.rehydrate(new Command.Snapshot(disabled.getOwnedProductId(), disabled.getCommandId(),
+                disabled.getCommandName(), disabled.getCreatorId(), disabled.getCreationTimestamp(),
+                disabled.getUpdaterId(), disabled.getUpdateTimestamp(), disabled.getOwnerList(),
+                disabled.getCommandStatus()));
+        disabled.applyEditablePatch(new Command.EditablePatch(name, input.getOwnerList(), 1, op, now));
+        commandRepository.update(disabled);
+        operationLogAppService.logCommandUpdate(before, disabled, op);
+        return CommandAssembler.toPo(disabled);
+    }
+
+    private EntityCommandMappingPo insertNew(String productId, EntityCommandMappingPo input, LocalDateTime now) {
         if (StringUtils.isBlank(input.getCommandId())) {
             input.setCommandId(IdGenerator.commandId());
         }
         input.setCommandStatus(1);
-        Command c =
-                domainService.createNew(
-                        new CommandDomainService.CreateCommand(
-                                productId,
-                                input.getCommandId(),
-                                input.getCommandName(),
-                                input.getOwnerList(),
-                                input.getCommandStatus(),
-                                input.getCreatorId(),
-                                input.getUpdaterId(),
-                                now));
+        Command c = domainService.createNew(new CommandDomainService.CreateCommand(productId, input.getCommandId(),
+                input.getCommandName(), input.getOwnerList(), input.getCommandStatus(), input.getCreatorId(),
+                input.getUpdaterId(), now));
         commandRepository.insert(c);
         EntityCommandMappingPo out = CommandAssembler.toPo(c);
-        String who =
-                StringUtils.defaultIfBlank(
-                        StringUtils.firstNonBlank(
-                                input.getCreatorId(), input.getUpdaterId(), c.getCreatorId()),
-                        "system");
+        String who = StringUtils.defaultIfBlank(StringUtils.firstNonBlank(
+                input.getCreatorId(), input.getUpdaterId(), c.getCreatorId()), "system");
         operationLogAppService.logCommandCreate(productId, out, who);
         return out;
     }
