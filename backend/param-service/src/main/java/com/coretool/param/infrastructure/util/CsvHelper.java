@@ -76,7 +76,6 @@ public final class CsvHelper {
         return new QuoteStep(i, false);
     }
 
-    /** @return 是否进入引号域 */
     private static boolean consumeUnquotedChar(List<String> fields, StringBuilder cur, char c) {
         if (c == '"') {
             return true;
