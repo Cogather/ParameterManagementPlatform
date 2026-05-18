@@ -51,29 +51,43 @@ public final class CsvHelper {
         for (int i = 0; i < line.length(); i++) {
             char c = line.charAt(i);
             if (inQuotes) {
-                if (c == '"') {
-                    if (i + 1 < line.length() && line.charAt(i + 1) == '"') {
-                        cur.append('"');
-                        i++;
-                    } else {
-                        inQuotes = false;
-                    }
-                } else {
-                    cur.append(c);
-                }
+                QuoteStep step = stepInQuotes(line, cur, i, c);
+                i = step.index();
+                inQuotes = step.inQuotes();
             } else {
-                if (c == '"') {
-                    inQuotes = true;
-                } else if (c == ',') {
-                    fields.add(cur.toString());
-                    cur.setLength(0);
-                } else {
-                    cur.append(c);
-                }
+                inQuotes = consumeUnquotedChar(fields, cur, c);
             }
         }
         fields.add(cur.toString());
         return fields.toArray(new String[0]);
+    }
+
+    private record QuoteStep(int index, boolean inQuotes) {}
+
+    private static QuoteStep stepInQuotes(String line, StringBuilder cur, int i, char c) {
+        if (c != '"') {
+            cur.append(c);
+            return new QuoteStep(i, true);
+        }
+        if (i + 1 < line.length() && line.charAt(i + 1) == '"') {
+            cur.append('"');
+            return new QuoteStep(i + 1, true);
+        }
+        return new QuoteStep(i, false);
+    }
+
+    /** @return 是否进入引号域 */
+    private static boolean consumeUnquotedChar(List<String> fields, StringBuilder cur, char c) {
+        if (c == '"') {
+            return true;
+        }
+        if (c == ',') {
+            fields.add(cur.toString());
+            cur.setLength(0);
+            return false;
+        }
+        cur.append(c);
+        return false;
     }
 
     /**

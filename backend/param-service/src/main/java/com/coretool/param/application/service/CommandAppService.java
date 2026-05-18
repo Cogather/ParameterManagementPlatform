@@ -205,46 +205,64 @@ public class CommandAppService {
     public BatchImportResult importExcel(String productId, byte[] bytes) {
         operationLogAppService.beginImportBatch();
         try {
-            ExcelHelper.ParsedSheet sheet = ExcelHelper.parseFirstSheet(bytes);
-            List<List<String>> rows = sheet.rows();
-            if (rows.size() <= 1) {
-                return emptyResult();
-            }
-            int headerIdx = ExcelHelper.detectHeaderRowIndex(rows);
-            Map<String, Integer> idx = ExcelHelper.headerIndex(rows.get(headerIdx));
-            ImportResultCollector c = new ImportResultCollector();
-            int dataRows = rows.size() - headerIdx - 1;
-            for (int i = headerIdx + 1; i < rows.size(); i++) {
-                int line = i + 1;
-                try {
-                    List<String> cols = rows.get(i);
-                    EntityCommandMappingPo po = new EntityCommandMappingPo();
-                    po.setCommandId(StringUtils.trimToNull(col(cols, idx, "命令ID")));
-                    po.setCommandName(col(cols, idx, "命令"));
-                    po.setOwnerList(col(cols, idx, "责任人(英文逗号)"));
-                    po.setCommandStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
-                    if (StringUtils.isBlank(po.getCommandId())) {
-                        create(productId, po);
-                    } else {
-                        Command ex = commandRepository.findById(po.getCommandId()).orElse(null);
-                        if (ex == null) {
-                            create(productId, po);
-                            c.success(line);
-                            continue;
-                        }
-                        domainService.requireOwned(productId, po.getCommandId());
-                        po.setUpdaterId("system");
-                        update(productId, po.getCommandId(), po);
-                    }
-                    c.success(line);
-                } catch (Exception ex) {
-                    c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
-                }
-            }
-            return c.build(dataRows);
+            return importExcelRows(productId, bytes);
         } finally {
             operationLogAppService.endImportBatch();
         }
+    }
+
+    private BatchImportResult importExcelRows(String productId, byte[] bytes) {
+        ExcelHelper.ParsedSheet sheet = ExcelHelper.parseFirstSheet(bytes);
+        List<List<String>> rows = sheet.rows();
+        if (rows.size() <= 1) {
+            return emptyResult();
+        }
+        int headerIdx = ExcelHelper.detectHeaderRowIndex(rows);
+        Map<String, Integer> idx = ExcelHelper.headerIndex(rows.get(headerIdx));
+        ImportResultCollector c = new ImportResultCollector();
+        int dataRows = rows.size() - headerIdx - 1;
+        for (int i = headerIdx + 1; i < rows.size(); i++) {
+            importCommandRow(productId, rows.get(i), idx, i + 1, c);
+        }
+        return c.build(dataRows);
+    }
+
+    private void importCommandRow(
+            String productId, List<String> cols, Map<String, Integer> idx, int line, ImportResultCollector c) {
+        try {
+            EntityCommandMappingPo po = parseCommandImportRow(cols, idx);
+            applyCommandImportRow(productId, po, line, c);
+        } catch (Exception ex) {
+            c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
+        }
+    }
+
+    private EntityCommandMappingPo parseCommandImportRow(List<String> cols, Map<String, Integer> idx) {
+        EntityCommandMappingPo po = new EntityCommandMappingPo();
+        po.setCommandId(StringUtils.trimToNull(col(cols, idx, "命令ID")));
+        po.setCommandName(col(cols, idx, "命令"));
+        po.setOwnerList(col(cols, idx, "责任人(英文逗号)"));
+        po.setCommandStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
+        return po;
+    }
+
+    private void applyCommandImportRow(
+            String productId, EntityCommandMappingPo po, int line, ImportResultCollector c) {
+        if (StringUtils.isBlank(po.getCommandId())) {
+            create(productId, po);
+            c.success(line);
+            return;
+        }
+        Command ex = commandRepository.findById(po.getCommandId()).orElse(null);
+        if (ex == null) {
+            create(productId, po);
+            c.success(line);
+            return;
+        }
+        domainService.requireOwned(productId, po.getCommandId());
+        po.setUpdaterId("system");
+        update(productId, po.getCommandId(), po);
+        c.success(line);
     }
 
     /**

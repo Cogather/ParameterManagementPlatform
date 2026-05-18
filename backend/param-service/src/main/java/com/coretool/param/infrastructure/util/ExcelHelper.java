@@ -96,45 +96,72 @@ public final class ExcelHelper {
      * @return 解析结果
      */
     public static ParsedSheet parseFirstSheet(byte[] bytes) {
-        if (bytes == null || bytes.length == 0) {
-            throw new DomainRuleException("文件为空");
-        }
+        requireNonEmptyBytes(bytes);
         try (Workbook wb = new XSSFWorkbook(new ByteArrayInputStream(bytes))) {
-            Sheet sheet = wb.getNumberOfSheets() > 0 ? wb.getSheetAt(0) : null;
-            if (sheet == null) {
-                throw new DomainRuleException("Excel 不包含 sheet");
-            }
+            Sheet sheet = firstSheetOrThrow(wb);
             DataFormatter fmt = new DataFormatter();
-            List<List<String>> rows = new ArrayList<>();
-            int lastRow = sheet.getLastRowNum();
-            for (int i = 0; i <= lastRow; i++) {
-                Row r = sheet.getRow(i);
-                if (r == null) {
-                    continue;
-                }
-                int lastCell = r.getLastCellNum();
-                if (lastCell <= 0) {
-                    continue;
-                }
-                List<String> cols = new ArrayList<>();
-                boolean allBlank = true;
-                for (int c = 0; c < lastCell; c++) {
-                    Cell cell = r.getCell(c);
-                    String v = cell == null ? "" : fmt.formatCellValue(cell);
-                    String vv = v == null ? "" : v.trim();
-                    cols.add(vv);
-                    if (!vv.isBlank()) {
-                        allBlank = false;
-                    }
-                }
-                if (!allBlank) {
-                    rows.add(cols);
-                }
-            }
+            List<List<String>> rows = readNonBlankRows(sheet, fmt);
             return new ParsedSheet(sheet.getSheetName(), rows);
+        } catch (DomainRuleException e) {
+            throw e;
         } catch (Exception e) {
             throw new DomainRuleException("Excel 解析失败: " + e.getMessage());
         }
+    }
+
+    private static void requireNonEmptyBytes(byte[] bytes) {
+        if (bytes == null || bytes.length == 0) {
+            throw new DomainRuleException("文件为空");
+        }
+    }
+
+    private static Sheet firstSheetOrThrow(Workbook wb) {
+        if (wb.getNumberOfSheets() <= 0) {
+            throw new DomainRuleException("Excel 不包含 sheet");
+        }
+        return wb.getSheetAt(0);
+    }
+
+    private static List<List<String>> readNonBlankRows(Sheet sheet, DataFormatter fmt) {
+        List<List<String>> rows = new ArrayList<>();
+        for (int i = 0; i <= sheet.getLastRowNum(); i++) {
+            List<String> cols = readRowIfPresent(sheet.getRow(i), fmt);
+            if (cols != null) {
+                rows.add(cols);
+            }
+        }
+        return rows;
+    }
+
+    private static List<String> readRowIfPresent(Row r, DataFormatter fmt) {
+        if (r == null) {
+            return null;
+        }
+        int lastCell = r.getLastCellNum();
+        if (lastCell <= 0) {
+            return null;
+        }
+        List<String> cols = readRowCells(r, fmt, lastCell);
+        return rowHasContent(cols) ? cols : null;
+    }
+
+    private static List<String> readRowCells(Row r, DataFormatter fmt, int lastCell) {
+        List<String> cols = new ArrayList<>(lastCell);
+        for (int c = 0; c < lastCell; c++) {
+            Cell cell = r.getCell(c);
+            String v = cell == null ? "" : fmt.formatCellValue(cell);
+            cols.add(v == null ? "" : v.trim());
+        }
+        return cols;
+    }
+
+    private static boolean rowHasContent(List<String> cols) {
+        for (String vv : cols) {
+            if (!vv.isBlank()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

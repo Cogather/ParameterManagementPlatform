@@ -226,47 +226,65 @@ public class ApplicableNeAppService {
     public BatchImportResult importCsv(String productId, byte[] bytes) {
         operationLogAppService.beginImportBatch();
         try {
-            ExcelHelper.ParsedSheet sheet = ExcelHelper.parseFirstSheet(bytes);
-            List<List<String>> rows = sheet.rows();
-            if (rows.size() <= 1) {
-                return emptyResult();
-            }
-            int headerIdx = ExcelHelper.detectHeaderRowIndex(rows);
-            Map<String, Integer> idx = ExcelHelper.headerIndex(rows.get(headerIdx));
-            ImportResultCollector c = new ImportResultCollector();
-            int dataRows = rows.size() - headerIdx - 1;
-            for (int i = headerIdx + 1; i < rows.size(); i++) {
-                int line = i + 1;
-                try {
-                    List<String> cols = rows.get(i);
-                    EntityApplicableNeDictPo po = new EntityApplicableNeDictPo();
-                    po.setNeTypeId(StringUtils.trimToNull(col(cols, idx, "ID")));
-                    po.setNeTypeNameCn(col(cols, idx, "适用网元名称"));
-                    po.setNeTypeDescription(StringUtils.trimToNull(col(cols, idx, "网元类型描述")));
-                    po.setNeTypeStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
-                    po.setProductForm(StringUtils.trimToNull(col(cols, idx, "产品形态")));
-                    if (StringUtils.isBlank(po.getNeTypeId())) {
-                        create(productId, po);
-                    } else {
-                        ApplicableNe ex = applicableNeRepository.findByNeTypeId(po.getNeTypeId()).orElse(null);
-                        if (ex == null) {
-                            create(productId, po);
-                            c.success(line);
-                            continue;
-                        }
-                        ensureDomain().requireOwned(productId, po.getNeTypeId());
-                        po.setUpdaterId("system");
-                        update(productId, po.getNeTypeId(), po);
-                    }
-                    c.success(line);
-                } catch (Exception ex) {
-                    c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
-                }
-            }
-            return c.build(dataRows);
+            return importCsvRows(productId, bytes);
         } finally {
             operationLogAppService.endImportBatch();
         }
+    }
+
+    private BatchImportResult importCsvRows(String productId, byte[] bytes) {
+        ExcelHelper.ParsedSheet sheet = ExcelHelper.parseFirstSheet(bytes);
+        List<List<String>> rows = sheet.rows();
+        if (rows.size() <= 1) {
+            return emptyResult();
+        }
+        int headerIdx = ExcelHelper.detectHeaderRowIndex(rows);
+        Map<String, Integer> idx = ExcelHelper.headerIndex(rows.get(headerIdx));
+        ImportResultCollector c = new ImportResultCollector();
+        int dataRows = rows.size() - headerIdx - 1;
+        for (int i = headerIdx + 1; i < rows.size(); i++) {
+            importNeRow(productId, rows.get(i), idx, i + 1, c);
+        }
+        return c.build(dataRows);
+    }
+
+    private void importNeRow(
+            String productId, List<String> cols, Map<String, Integer> idx, int line, ImportResultCollector c) {
+        try {
+            EntityApplicableNeDictPo po = parseNeImportRow(cols, idx);
+            applyNeImportRow(productId, po, line, c);
+        } catch (Exception ex) {
+            c.failure(line, ex.getMessage() == null ? "处理失败" : ex.getMessage());
+        }
+    }
+
+    private EntityApplicableNeDictPo parseNeImportRow(List<String> cols, Map<String, Integer> idx) {
+        EntityApplicableNeDictPo po = new EntityApplicableNeDictPo();
+        po.setNeTypeId(StringUtils.trimToNull(col(cols, idx, "ID")));
+        po.setNeTypeNameCn(col(cols, idx, "适用网元名称"));
+        po.setNeTypeDescription(StringUtils.trimToNull(col(cols, idx, "网元类型描述")));
+        po.setNeTypeStatus(parseIntDefault(col(cols, idx, "状态(1启用0未启用)"), 1));
+        po.setProductForm(StringUtils.trimToNull(col(cols, idx, "产品形态")));
+        return po;
+    }
+
+    private void applyNeImportRow(
+            String productId, EntityApplicableNeDictPo po, int line, ImportResultCollector c) {
+        if (StringUtils.isBlank(po.getNeTypeId())) {
+            create(productId, po);
+            c.success(line);
+            return;
+        }
+        ApplicableNe ex = applicableNeRepository.findByNeTypeId(po.getNeTypeId()).orElse(null);
+        if (ex == null) {
+            create(productId, po);
+            c.success(line);
+            return;
+        }
+        ensureDomain().requireOwned(productId, po.getNeTypeId());
+        po.setUpdaterId("system");
+        update(productId, po.getNeTypeId(), po);
+        c.success(line);
     }
 
     /**
