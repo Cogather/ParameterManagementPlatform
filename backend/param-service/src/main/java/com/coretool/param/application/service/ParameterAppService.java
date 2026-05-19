@@ -1274,7 +1274,7 @@ public class ParameterAppService {
                     try {
                         target.setParameterSequence(Integer.parseInt(s.trim()));
                     } catch (NumberFormatException e) {
-                        throw new DomainRuleException("parameter_sequence 须为整数");
+                        throw new DomainRuleException("parameter_sequence 须为整数: " + s.trim(), e);
                     }
                 }
             }

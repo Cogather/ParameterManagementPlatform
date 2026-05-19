@@ -42,7 +42,7 @@ public final class BitUsage {
             try {
                 bit = Integer.parseInt(t.trim());
             } catch (NumberFormatException e) {
-                throw new DomainRuleException("PARAM_BIT_CONFLICT: BIT 序号须为整数");
+                throw new DomainRuleException("PARAM_BIT_CONFLICT: BIT 序号须为整数: " + t, e);
             }
             if (bit < 1 || bit > maxBitInclusive) {
                 throw new DomainRuleException(
