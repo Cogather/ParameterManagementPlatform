@@ -182,6 +182,7 @@
           v-model="dialogVisible"
           :title="dialogTitle"
           width="1100px"
+          align-center
           destroy-on-close
           class="param-dialog"
           @closed="onDialogClosed"
@@ -447,7 +448,12 @@
                 </el-col>
               </el-row>
               <el-form-item label="变更来源">
-                <el-input v-model="formMain.changeSource" type="textarea" :rows="2" placeholder="不对内容 trim 后再保存（由后端约定）" />
+                <el-input
+                  v-model="formMain.changeSource"
+                  type="textarea"
+                  :rows="2"
+                  placeholder="请填写本次参数变更的来源说明（选填）"
+                />
               </el-form-item>
               <el-row :gutter="16">
                 <el-col :span="12">
@@ -1855,12 +1861,22 @@ onMounted(() => {
   text-decoration: underline;
 }
 
+.param-dialog :deep(.el-dialog) {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 48px);
+  margin-bottom: 0;
+}
+
 .param-dialog :deep(.el-dialog__body) {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   padding-top: 8px;
 }
 
 .param-form-scroll {
-  max-height: calc(100vh - 220px);
+  max-height: calc(100vh - 260px);
   overflow-y: auto;
   padding-right: 8px;
 }
