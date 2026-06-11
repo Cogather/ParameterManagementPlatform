@@ -53,18 +53,23 @@ public class VersionAppService {
     private final ProductVersionRepository productVersionRepository;
     private final ProductVersionDomainService domainService;
     private final OperationLogAppService operationLogAppService;
+    private final ParameterVersionCopyAppService parameterVersionCopyAppService;
 
     /**
      * 构造函数。
      *
      * @param productVersionRepository 产品版本仓储
      * @param operationLogAppService   操作日志应用服务
+     * @param parameterVersionCopyAppService 参数版本复制服务
      */
     public VersionAppService(
-            ProductVersionRepository productVersionRepository, OperationLogAppService operationLogAppService) {
+            ProductVersionRepository productVersionRepository,
+            OperationLogAppService operationLogAppService,
+            ParameterVersionCopyAppService parameterVersionCopyAppService) {
         this.productVersionRepository = productVersionRepository;
         this.domainService = new ProductVersionDomainService(productVersionRepository);
         this.operationLogAppService = operationLogAppService;
+        this.parameterVersionCopyAppService = parameterVersionCopyAppService;
     }
 
     /**
@@ -132,6 +137,20 @@ public class VersionAppService {
             input.setVersionType("在研");
         }
         LocalDateTime now = LocalDateTime.now();
+        String inheritId = resolveInheritVersionId(input);
+        if (inheritId != null) {
+            ProductVersion source =
+                    productVersionRepository
+                            .findById(inheritId)
+                            .filter(pv -> pv.belongsToProduct(productId))
+                            .filter(pv -> pv.getVersionStatus() == 1)
+                            .orElseThrow(
+                                    () ->
+                                            new DomainRuleException(
+                                                    "INHERIT_VERSION_NOT_FOUND: 继承版本不存在或不属于该产品"));
+            input.setBaselineVersionId(inheritId);
+            input.setBaselineVersionName(source.getVersionName());
+        }
         ProductVersion v = domainService.createNew(new ProductVersionDomainService.CreateCommand(productId,
                 input.getVersionId(), input.getVersionName(), input.getVersionType(), input.getVersionDescription(),
                 input.getBaselineVersionId(), input.getBaselineVersionName(), input.getVersionDesc(),
@@ -142,7 +161,14 @@ public class VersionAppService {
         String who = StringUtils.defaultIfBlank(StringUtils.firstNonBlank(
                 input.getCreatorId(), input.getUpdaterId(), v.getCreatorId()), "system");
         operationLogAppService.logVersionCreate(productId, out, who);
+        if (inheritId != null) {
+            parameterVersionCopyAppService.copyAll(productId, inheritId, input.getVersionId(), who);
+        }
         return out;
+    }
+
+    private static String resolveInheritVersionId(EntityVersionInfoPo input) {
+        return StringUtils.trimToNull(input.getBaselineVersionId());
     }
 
     private static ProductVersion.Snapshot snapshotOf(ProductVersion disabled) {
@@ -176,11 +202,11 @@ public class VersionAppService {
                                 req.getVersionDescription(),
                                 now));
         productVersionRepository.insert(neo);
-        if (Boolean.TRUE.equals(req.getCopyParameters())) {
-            // system_parameter 复制在 spec-03 落地
+        String w2 = StringUtils.defaultIfBlank(neo.getCreatorId(), "system");
+        if (Boolean.TRUE.equals(req.getCopyParameters()) && StringUtils.isNotBlank(req.getBaseVersionId())) {
+            parameterVersionCopyAppService.copyAll(productId, req.getBaseVersionId(), neo.getVersionId(), w2);
         }
         EntityVersionInfoPo br = ProductVersionAssembler.toPo(neo);
-        String w2 = StringUtils.defaultIfBlank(neo.getCreatorId(), "system");
         operationLogAppService.logVersionCreate(productId, br, w2);
         return br;
     }

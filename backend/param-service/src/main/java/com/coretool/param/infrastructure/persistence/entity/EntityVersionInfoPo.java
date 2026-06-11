@@ -6,6 +6,7 @@ package com.coretool.param.infrastructure.persistence.entity;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonAlias;
 
 import lombok.Data;
 
@@ -28,6 +29,7 @@ public class EntityVersionInfoPo {
     private String versionName;
     private String versionType;
     private String versionDescription;
+    @JsonAlias("inheritVersionId")
     private String baselineVersionId;
     private String baselineVersionName;
     private String versionDesc;

@@ -244,6 +244,71 @@ export async function importParameters(
   return ro.data
 }
 
+export interface ParameterSyncTypeOption {
+  commandId: string
+  commandName: string
+  commandTypeId: string
+  commandTypeName: string
+}
+
+export interface ParameterSyncParameterOption {
+  sourceParameterId: number
+  parameterNameCn: string
+  dataStatus?: string
+}
+
+export interface ParameterSyncResult {
+  successCount: number
+  failureCount: number
+  failures: { sourceParameterId?: number; parameterNameCn?: string; reason: string }[]
+  successes: { sourceParameterId: number; newParameterId?: number }[]
+}
+
+function versionBase(productId: string, versionId: string): string {
+  return `/products/${enc(productId)}/versions/${enc(versionId)}`
+}
+
+export async function fetchParameterSyncTypeOptions(
+  productId: string,
+  sourceVersionId: string,
+): Promise<ParameterSyncTypeOption[]> {
+  const ro = await request<ParameterSyncTypeOption[]>({
+    url: `${versionBase(productId, sourceVersionId)}/parameter-sync/type-options`,
+    method: 'GET',
+  })
+  return ro.data
+}
+
+export async function fetchParameterSyncParameters(
+  productId: string,
+  sourceVersionId: string,
+  commandId: string,
+  commandTypeId: string,
+): Promise<ParameterSyncParameterOption[]> {
+  const ro = await request<ParameterSyncParameterOption[]>({
+    url: `${versionBase(productId, sourceVersionId)}/parameter-sync/parameters`,
+    method: 'GET',
+    params: { commandId, commandTypeId },
+  })
+  return ro.data
+}
+
+export async function executeParameterSync(
+  productId: string,
+  targetVersionId: string,
+  body: {
+    sourceVersionId: string
+    items: { sourceParameterId: number; commandId: string; commandTypeId: string }[]
+  },
+): Promise<ParameterSyncResult> {
+  const ro = await request<ParameterSyncResult>({
+    url: `${versionBase(productId, targetVersionId)}/parameter-sync/commands`,
+    method: 'POST',
+    data: body,
+  })
+  return ro.data
+}
+
 /** 解析 axios 错误体中的黑名单命中正则（HTTP 500 + JSON body） */
 export function extractViolatedKeywordRegex(err: unknown): string | undefined {
   const e = err as {

@@ -44,11 +44,7 @@
                 <el-button type="primary" :disabled="!canQuery || isAllVersionsView" @click="openCreate">新增</el-button>
                 <el-button :disabled="!canImport" @click="importVisible = true">导入</el-button>
                 <el-button :disabled="!canQuery || isAllVersionsView" @click="openExport">导出</el-button>
-                <el-tooltip content="暂缓" placement="top">
-                  <span class="sync-wrap">
-                    <el-button disabled>参数同步</el-button>
-                  </span>
-                </el-tooltip>
+                <el-button :disabled="!canSync" @click="openSyncDialog">参数同步</el-button>
                 <el-tag v-if="canQuery" type="info" effect="plain" class="baseline-tag">
                   已基线参数：{{ baselineCount }}{{ isAllVersionsView ? '（全产品合计）' : '' }}
                 </el-tag>
@@ -637,6 +633,70 @@
           </template>
         </el-dialog>
 
+        <el-dialog v-model="syncVisible" title="参数同步" width="640px" destroy-on-close @closed="resetSyncForm">
+          <el-form label-width="100px">
+            <el-form-item label="源版本" required>
+              <el-select
+                v-model="syncSourceVersionId"
+                filterable
+                placeholder="选择要复制的版本"
+                style="width: 100%"
+                @change="onSyncSourceVersionChange"
+              >
+                <el-option
+                  v-for="v in syncSourceVersionOptions"
+                  :key="v.versionId"
+                  :label="v.versionName"
+                  :value="v.versionId"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="类型" required>
+              <el-select
+                v-model="syncTypeKey"
+                filterable
+                placeholder="先选源版本"
+                style="width: 100%"
+                :disabled="!syncSourceVersionId"
+                @change="onSyncTypeChange"
+              >
+                <el-option
+                  v-for="t in syncTypeOptions"
+                  :key="`${t.commandId}:${t.commandTypeId}`"
+                  :label="`${t.commandName} / ${t.commandTypeName}`"
+                  :value="`${t.commandId}\0${t.commandTypeId}`"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="参数" required>
+              <el-select
+                v-model="syncParameterIds"
+                multiple
+                filterable
+                collapse-tags
+                collapse-tags-tooltip
+                placeholder="先选类型"
+                style="width: 100%"
+                :disabled="!syncTypeKey"
+              >
+                <el-option
+                  v-for="p in syncParameterOptions"
+                  :key="p.sourceParameterId"
+                  :label="syncParamLabel(p)"
+                  :value="p.sourceParameterId"
+                />
+              </el-select>
+            </el-form-item>
+          </el-form>
+          <div v-if="syncResultSummary" class="sync-result-summary">{{ syncResultSummary }}</div>
+          <template #footer>
+            <el-button @click="syncVisible = false">取消</el-button>
+            <el-button type="primary" :loading="syncSubmitting" :disabled="!canSyncSubmit" @click="submitSync">
+              确定同步
+            </el-button>
+          </template>
+        </el-dialog>
+
         <el-dialog v-model="importVisible" title="导入" width="560px" destroy-on-close>
           <div style="margin-bottom: 10px; color: #666">
             支持 .xlsx。请先在左侧选择“命令”（可选：再选择类型）。
@@ -695,8 +755,13 @@ import {
   fetchParameterCommandTree,
   fetchParameterPage,
   fetchParameterPageByProduct,
+  executeParameterSync,
+  fetchParameterSyncParameters,
+  fetchParameterSyncTypeOptions,
   importParameters,
   updateParameter,
+  type ParameterSyncParameterOption,
+  type ParameterSyncTypeOption,
   type ConfigChangeTypeItem,
   type ParameterCommandTreeNode,
   type ParameterImportMode,
@@ -836,6 +901,129 @@ const displayVersionOptions = computed(() => [
 ])
 
 const canImport = computed(() => canQuery.value && !isAllVersionsView.value)
+const canSync = computed(() => canQuery.value && !isAllVersionsView.value)
+
+const syncVisible = ref(false)
+const syncSubmitting = ref(false)
+const syncSourceVersionId = ref('')
+const syncTypeKey = ref('')
+const syncParameterIds = ref<number[]>([])
+const syncTypeOptions = ref<ParameterSyncTypeOption[]>([])
+const syncParameterOptions = ref<ParameterSyncParameterOption[]>([])
+const syncResultSummary = ref('')
+
+const syncSourceVersionOptions = computed(() =>
+  versionOptions.value.filter((v) => v.versionId && v.versionId !== versionId.value),
+)
+
+const canSyncSubmit = computed(
+  () =>
+    !!selectedProductId.value &&
+    !!versionId.value &&
+    !!syncSourceVersionId.value &&
+    !!syncTypeKey.value &&
+    syncParameterIds.value.length > 0,
+)
+
+function syncParamLabel(p: ParameterSyncParameterOption) {
+  const name = p.parameterNameCn || '未命名'
+  if (p.dataStatus === BASELINE) {
+    return `${name}（已基线）`
+  }
+  return name
+}
+
+function resetSyncForm() {
+  syncSourceVersionId.value = ''
+  syncTypeKey.value = ''
+  syncParameterIds.value = []
+  syncTypeOptions.value = []
+  syncParameterOptions.value = []
+  syncResultSummary.value = ''
+}
+
+function openSyncDialog() {
+  if (!canSync.value) return
+  resetSyncForm()
+  syncVisible.value = true
+}
+
+async function onSyncSourceVersionChange() {
+  syncTypeKey.value = ''
+  syncParameterIds.value = []
+  syncTypeOptions.value = []
+  syncParameterOptions.value = []
+  if (!selectedProductId.value || !syncSourceVersionId.value) return
+  try {
+    syncTypeOptions.value = await fetchParameterSyncTypeOptions(
+      selectedProductId.value,
+      syncSourceVersionId.value,
+    )
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '加载类型失败')
+  }
+}
+
+async function onSyncTypeChange() {
+  syncParameterIds.value = []
+  syncParameterOptions.value = []
+  const key = syncTypeKey.value
+  if (!key || !selectedProductId.value || !syncSourceVersionId.value) return
+  const sep = key.indexOf('\0')
+  if (sep < 0) return
+  const commandId = key.slice(0, sep)
+  const commandTypeId = key.slice(sep + 1)
+  try {
+    syncParameterOptions.value = await fetchParameterSyncParameters(
+      selectedProductId.value,
+      syncSourceVersionId.value,
+      commandId,
+      commandTypeId,
+    )
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '加载参数失败')
+  }
+}
+
+async function submitSync() {
+  if (!canSyncSubmit.value || !selectedProductId.value || !versionId.value) return
+  const key = syncTypeKey.value
+  const sep = key.indexOf('\0')
+  if (sep < 0) return
+  const commandId = key.slice(0, sep)
+  const commandTypeId = key.slice(sep + 1)
+  syncSubmitting.value = true
+  syncResultSummary.value = ''
+  try {
+    const data = await executeParameterSync(selectedProductId.value, versionId.value, {
+      sourceVersionId: syncSourceVersionId.value,
+      items: syncParameterIds.value.map((id) => ({
+        sourceParameterId: id,
+        commandId,
+        commandTypeId,
+      })),
+    })
+    const msg = `成功 ${data.successCount} 条，失败 ${data.failureCount} 条`
+    syncResultSummary.value = msg
+    if (data.failureCount > 0 && data.failures?.length) {
+      const detail = data.failures
+        .slice(0, 5)
+        .map((f) => `${f.parameterNameCn || f.sourceParameterId}: ${f.reason}`)
+        .join('\n')
+      ElMessage.warning(`${msg}\n${detail}`)
+    } else {
+      ElMessage.success(msg)
+    }
+    if (data.successCount > 0) {
+      await loadRows()
+      await loadBaselineCount()
+    }
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '同步失败')
+  } finally {
+    syncSubmitting.value = false
+  }
+}
 
 const importMode = ref<ParameterImportMode>('INCREMENTAL')
 

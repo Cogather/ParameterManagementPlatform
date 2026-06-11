@@ -38,8 +38,12 @@ class VersionAppServiceTest {
     @Mock
     private OperationLogAppService operationLogAppService;
 
+    @Mock
+    private ParameterVersionCopyAppService parameterVersionCopyAppService;
+
     private VersionAppService newSvc() {
-        return new VersionAppService(productVersionRepository, operationLogAppService);
+        return new VersionAppService(
+                productVersionRepository, operationLogAppService, parameterVersionCopyAppService);
     }
 
     @Test

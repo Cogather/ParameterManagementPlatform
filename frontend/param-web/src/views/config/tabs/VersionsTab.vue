@@ -21,7 +21,23 @@
     op-log-biz-table="entity_version_info"
     :op-log-ignore-version-filter="true"
   >
-    <template #form="{ form }">
+    <template #form="{ form, mode }">
+      <el-form-item v-if="mode === 'create'" label="继承版本">
+        <el-select
+          v-model="form.inheritVersionId"
+          clearable
+          filterable
+          placeholder="不选则不复制参数"
+          style="width: 100%"
+        >
+          <el-option
+            v-for="v in inheritVersionOptions"
+            :key="v.versionId"
+            :label="v.versionName"
+            :value="v.versionId"
+          />
+        </el-select>
+      </el-form-item>
       <el-form-item label="版本名称" required>
         <el-input v-model="form.versionName" />
       </el-form-item>
@@ -47,11 +63,32 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import UserSelect from '../../../components/UserSelect.vue'
 import { resolveParamApiUrl } from '../../../api/api-config'
+import { request } from '../../../api/http'
+import type { PageResponse } from '../../../types/api-response'
 import DictCrudTable from '../components/DictCrudTable.vue'
 
 const props = defineProps<{ productId: string }>()
+
+const inheritVersionOptions = ref<{ versionId: string; versionName: string }[]>([])
+
+async function loadInheritVersionOptions() {
+  inheritVersionOptions.value = []
+  if (!props.productId) return
+  const resp = await request<PageResponse<Record<string, unknown>>>({
+    url: `/products/${encodeURIComponent(props.productId)}/versions`,
+    method: 'GET',
+    params: { page: 1, size: 500 },
+  })
+  inheritVersionOptions.value = (resp.data.records || []).map((r) => ({
+    versionId: String(r.versionId || ''),
+    versionName: String(r.versionName || '').trim() || '未命名版本',
+  }))
+}
+
+watch(() => props.productId, () => loadInheritVersionOptions(), { immediate: true })
 
 /** 与 entity_version_info.version_type 枚举一致（中文入库） */
 const versionTypeOptions = ['在研', '补丁'] as const
@@ -65,6 +102,7 @@ const columns = [
 
 function defaultForm() {
   return {
+    inheritVersionId: '',
     versionName: '',
     versionType: versionTypeOptions[0],
     supportedVersion: '',
@@ -95,6 +133,7 @@ function validate(form: Record<string, unknown>) {
 }
 
 function buildCreateBody(form: Record<string, unknown>) {
+  const inheritVersionId = String(form.inheritVersionId || '').trim()
   return {
     versionName: String(form.versionName || '').trim(),
     versionType: String(form.versionType || '').trim(),
@@ -102,6 +141,7 @@ function buildCreateBody(form: Record<string, unknown>) {
     versionDescription: form.versionDescription || null,
     versionDesc: form.versionDesc || null,
     ownerList: String(form.ownerList || '').trim(),
+    ...(inheritVersionId ? { inheritVersionId } : {}),
   }
 }
 
