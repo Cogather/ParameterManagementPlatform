@@ -10,9 +10,8 @@
           <el-radio-button label="/parameter">参数管理</el-radio-button>
         </el-radio-group>
       </div>
-      <div class="app-context-bar__product">
+      <div v-if="!isProductLockedFromUrl" class="app-context-bar__product">
         <product-selector
-        
           v-model="selectedProductId"
           :options="productOptions"
           :loading="productLoading"
@@ -30,7 +29,12 @@ import { useRoute, useRouter } from 'vue-router'
 import { useProductContextStore } from './stores/productContext'
 import { useVersionContextStore } from './stores/versionContext'
 import ProductSelector, { type ProductOption } from './views/config/components/ProductSelector.vue'
-import { isEmbeddedFromEnv, isEmbeddedFromQuery } from './utils/embed'
+import {
+  isEmbeddedFromEnv,
+  isEmbeddedFromQuery,
+  isProductLockedFromQuery,
+  parseHostQuery,
+} from './utils/embed'
 import { fetchProductChoices } from './api/entityBasicInfo'
 
 const route = useRoute()
@@ -38,40 +42,37 @@ const router = useRouter()
 const productContext = useProductContextStore()
 const versionContext = useVersionContextStore()
 
-/** 嵌入宿主时可通过 URL Query 注入 productId、versionId、productName（与 Pinia 一致） */
-function parseHostQuery(q: typeof route.query) {
-  const pick = (k: string) => {
-    const v = q[k]
-    if (typeof v === 'string') {
-      return v.trim()
-    }
-    if (Array.isArray(v) && typeof v[0] === 'string') {
-      return v[0].trim()
-    }
-    return ''
-  }
-  return {
-    productId: pick('productId'),
-    versionId: pick('versionId'),
-    productName: pick('productName'),
-  }
-}
-
-const host = parseHostQuery(route.query)
-if (host.productId) {
-  productContext.setOwnedProductId(host.productId)
-  if (host.productName) {
-    productContext.setOwnedProductName(host.productName)
-  }
-}
-if (host.versionId) {
-  versionContext.setVersionId(host.versionId)
-}
-
 const selectedProductId = ref(productContext.ownedProductId || '')
 const productLoading = ref(false)
 const allProducts = ref<ProductOption[]>([])
 const productOptions = ref<ProductOption[]>([])
+
+const isProductLockedFromUrl = computed(() =>
+  isProductLockedFromQuery(route.query as Record<string, unknown>),
+)
+
+/** 嵌入宿主时可通过 URL Query 注入 productId、versionId、productName（与 Pinia 一致） */
+function applyHostContextFromQuery(query: Record<string, unknown>) {
+  const host = parseHostQuery(query)
+  if (host.productId) {
+    productContext.setOwnedProductId(host.productId)
+    selectedProductId.value = host.productId
+    if (host.productName) {
+      productContext.setOwnedProductName(host.productName)
+    }
+  }
+  if (host.versionId) {
+    versionContext.setVersionId(host.versionId)
+  }
+}
+
+watch(
+  () => route.query,
+  (q) => {
+    applyHostContextFromQuery(q as Record<string, unknown>)
+  },
+  { immediate: true, deep: true },
+)
 
 const menuActive = computed(() => {
   const p = route.path
@@ -96,7 +97,7 @@ const isEmbedded = computed(() => isEmbeddedFromEnv() || isEmbeddedFromQuery(rou
 function onModuleChange(path: string | number | boolean | undefined) {
   const p = String(path ?? '')
   if (p && p !== route.path) {
-    void router.push(p)
+    void router.push({ path: p, query: route.query })
   }
 }
 
@@ -134,6 +135,9 @@ async function loadProductOptionsFromServer() {
 provide('reloadProductOptions', loadProductOptionsFromServer)
 
 function onProductChanged(v: { productId: string; productName: string }) {
+  if (isProductLockedFromUrl.value) {
+    return
+  }
   selectedProductId.value = v.productId || ''
   productContext.setOwnedProductId(selectedProductId.value.trim())
   productContext.setOwnedProductName(v.productName || '')
@@ -143,13 +147,17 @@ function onProductChanged(v: { productId: string; productName: string }) {
 
 /** 产品 / 版本变更时回写 URL，便于宿主页签与外链联调 */
 watch(
-  () => [productContext.ownedProductId, versionContext.versionId] as const,
+  () => [productContext.ownedProductId, productContext.ownedProductName, versionContext.versionId] as const,
   () => {
-    const pid = (productContext.ownedProductId || '').trim()
+    const locked = isProductLockedFromUrl.value
+    const lockedHost = locked ? parseHostQuery(route.query as Record<string, unknown>) : null
+    const pid = locked && lockedHost ? lockedHost.productId : (productContext.ownedProductId || '').trim()
+    const pname = locked && lockedHost ? lockedHost.productName : (productContext.ownedProductName || '').trim()
     const vid = (versionContext.versionId || '').trim()
     const curPid = typeof route.query.productId === 'string' ? route.query.productId : ''
+    const curPname = typeof route.query.productName === 'string' ? route.query.productName : ''
     const curVid = typeof route.query.versionId === 'string' ? route.query.versionId : ''
-    if (curPid === pid && curVid === vid) {
+    if (curPid === pid && curPname === pname && curVid === vid) {
       return
     }
     const q = { ...route.query }
@@ -157,6 +165,11 @@ watch(
       q.productId = pid
     } else {
       delete q.productId
+    }
+    if (pname) {
+      q.productName = pname
+    } else {
+      delete q.productName
     }
     if (vid) {
       q.versionId = vid
