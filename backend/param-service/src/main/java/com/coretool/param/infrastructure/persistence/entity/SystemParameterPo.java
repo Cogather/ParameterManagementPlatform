@@ -99,4 +99,11 @@ public class SystemParameterPo {
     private String figureExampleCn;
     private String figureExampleEn;
     private String internalDescription;
+    private String isPublished;
+    private String noPublishReason;
+    private String relatedLicense;
+    private String productFormId;
+    private String platformGeneration;
+    private String applicationRegion;
+    private String valueRangeSegments;
 }

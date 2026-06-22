@@ -185,7 +185,7 @@
         >
           <div v-loading="masterdataLoading" class="param-form-scroll">
             <el-form label-width="150px" @submit.prevent>
-              <el-divider content-position="left">1. 基础标识</el-divider>
+              <el-divider content-position="left">基础信息</el-divider>
               <el-row :gutter="16">
                 <el-col :span="12">
                   <el-form-item required>
@@ -246,7 +246,7 @@
                 </el-col>
               </el-row>
               <el-form-item v-if="seqOptions.length" label="可用序号列表">
-                <el-select v-model="formSequence" placeholder="FULL / PARTIAL" style="width: 100%" @change="onSequencePick">
+                <el-select v-model="formSequence" placeholder="请选择可用序号" style="width: 100%" @change="onSequencePick">
                   <el-option
                     v-for="s in seqOptions"
                     :key="s.sequence"
@@ -255,30 +255,105 @@
                   />
                 </el-select>
               </el-form-item>
-              <el-form-item label="取值范围">
-                <el-input v-model="formMain.valueRange" placeholder="文本，不做格式校验" />
+              <el-form-item label="取值区间" required>
+                <div class="range-segments">
+                  <div v-for="(seg, idx) in valueRangeSegments" :key="idx" class="range-segment-row">
+                    <el-input-number
+                      v-model="seg.min"
+                      :step="1"
+                      controls-position="right"
+                      class="range-num"
+                      @change="syncValueRangePreview"
+                    />
+                    <span class="range-sep">～</span>
+                    <el-input-number
+                      v-model="seg.max"
+                      :step="1"
+                      controls-position="right"
+                      class="range-num"
+                      @change="syncValueRangePreview"
+                    />
+                    <el-button
+                      size="small"
+                      class="range-btn"
+                      :disabled="valueRangeSegments.length <= 1"
+                      @click="removeRangeSegment(idx)"
+                    >
+                      删除段
+                    </el-button>
+                  </div>
+                  <div class="range-segment-row range-segment-add-row">
+                    <span class="range-segment-spacer" aria-hidden="true" />
+                    <span class="range-segment-spacer range-sep" aria-hidden="true" />
+                    <span class="range-segment-spacer" aria-hidden="true" />
+                    <el-button size="small" class="range-btn" @click="addRangeSegment">添加段</el-button>
+                  </div>
+                  <div class="hint">取值范围：{{ valueRangePreview || '—' }}</div>
+                </div>
               </el-form-item>
               <el-form-item v-if="maxBitsForCurrentType > 0" label="使用 BIT 位" required>
-                <div class="bit-check-grid">
-                  <el-checkbox
-                    v-for="n in bitCheckboxRange"
-                    :key="n"
-                    :model-value="selectedBits.includes(n)"
-                    :disabled="isBitCheckboxDisabled(n)"
-                    :class="{ 'bit-occupied': isBitOccupiedGray(n) }"
-                    @update:model-value="(v: boolean) => toggleBit(n, v)"
-                  >
-                    BIT{{ n }}
-                  </el-checkbox>
+                <div class="bit-field">
+                  <div class="bit-field-body">
+                    <div class="bit-check-grid">
+                      <el-checkbox
+                        v-for="n in bitCheckboxRange"
+                        :key="n"
+                        :model-value="selectedBits.includes(n)"
+                        :disabled="isBitCheckboxDisabled(n)"
+                        :class="{ 'bit-occupied': isBitOccupiedGray(n) }"
+                        @update:model-value="(v: boolean) => toggleBit(n, v)"
+                      >
+                        BIT{{ n }}
+                      </el-checkbox>
+                    </div>
+                    <el-button
+                      size="small"
+                      class="bit-load-btn"
+                      :disabled="!canLoadBits"
+                      @click="loadBitPool"
+                    >
+                      加载可选 BIT
+                    </el-button>
+                  </div>
+                  <div class="hint">请先加载可选 BIT，再勾选占用位。</div>
                 </div>
-                <el-button style="margin-top: 8px" :disabled="!canLoadBits" @click="loadBitPool">加载可选 BIT</el-button>
-                <div class="hint">英文逗号分隔落库；请先加载可选 BIT。</div>
               </el-form-item>
-
-              <el-divider content-position="left">2. 取值与场景</el-divider>
               <el-row :gutter="16">
                 <el-col :span="12">
-                  <el-form-item>
+                  <el-form-item label="参数默认值" required>
+                    <el-input v-model="formMain.parameterDefaultValue" placeholder="整数" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="参数推荐值" required>
+                    <el-input v-model="formMain.parameterRecommendedValue" placeholder="整数" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-form-item label="引入版本" required>
+                <el-input
+                  v-model="formMain.introducedVersion"
+                  placeholder="填写引入版本"
+                  :readonly="introducedVersionReadonly"
+                />
+              </el-form-item>
+              <el-row :gutter="16">
+                <el-col :span="12">
+                  <el-form-item label="单位（中）" required>
+                    <el-input v-model="formMain.parameterUnitCn" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="单位（英）">
+                    <el-input v-model="formMain.parameterUnitEn" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-divider content-position="left">详细信息</el-divider>
+              <el-row :gutter="16">
+                <el-col :span="12">
+                  <el-form-item :required="dialogMode === 'edit'">
                     <template #label>
                       <span>取值说明（中）</span>
                       <el-tooltip content="说明该参数可取值的含义与约束。" placement="top">
@@ -296,7 +371,7 @@
               </el-row>
               <el-row :gutter="16">
                 <el-col :span="12">
-                  <el-form-item>
+                  <el-form-item :required="dialogMode === 'edit'">
                     <template #label>
                       <span>应用场景（中）</span>
                       <el-tooltip content="描述该参数的典型使用场景。" placement="top">
@@ -312,28 +387,14 @@
                   </el-form-item>
                 </el-col>
               </el-row>
-              <el-row :gutter="16">
-                <el-col :span="12">
-                  <el-form-item label="参数默认值">
-                    <el-input v-model="formMain.parameterDefaultValue" placeholder="整数" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="参数推荐值">
-                    <el-input v-model="formMain.parameterRecommendedValue" placeholder="整数" />
-                  </el-form-item>
-                </el-col>
-              </el-row>
-
-              <el-divider content-position="left">3. 分类与归属</el-divider>
-              <el-form-item label="适用网元">
+              <el-form-item label="适用网元" :required="dialogMode === 'edit'">
                 <el-select
                   v-model="applicableNeSelection"
                   multiple
                   filterable
                   collapse-tags
                   collapse-tags-tooltip
-                  placeholder="多选，顿号分隔落库"
+                  placeholder="请选择适用网元"
                   style="width: 100%"
                   @change="onApplicableNeChange"
                 >
@@ -345,52 +406,23 @@
                   />
                 </el-select>
               </el-form-item>
-              <el-form-item label="所属特性">
+              <el-form-item label="业务分类" :required="dialogMode === 'edit'">
                 <el-select
-                  v-model="selectedFeatureId"
+                  v-model="selectedCategoryCode"
                   filterable
                   clearable
-                  placeholder="当前版本特性"
+                  placeholder="选择分类"
                   style="width: 100%"
-                  @change="onFeatureChange"
+                  @change="onCategoryChange"
                 >
                   <el-option
-                    v-for="f in featureOptions"
-                    :key="String(f.featureId)"
-                    :label="String(f.featureNameCn || f.featureNameEn || '未命名特性')"
-                    :value="String(f.featureId)"
+                    v-for="c in categoryOptions"
+                    :key="String(c.categoryId)"
+                    :label="String(c.categoryNameCn || '未命名分类')"
+                    :value="String(c.categoryId)"
                   />
                 </el-select>
               </el-form-item>
-              <el-row :gutter="16">
-                <el-col :span="12">
-                  <el-form-item label="业务分类">
-                    <el-select
-                      v-model="selectedCategoryCode"
-                      filterable
-                      clearable
-                      placeholder="选择分类"
-                      style="width: 100%"
-                      @change="onCategoryChange"
-                    >
-                      <el-option
-                        v-for="c in categoryOptions"
-                        :key="String(c.categoryId)"
-                        :label="String(c.categoryNameCn || '未命名分类')"
-                        :value="String(c.categoryId)"
-                      />
-                    </el-select>
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="立即生效">
-                    <el-select v-model="formMain.takeEffectImmediately" style="width: 140px">
-                      <el-option label="是" value="是" />
-                      <el-option label="否" value="否" />
-                    </el-select>
-                  </el-form-item>
-                </el-col>
-              </el-row>
               <el-row :gutter="16">
                 <el-col :span="12">
                   <el-form-item label="生效方式（中）">
@@ -419,7 +451,7 @@
               </el-row>
               <el-row :gutter="16">
                 <el-col :span="12">
-                  <el-form-item label="项目组">
+                  <el-form-item label="项目组" :required="dialogMode === 'edit'">
                     <el-select
                       v-model="selectedTeamId"
                       filterable
@@ -443,37 +475,9 @@
                   </el-form-item>
                 </el-col>
               </el-row>
-              <el-form-item label="变更来源">
-                <el-input
-                  v-model="formMain.changeSource"
-                  type="textarea"
-                  :rows="2"
-                  placeholder="请填写本次参数变更的来源说明（选填）"
-                />
-              </el-form-item>
               <el-row :gutter="16">
                 <el-col :span="12">
-                  <el-form-item label="版本号">
-                    <el-input v-model="formMain.patchVersion" placeholder="默认当前版本名" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="引入版本">
-                    <el-input v-model="formMain.introducedVersion" placeholder="与版本域对齐" />
-                  </el-form-item>
-                </el-col>
-              </el-row>
-              <el-form-item
-                v-if="dialogMode === 'edit' && (formMain.introduceType || formMain.inheritReferenceVersionId)"
-                label="引入/继承"
-              >
-                <el-input :model-value="inheritIntroSummary" readonly />
-              </el-form-item>
-
-              <el-divider content-position="left">4. 长文本</el-divider>
-              <el-row :gutter="16">
-                <el-col :span="12">
-                  <el-form-item>
+                  <el-form-item :required="dialogMode === 'edit'">
                     <template #label>
                       <span>参数含义（中）</span>
                       <el-tooltip content="阐述参数的业务语义与定义。" placement="top">
@@ -491,7 +495,7 @@
               </el-row>
               <el-row :gutter="16">
                 <el-col :span="12">
-                  <el-form-item>
+                  <el-form-item :required="dialogMode === 'edit'">
                     <template #label>
                       <span>影响说明（中）</span>
                       <el-tooltip content="说明修改或配置该参数可能带来的影响。" placement="top">
@@ -509,7 +513,7 @@
               </el-row>
               <el-row :gutter="16">
                 <el-col :span="12">
-                  <el-form-item>
+                  <el-form-item :required="dialogMode === 'edit'">
                     <template #label>
                       <span>配置举例（中）</span>
                       <el-tooltip content="可填写典型配置示例，便于实施参考。" placement="top">
@@ -527,6 +531,25 @@
               </el-row>
               <el-row :gutter="16">
                 <el-col :span="12">
+                  <el-form-item label="是否发布" :required="dialogMode === 'edit'">
+                    <el-select v-model="formMain.isPublished" placeholder="是/否" style="width: 100%">
+                      <el-option label="是" value="是" />
+                      <el-option label="否" value="否" />
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item
+                    v-if="formMain.isPublished === '否'"
+                    label="不发布原因"
+                    :required="dialogMode === 'edit'"
+                  >
+                    <el-input v-model="formMain.noPublishReason" type="textarea" :rows="2" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="16">
+                <el-col :span="12">
                   <el-form-item label="关联参数描述（中）">
                     <el-input v-model="formMain.relatedParameterDescriptionCn" type="textarea" :rows="2" />
                   </el-form-item>
@@ -537,45 +560,84 @@
                   </el-form-item>
                 </el-col>
               </el-row>
+              <el-form-item label="所属特性" :required="dialogMode === 'edit'">
+                <el-select
+                  v-model="selectedFeatureId"
+                  filterable
+                  clearable
+                  placeholder="当前版本特性"
+                  style="width: 100%"
+                  @change="onFeatureChange"
+                >
+                  <el-option
+                    v-for="f in featureOptions"
+                    :key="String(f.featureId)"
+                    :label="String(f.featureNameCn || f.featureNameEn || '未命名特性')"
+                    :value="String(f.featureId)"
+                  />
+                </el-select>
+              </el-form-item>
+              <el-row :gutter="16">
+                <el-col :span="12">
+                  <el-form-item label="影响级别（中）">
+                    <el-input v-model="formMain.impactLevelCn" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="影响级别（英）">
+                    <el-input v-model="formMain.impactLevelEn" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-form-item label="关联 License">
+                <el-input v-model="formMain.relatedLicense" />
+              </el-form-item>
+              <el-form-item label="内部功能描述">
+                <el-input v-model="formMain.internalDescription" type="textarea" :rows="2" />
+              </el-form-item>
+              <el-row :gutter="16">
+                <el-col :span="12">
+                  <el-form-item label="产品形态">
+                    <el-select
+                      v-model="selectedProductFormId"
+                      filterable
+                      clearable
+                      placeholder="当前产品配置"
+                      style="width: 100%"
+                      @change="onProductFormChange"
+                    >
+                      <el-option
+                        v-for="pf in productFormOptions"
+                        :key="String(pf.productFormId)"
+                        :label="String(pf.productForm || pf.productFormId || '未命名形态')"
+                        :value="String(pf.productFormId)"
+                      />
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="平台代际" :required="dialogMode === 'edit'">
+                    <el-select v-model="formMain.platformGeneration" placeholder="裸机形态/虚拟机形态" style="width: 100%">
+                      <el-option v-for="opt in PLATFORM_GENERATION_OPTIONS" :key="opt" :label="opt" :value="opt" />
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-form-item label="应用区域" :required="dialogMode === 'edit'">
+                <el-select v-model="formMain.applicationRegion" placeholder="海外/全球" style="width: 280px">
+                  <el-option v-for="opt in APPLICATION_REGION_OPTIONS" :key="opt" :label="opt" :value="opt" />
+                </el-select>
+              </el-form-item>
               <el-form-item label="备注">
                 <el-input v-model="formMain.remark" type="textarea" :rows="2" />
               </el-form-item>
 
-              <el-collapse>
-                <el-collapse-item title="扩展字段（枚举 / 单位 / 范围，可选）" name="ext">
-                  <el-row :gutter="16">
-                    <el-col :span="12">
-                      <el-form-item label="枚举值（中）">
-                        <el-input v-model="formMain.enumerationValuesCn" type="textarea" :rows="2" />
-                      </el-form-item>
-                    </el-col>
-                    <el-col :span="12">
-                      <el-form-item label="枚举值（英）">
-                        <el-input v-model="formMain.enumerationValuesEn" type="textarea" :rows="2" />
-                      </el-form-item>
-                    </el-col>
-                  </el-row>
-                  <el-row :gutter="16">
-                    <el-col :span="12">
-                      <el-form-item label="参数单位（中）">
-                        <el-input v-model="formMain.parameterUnitCn" />
-                      </el-form-item>
-                    </el-col>
-                    <el-col :span="12">
-                      <el-form-item label="参数单位（英）">
-                        <el-input v-model="formMain.parameterUnitEn" />
-                      </el-form-item>
-                    </el-col>
-                  </el-row>
-                  <el-form-item label="参数范围">
-                    <el-input v-model="formMain.parameterRange" />
-                  </el-form-item>
-                </el-collapse-item>
-              </el-collapse>
-
-              <el-divider content-position="left">5. 变更说明（至少 1 条，中英四格必填）</el-divider>
+              <el-divider content-position="left">变更说明（至少 1 条，中文原因/影响必填）</el-divider>
             <el-table :data="formChanges" border size="small" style="width: 100%">
-              <el-table-column label="变更类型" width="160">
+              <el-table-column width="160">
+                <template #header>
+                  <span class="param-table-col-required">变更类型</span>
+                </template>
                 <template #default="{ row }">
                   <el-select v-model="row.changeType" size="small" filterable style="width: 148px">
                     <el-option
@@ -587,7 +649,10 @@
                   </el-select>
                 </template>
               </el-table-column>
-              <el-table-column label="原因（中）" min-width="100">
+              <el-table-column min-width="100">
+                <template #header>
+                  <span class="param-table-col-required">原因（中）</span>
+                </template>
                 <template #default="{ row }">
                   <el-input v-model="row.changeReasonCn" size="small" />
                 </template>
@@ -597,7 +662,10 @@
                   <el-input v-model="row.changeReasonEn" size="small" />
                 </template>
               </el-table-column>
-              <el-table-column label="影响（中）" min-width="100">
+              <el-table-column min-width="100">
+                <template #header>
+                  <span class="param-table-col-required">影响（中）</span>
+                </template>
                 <template #default="{ row }">
                   <el-input v-model="row.changeImpactCn" size="small" />
                 </template>
@@ -607,7 +675,10 @@
                   <el-input v-model="row.changeImpactEn" size="small" />
                 </template>
               </el-table-column>
-              <el-table-column label="导出 delta" width="100">
+              <el-table-column width="100">
+                <template #header>
+                  <span class="param-table-col-required">导出 delta</span>
+                </template>
                 <template #default="{ row }">
                   <el-select v-model="row.exportDelta" size="small" style="width: 88px">
                     <el-option label="是" value="是" />
@@ -615,9 +686,35 @@
                   </el-select>
                 </template>
               </el-table-column>
-              <el-table-column label="不导出原因" min-width="100">
+              <el-table-column min-width="100">
+                <template #header>
+                  <span
+                    :class="{
+                      'param-table-col-required': formChanges.some((c) => c.exportDelta === '否'),
+                    }"
+                  >
+                    不导出原因
+                  </span>
+                </template>
                 <template #default="{ row }">
-                  <el-input v-model="row.noExportReason" size="small" />
+                  <el-input
+                    v-model="row.noExportReason"
+                    size="small"
+                    :placeholder="row.exportDelta === '否' ? '必填' : ''"
+                  />
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="72" fixed="right">
+                <template #default="{ $index }">
+                  <el-button
+                    size="small"
+                    type="danger"
+                    link
+                    :disabled="formChanges.length <= 1"
+                    @click="removeChangeRow($index)"
+                  >
+                    删除
+                  </el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -738,6 +835,7 @@ import {
   fetchProjectTeams,
   fetchVersionFeatures,
 } from '../../api/config-masterdata'
+import { fetchEntityBasicInfoPage, type EntityBasicInfoRow } from '../../api/entityBasicInfo'
 import { fetchCommands } from '../../api/command-domain'
 import { fetchTypeBits } from '../../api/type-bits'
 import {
@@ -775,6 +873,8 @@ import OperationLogDrawer from '../../components/OperationLogDrawer.vue'
 const TYPE_NEW_PARAMETER_CN = '新增参数'
 const BASELINE = '已基线'
 const typeOptions = ['BIT', 'BYTE', 'DWORD', 'STRING', 'INT']
+const PLATFORM_GENERATION_OPTIONS = ['裸机形态', '虚拟机形态']
+const APPLICATION_REGION_OPTIONS = ['海外', '全球']
 
 const typeBits = ref<Record<string, number>>({})
 const typeBitsLoading = ref(false)
@@ -851,6 +951,10 @@ const selectedFeatureId = ref('')
 const selectedCategoryCode = ref('')
 const selectedEffectiveModeId = ref('')
 const selectedTeamId = ref('')
+const valueRangeSegments = ref<{ min: number; max: number }[]>([{ min: 0, max: 255 }])
+const valueRangePreview = ref('')
+const productFormOptions = ref<EntityBasicInfoRow[]>([])
+const selectedProductFormId = ref('')
 
 // 产品选择器已提升到全局 Header；本页仅消费上下文
 
@@ -1094,12 +1198,6 @@ const maxBitsForCurrentType = computed(() => {
   return 32
 })
 
-const currentVersionLabel = computed(() => {
-  if (versionId.value === VERSION_ALL) return 'ALL（全产品）'
-  const v = versionOptions.value.find((x) => x.versionId === versionId.value)
-  return v?.versionName || versionId.value || ''
-})
-
 function versionNameForTable(id: string) {
   if (!id) return '—'
   const v = versionOptions.value.find((x) => x.versionId === id)
@@ -1113,15 +1211,12 @@ function commandNameForTable(id: string) {
   return c?.commandName || cid
 }
 
-const inheritIntroSummary = computed(() => {
+const introducedVersionReadonly = computed(() => {
   const t = String(formMain.introduceType || '').trim()
   const refId = String(formMain.inheritReferenceVersionId || '').trim()
-  if (!t && !refId) return ''
-  const vn = refId ? versionNameForTable(refId) : ''
-  const parts: string[] = []
-  if (t) parts.push(t)
-  if (refId) parts.push(vn !== '—' ? vn : '参考版本')
-  return parts.join(' · ')
+  if (!refId) return false
+  const lower = t.toLowerCase()
+  return lower.includes('inherit') || lower.includes('reference') || t.includes('继承') || t.includes('引用')
 })
 
 function parseDunhao(s: string): string[] {
@@ -1132,18 +1227,20 @@ async function loadMasterdataForForm(contextVersionId: string) {
   if (!selectedProductId.value || !contextVersionId) return
   masterdataLoading.value = true
   try {
-    const [nes, cats, modes, teams, feats] = await Promise.all([
+    const [nes, cats, modes, teams, feats, productForms] = await Promise.all([
       fetchApplicableNes(selectedProductId.value),
       fetchBusinessCategories(selectedProductId.value),
       fetchEffectiveModes(selectedProductId.value),
       fetchProjectTeams(selectedProductId.value),
       fetchVersionFeatures(selectedProductId.value, contextVersionId),
+      fetchEntityBasicInfoPage({ page: 1, size: 200, productId: selectedProductId.value }),
     ])
     applicableNeOptions.value = nes
     categoryOptions.value = cats
     effectiveModeOptions.value = modes
     teamOptions.value = teams
     featureOptions.value = feats
+    productFormOptions.value = productForms.records || []
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '加载主数据失败')
   } finally {
@@ -1161,6 +1258,77 @@ function syncSelectionsFromForm() {
   const pt = String(formMain.projectTeam || '')
   const tm = teamOptions.value.find((t) => String(t.teamName) === pt)
   selectedTeamId.value = tm ? String(tm.teamId || '') : ''
+  selectedProductFormId.value = String(formMain.productFormId || '')
+}
+
+function syncValueRangePreview() {
+  const sorted = valueRangeSegments.value.slice().sort((a, b) => a.min - b.min)
+  valueRangePreview.value = sorted.map((s) => `${s.min}-${s.max}`).join(',')
+}
+
+function addRangeSegment() {
+  valueRangeSegments.value.push({ min: 0, max: 255 })
+  syncValueRangePreview()
+}
+
+function removeRangeSegment(index: number) {
+  if (valueRangeSegments.value.length <= 1) {
+    ElMessage.warning('至少保留 1 段')
+    return
+  }
+  valueRangeSegments.value.splice(index, 1)
+  syncValueRangePreview()
+}
+
+function parseValueRangeText(s: string): { min: number; max: number }[] {
+  const parts = s.split(',').map((x) => x.trim()).filter(Boolean)
+  const out: { min: number; max: number }[] = []
+  for (const p of parts) {
+    const m = p.match(/^(-?\d+)\s*-\s*(-?\d+)$/)
+    if (m) {
+      out.push({ min: Number(m[1]), max: Number(m[2]) })
+    } else if (/^-?\d+$/.test(p)) {
+      const n = Number(p)
+      out.push({ min: n, max: n })
+    }
+  }
+  return out
+}
+
+function loadValueRangeSegmentsFromRow(row: Record<string, unknown>) {
+  const json = String(row.valueRangeSegments || '').trim()
+  if (json) {
+    try {
+      const parsed = JSON.parse(json) as { min: number; max: number }[]
+      if (Array.isArray(parsed) && parsed.length) {
+        valueRangeSegments.value = parsed.map((s) => ({
+          min: Number(s.min),
+          max: Number(s.max),
+        }))
+        syncValueRangePreview()
+        return
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+  const vr = String(row.valueRange || formMain.valueRange || '').trim()
+  if (vr) {
+    const segments = parseValueRangeText(vr)
+    if (segments.length) {
+      valueRangeSegments.value = segments
+      syncValueRangePreview()
+      return
+    }
+  }
+  valueRangeSegments.value = [{ min: 0, max: 255 }]
+  syncValueRangePreview()
+}
+
+function onProductFormChange(id: string | undefined) {
+  const fid = id || ''
+  selectedProductFormId.value = fid
+  formMain.productFormId = fid
 }
 
 function onApplicableNeChange() {
@@ -1218,6 +1386,7 @@ function copyMainFromRow(row: Record<string, unknown>) {
     'parameterNameCn',
     'parameterNameEn',
     'valueRange',
+    'valueRangeSegments',
     'bitUsage',
     'valueDescriptionCn',
     'valueDescriptionEn',
@@ -1230,13 +1399,10 @@ function copyMainFromRow(row: Record<string, unknown>) {
     'featureId',
     'businessClassification',
     'categoryId',
-    'takeEffectImmediately',
     'effectiveModeCn',
     'effectiveModeEn',
     'projectTeam',
     'belongingModule',
-    'changeSource',
-    'patchVersion',
     'introducedVersion',
     'parameterDescriptionCn',
     'parameterDescriptionEn',
@@ -1247,13 +1413,19 @@ function copyMainFromRow(row: Record<string, unknown>) {
     'relatedParameterDescriptionCn',
     'relatedParameterDescriptionEn',
     'remark',
-    'enumerationValuesCn',
-    'enumerationValuesEn',
     'parameterUnitCn',
     'parameterUnitEn',
-    'parameterRange',
     'introduceType',
     'inheritReferenceVersionId',
+    'isPublished',
+    'noPublishReason',
+    'relatedLicense',
+    'productFormId',
+    'platformGeneration',
+    'applicationRegion',
+    'impactLevelCn',
+    'impactLevelEn',
+    'internalDescription',
   ]
   for (const k of keys) {
     const v = row[k]
@@ -1457,9 +1629,7 @@ function resetForm() {
   syncCode()
   formMain.parameterNameCn = ''
   formMain.parameterNameEn = ''
-  formMain.valueRange = '0'
   formMain.bitUsage = ''
-  formMain.changeSource = ''
   formMain.valueDescriptionCn = ''
   formMain.valueDescriptionEn = ''
   formMain.applicationScenarioCn = ''
@@ -1471,12 +1641,10 @@ function resetForm() {
   formMain.featureId = ''
   formMain.businessClassification = ''
   formMain.categoryId = ''
-  formMain.takeEffectImmediately = '是'
   formMain.effectiveModeCn = ''
   formMain.effectiveModeEn = ''
   formMain.projectTeam = ''
   formMain.belongingModule = ''
-  formMain.patchVersion = currentVersionLabel.value
   formMain.introducedVersion = versionId.value === VERSION_ALL ? '' : versionId.value || ''
   formMain.parameterDescriptionCn = ''
   formMain.parameterDescriptionEn = ''
@@ -1487,16 +1655,25 @@ function resetForm() {
   formMain.relatedParameterDescriptionCn = ''
   formMain.relatedParameterDescriptionEn = ''
   formMain.remark = ''
-  formMain.enumerationValuesCn = ''
-  formMain.enumerationValuesEn = ''
   formMain.parameterUnitCn = ''
   formMain.parameterUnitEn = ''
-  formMain.parameterRange = ''
+  formMain.isPublished = ''
+  formMain.noPublishReason = ''
+  formMain.relatedLicense = ''
+  formMain.productFormId = ''
+  formMain.platformGeneration = ''
+  formMain.applicationRegion = ''
+  formMain.impactLevelCn = ''
+  formMain.impactLevelEn = ''
+  formMain.internalDescription = ''
+  valueRangeSegments.value = [{ min: 0, max: 255 }]
+  syncValueRangePreview()
   applicableNeSelection.value = []
   selectedFeatureId.value = ''
   selectedCategoryCode.value = ''
   selectedEffectiveModeId.value = ''
   selectedTeamId.value = ''
+  selectedProductFormId.value = ''
   formChanges.value = [defaultChangeRow()]
   seqOptions.value = []
   selectedBits.value = []
@@ -1514,6 +1691,7 @@ function fillFromRow(row: Record<string, unknown>) {
     if (!Number.isNaN(n)) formSequence.value = n
   }
   copyMainFromRow(row)
+  loadValueRangeSegmentsFromRow(row)
   syncCode()
   selectedBits.value = parseBits(String(formMain.bitUsage || ''))
   expandRawToFullRange()
@@ -1576,16 +1754,28 @@ function addChangeRow() {
   formChanges.value.push(base)
 }
 
+function removeChangeRow(index: number) {
+  if (formChanges.value.length <= 1) {
+    ElMessage.warning('至少保留一条变更说明')
+    return
+  }
+  formChanges.value.splice(index, 1)
+}
+
 function buildSaveRequest(): ParameterSaveRequest {
   syncCode()
+  syncValueRangePreview()
   const main: Record<string, unknown> = { ...formMain }
   main.parameterCode = formMain.parameterCode
   main.parameterSequence = formSequence.value
   main.bitUsage = formMain.bitUsage || ''
   main.ownedCommandId = formMain.ownedCommandId
   main.parameterNameCn = formMain.parameterNameCn
-  main.valueRange = formMain.valueRange || '0'
-  main.changeSource = formMain.changeSource === undefined || formMain.changeSource === null ? '' : formMain.changeSource
+  main.valueRangeSegments = JSON.stringify(valueRangeSegments.value)
+  main.valueRange = valueRangePreview.value
+  delete main.takeEffectImmediately
+  delete main.changeSource
+  delete main.patchVersion
 
   const changeDescriptions = formChanges.value.map((c) => ({
     changeDescriptionId: '',
@@ -1601,9 +1791,24 @@ function buildSaveRequest(): ParameterSaveRequest {
   return { main, changeDescriptions }
 }
 
-function validateOptionalInt(label: string, v: unknown): string | undefined {
+function validateValueRangeSegments(): string | undefined {
+  if (!valueRangeSegments.value.length) return '取值区间至少 1 段'
+  const sorted = valueRangeSegments.value.slice().sort((a, b) => a.min - b.min)
+  let prev: { min: number; max: number } | null = null
+  for (const s of sorted) {
+    if (Number.isNaN(s.min) || Number.isNaN(s.max)) return '取值区间 min/max 须为整数'
+    if (s.min > s.max) return '取值区间每段须满足 min ≤ max'
+    if (prev && s.min <= prev.max) return '取值区间段之间不得重叠'
+    prev = s
+  }
+  syncValueRangePreview()
+  if (valueRangePreview.value.length > 255) return '取值范围拼接后超过 255 字符'
+  return undefined
+}
+
+function validateRequiredInt(label: string, v: unknown): string | undefined {
   const s = String(v ?? '').trim()
-  if (!s) return undefined
+  if (!s) return `请填写${label}`
   if (!/^-?\d+$/.test(s)) return `${label}须为整数`
   return undefined
 }
@@ -1611,20 +1816,42 @@ function validateOptionalInt(label: string, v: unknown): string | undefined {
 function validateForm(): string | undefined {
   if (!String(formMain.ownedCommandId || '').trim()) return '请选择归属命令'
   if (!String(formMain.parameterNameCn || '').trim()) return '请填写参数名称（中文）'
+  const rangeErr = validateValueRangeSegments()
+  if (rangeErr) return rangeErr
   if (maxBitsForCurrentType.value > 0 && !String(formMain.bitUsage || '').trim()) return '请选择或填写 BIT 占用'
-  const d = validateOptionalInt('参数默认值', formMain.parameterDefaultValue)
+  const d = validateRequiredInt('参数默认值', formMain.parameterDefaultValue)
   if (d) return d
-  const r = validateOptionalInt('参数推荐值', formMain.parameterRecommendedValue)
+  const r = validateRequiredInt('参数推荐值', formMain.parameterRecommendedValue)
   if (r) return r
+  if (!String(formMain.introducedVersion || '').trim()) return '请填写引入版本'
+  if (!String(formMain.parameterUnitCn || '').trim()) return '请填写单位（中文）'
+
+  if (dialogMode.value === 'edit') {
+    if (!String(formMain.valueDescriptionCn || '').trim()) return '请填写取值说明（中文）'
+    if (!String(formMain.applicationScenarioCn || '').trim()) return '请填写应用场景（中文）'
+    if (!String(formMain.applicableNe || '').trim()) return '请选择适用网元'
+    if (!String(formMain.categoryId || '').trim()) return '请选择业务分类'
+    if (!String(formMain.projectTeam || '').trim()) return '请选择项目组'
+    if (!String(formMain.parameterDescriptionCn || '').trim()) return '请填写参数含义（中文）'
+    if (!String(formMain.impactDescriptionCn || '').trim()) return '请填写影响说明（中文）'
+    if (!String(formMain.configurationExampleCn || '').trim()) return '请填写配置举例（中文）'
+    if (!String(formMain.isPublished || '').trim()) return '请选择是否发布'
+    if (!String(formMain.featureId || '').trim()) return '请选择所属特性'
+    if (!String(formMain.platformGeneration || '').trim()) return '请选择平台代际'
+    if (!String(formMain.applicationRegion || '').trim()) return '请选择应用区域'
+    if (formMain.isPublished === '否' && !String(formMain.noPublishReason || '').trim()) {
+      return '请填写不发布原因'
+    }
+  }
+
   if (!formChanges.value.length) return '至少一条变更说明'
   for (const c of formChanges.value) {
     if (!String(c.changeType || '').trim()) return '请选择变更类型'
     if (!String(c.changeReasonCn || '').trim()) return '请填写变更原因（中）'
-    if (!String(c.changeReasonEn || '').trim()) return '请填写变更原因（英）'
     if (!String(c.changeImpactCn || '').trim()) return '请填写变更影响（中）'
-    if (!String(c.changeImpactEn || '').trim()) return '请填写变更影响（英）'
+    if (c.exportDelta !== '是' && c.exportDelta !== '否') return '请选择导出 delta'
     if (c.exportDelta === '否' && !String(c.noExportReason || '').trim()) {
-      return 'export_delta 为「否」时请填写不导出原因'
+      return '导出 delta 为「否」时请填写不导出原因'
     }
   }
   return undefined
@@ -1931,6 +2158,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.param-table-col-required::before {
+  color: var(--el-color-danger);
+  content: '*';
+  margin-right: 4px;
+}
+
 .filter-row {
   margin-bottom: 8px;
 }
@@ -2026,11 +2259,27 @@ onMounted(() => {
   margin-left: 4px;
 }
 
+.bit-field {
+  width: 100%;
+}
+
+.bit-field-body {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+}
+
 .bit-check-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(72px, 1fr));
+  flex: 1;
   gap: 8px 12px;
-  max-width: 640px;
+  grid-template-columns: repeat(6, minmax(72px, 1fr));
+  min-width: 0;
+}
+
+.bit-load-btn {
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .bit-check-grid :deep(.el-checkbox.bit-occupied) {
@@ -2073,5 +2322,43 @@ onMounted(() => {
   color: #888;
   cursor: help;
   margin-left: 4px;
+}
+
+.range-segments {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.range-segment-row {
+  align-items: center;
+  column-gap: 8px;
+  display: grid;
+  grid-template-columns: 148px 24px 148px 72px;
+  margin-bottom: 10px;
+}
+
+.range-segment-add-row {
+  margin-bottom: 4px;
+  margin-top: 2px;
+}
+
+.range-segment-spacer {
+  display: block;
+}
+
+.range-num {
+  width: 100%;
+}
+
+.range-btn {
+  justify-self: start;
+  min-width: 72px;
+}
+
+.range-sep {
+  color: #666;
+  line-height: 32px;
+  text-align: center;
 }
 </style>

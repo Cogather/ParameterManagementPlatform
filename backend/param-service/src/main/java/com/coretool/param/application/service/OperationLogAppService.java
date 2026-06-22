@@ -490,12 +490,42 @@ public class OperationLogAppService {
     /**
      * 字段「P_LABEL_UNIT_CN」。
      */
-    public static final String P_LABEL_UNIT_CN = "参数单位（中文）";
+    public static final String P_LABEL_UNIT_CN = "单位（中文）";
 
     /**
      * 字段「P_LABEL_UNIT_EN」。
      */
-    public static final String P_LABEL_UNIT_EN = "参数单位（英文）";
+    public static final String P_LABEL_UNIT_EN = "单位（英文）";
+
+    /** 是否发布 */
+    public static final String P_LABEL_IS_PUBLISHED = "是否发布";
+
+    /** 不发布原因 */
+    public static final String P_LABEL_NO_PUBLISH_REASON = "不发布原因";
+
+    /** 关联 License */
+    public static final String P_LABEL_RELATED_LICENSE = "关联 License";
+
+    /** 产品形态 ID */
+    public static final String P_LABEL_PRODUCT_FORM_ID = "产品形态";
+
+    /** 平台代际 */
+    public static final String P_LABEL_PLATFORM_GENERATION = "平台代际";
+
+    /** 应用区域 */
+    public static final String P_LABEL_APPLICATION_REGION = "应用区域";
+
+    /** 取值区间结构化 */
+    public static final String P_LABEL_VALUE_RANGE_SEGMENTS = "取值区间";
+
+    /** 影响级别（中文） */
+    public static final String P_LABEL_IMPACT_LEVEL_CN = "影响级别（中文）";
+
+    /** 影响级别（英文） */
+    public static final String P_LABEL_IMPACT_LEVEL_EN = "影响级别（英文）";
+
+    /** 内部功能描述 */
+    public static final String P_LABEL_INTERNAL_DESC = "内部功能描述";
 
     /**
      * 字段「P_LABEL_PARAM_RANGE」。
@@ -1193,6 +1223,16 @@ public class OperationLogAppService {
         addCreateStr(rows, ctx, P_LABEL_UNIT_CN, p.getParameterUnitCn());
         addCreateStr(rows, ctx, P_LABEL_UNIT_EN, p.getParameterUnitEn());
         addCreateStr(rows, ctx, P_LABEL_PARAM_RANGE, p.getParameterRange());
+        addCreateStr(rows, ctx, P_LABEL_IS_PUBLISHED, p.getIsPublished());
+        addCreateStr(rows, ctx, P_LABEL_NO_PUBLISH_REASON, p.getNoPublishReason());
+        addCreateStr(rows, ctx, P_LABEL_RELATED_LICENSE, p.getRelatedLicense());
+        addCreateStr(rows, ctx, P_LABEL_PRODUCT_FORM_ID, p.getProductFormId());
+        addCreateStr(rows, ctx, P_LABEL_PLATFORM_GENERATION, p.getPlatformGeneration());
+        addCreateStr(rows, ctx, P_LABEL_APPLICATION_REGION, p.getApplicationRegion());
+        addCreateStr(rows, ctx, P_LABEL_VALUE_RANGE_SEGMENTS, p.getValueRangeSegments());
+        addCreateStr(rows, ctx, P_LABEL_IMPACT_LEVEL_CN, p.getImpactLevelCn());
+        addCreateStr(rows, ctx, P_LABEL_IMPACT_LEVEL_EN, p.getImpactLevelEn());
+        addCreateStr(rows, ctx, P_LABEL_INTERNAL_DESC, p.getInternalDescription());
     }
 
     /**
@@ -1276,6 +1316,16 @@ public class OperationLogAppService {
         diffStr(rows, ctx, P_LABEL_UNIT_CN, before.getParameterUnitCn(), after.getParameterUnitCn());
         diffStr(rows, ctx, P_LABEL_UNIT_EN, before.getParameterUnitEn(), after.getParameterUnitEn());
         diffStr(rows, ctx, P_LABEL_PARAM_RANGE, before.getParameterRange(), after.getParameterRange());
+        diffStr(rows, ctx, P_LABEL_IS_PUBLISHED, before.getIsPublished(), after.getIsPublished());
+        diffStr(rows, ctx, P_LABEL_NO_PUBLISH_REASON, before.getNoPublishReason(), after.getNoPublishReason());
+        diffStr(rows, ctx, P_LABEL_RELATED_LICENSE, before.getRelatedLicense(), after.getRelatedLicense());
+        diffStr(rows, ctx, P_LABEL_PRODUCT_FORM_ID, before.getProductFormId(), after.getProductFormId());
+        diffStr(rows, ctx, P_LABEL_PLATFORM_GENERATION, before.getPlatformGeneration(), after.getPlatformGeneration());
+        diffStr(rows, ctx, P_LABEL_APPLICATION_REGION, before.getApplicationRegion(), after.getApplicationRegion());
+        diffStr(rows, ctx, P_LABEL_VALUE_RANGE_SEGMENTS, before.getValueRangeSegments(), after.getValueRangeSegments());
+        diffStr(rows, ctx, P_LABEL_IMPACT_LEVEL_CN, before.getImpactLevelCn(), after.getImpactLevelCn());
+        diffStr(rows, ctx, P_LABEL_IMPACT_LEVEL_EN, before.getImpactLevelEn(), after.getImpactLevelEn());
+        diffStr(rows, ctx, P_LABEL_INTERNAL_DESC, before.getInternalDescription(), after.getInternalDescription());
     }
 
     /**

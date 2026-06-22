@@ -17,8 +17,66 @@ export interface AvailableBitsData {
   availableBitIndexes: number[]
 }
 
+/** 取值区间单段（与后端 value_range_segments JSON 一致） */
+export interface ValueRangeSegment {
+  min: number
+  max: number
+}
+
+/** 参数主表保存载荷（与 SystemParameterPo 字段驼峰对齐） */
+export interface ParameterMainPayload {
+  parameterNameCn?: string
+  parameterNameEn?: string
+  ownedCommandId?: string
+  parameterCode?: string
+  parameterSequence?: number
+  valueRange?: string
+  valueRangeSegments?: string
+  bitUsage?: string
+  parameterDefaultValue?: string
+  parameterRecommendedValue?: string
+  introducedVersion?: string
+  parameterUnitCn?: string
+  parameterUnitEn?: string
+  valueDescriptionCn?: string
+  valueDescriptionEn?: string
+  applicationScenarioCn?: string
+  applicationScenarioEn?: string
+  applicableNe?: string
+  businessClassification?: string
+  categoryId?: string
+  effectiveModeCn?: string
+  effectiveModeEn?: string
+  projectTeam?: string
+  belongingModule?: string
+  parameterDescriptionCn?: string
+  parameterDescriptionEn?: string
+  impactDescriptionCn?: string
+  impactDescriptionEn?: string
+  configurationExampleCn?: string
+  configurationExampleEn?: string
+  isPublished?: string
+  noPublishReason?: string
+  relatedParameterDescriptionCn?: string
+  relatedParameterDescriptionEn?: string
+  feature?: string
+  featureId?: string
+  impactLevelCn?: string
+  impactLevelEn?: string
+  relatedLicense?: string
+  internalDescription?: string
+  productFormId?: string
+  platformGeneration?: string
+  applicationRegion?: string
+  remark?: string
+  introduceType?: string
+  inheritReferenceVersionId?: string
+  ownedVersionId?: string
+  [key: string]: unknown
+}
+
 export interface ParameterSaveRequest {
-  main: Record<string, unknown>
+  main: ParameterMainPayload | Record<string, unknown>
   changeDescriptions: Record<string, unknown>[]
 }
 

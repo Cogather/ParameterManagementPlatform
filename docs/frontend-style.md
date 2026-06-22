@@ -420,7 +420,7 @@ box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 - **业务主卡片**：**`.page-card.card-item`** 外边距 **20px**、内边距 **20px**（与「卡片内边距」同档）；**嵌入宿主 iframe**（`app-shell--embedded`）时在 `public/assets/styles/common.scss` 中另设较紧梯度。
 - **主区高度**：宿主全框架（顶栏等）占位 **78px** 时用 **`calc(100vh - 78px)`**；**param-web** 仅含单行工具条时，工程内为 **`calc(100vh - 44px)`**（以 `common.scss` 为准）。
 - **表格表头**：**`.common-main .el-table .el-table__header th`** 背景 **`#f5f7fa`**、文字色 **`#555`**，与 §5.3 一致。
-- **无产品上下文**：列表以 **空表格 + `empty-text`** 提示「请先选择产品」等，与 **`openspec/spec-04-integration.md`** 一致。
+- **无产品上下文**：列表以 **空表格 + `empty-text`** 提示「请先选择产品」等，与 **`openspec/specs/integration/spec.md`** 一致。
 
 #### 页脚样式
 ```less

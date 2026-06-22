@@ -50,6 +50,19 @@ public final class ExcelHelper {
     }
 
     /**
+     * 构建 Excel 模板（多行说明 + 表头）。
+     *
+     * @param sheetName         sheet 名称
+     * @param instructionLines  说明行（可为空）
+     * @param headersCn         表头（中文）
+     * @return xlsx 字节
+     */
+    public static byte[] buildTemplate(
+            String sheetName, List<String> instructionLines, List<String> headersCn) {
+        return buildWorkbook(sheetName, instructionLines, headersCn, List.of());
+    }
+
+    /**
      * 构建 Excel 工作簿。
      *
      * @param sheetName    sheet 名称
@@ -60,13 +73,35 @@ public final class ExcelHelper {
      */
     public static byte[] buildWorkbook(
             String sheetName, String instruction, List<String> headersCn, List<List<String>> rows) {
+        if (instruction == null || instruction.isBlank()) {
+            return buildWorkbook(sheetName, List.of(), headersCn, rows);
+        }
+        return buildWorkbook(sheetName, List.of(instruction), headersCn, rows);
+    }
+
+    /**
+     * 构建 Excel 工作簿（支持多行说明）。
+     *
+     * @param sheetName         sheet 名称
+     * @param instructionLines  说明行（可为空）
+     * @param headersCn         表头（中文）
+     * @param rows              数据行
+     * @return xlsx 字节
+     */
+    public static byte[] buildWorkbook(
+            String sheetName, List<String> instructionLines, List<String> headersCn, List<List<String>> rows) {
         try (Workbook wb = new XSSFWorkbook();
                 ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = wb.createSheet(sheetName == null ? "sheet1" : sheetName);
             int r = 0;
-            if (instruction != null && !instruction.isBlank()) {
-                Row row0 = sheet.createRow(r++);
-                row0.createCell(0).setCellValue(instruction);
+            if (instructionLines != null) {
+                for (String instruction : instructionLines) {
+                    if (instruction == null || instruction.isBlank()) {
+                        continue;
+                    }
+                    Row row0 = sheet.createRow(r++);
+                    row0.createCell(0).setCellValue(instruction);
+                }
             }
             Row header = sheet.createRow(r++);
             for (int i = 0; i < headersCn.size(); i++) {
@@ -190,8 +225,38 @@ public final class ExcelHelper {
      * @return 表头行下标（默认 0；若首行为说明行则返回 1）
      */
     public static int detectHeaderRowIndex(List<List<String>> rows) {
+        return detectHeaderRowIndex(rows, new String[0]);
+    }
+
+    /**
+     * 推断表头所在行下标；若提供 anchor 列名则优先匹配含该表头单元格的行（用于多行说明的参数模板）。
+     *
+     * @param rows          解析后的非空白行
+     * @param anchorHeaders 表头锚点列名（如「参数ID」「参数编码」）
+     * @return 表头行下标
+     */
+    public static int detectHeaderRowIndex(List<List<String>> rows, String... anchorHeaders) {
         if (rows == null || rows.isEmpty()) {
             return 0;
+        }
+        if (anchorHeaders != null && anchorHeaders.length > 0) {
+            for (int i = 0; i < rows.size(); i++) {
+                List<String> row = rows.get(i);
+                if (row == null) {
+                    continue;
+                }
+                for (String cell : row) {
+                    if (cell == null || cell.isBlank()) {
+                        continue;
+                    }
+                    String trimmed = cell.trim();
+                    for (String anchor : anchorHeaders) {
+                        if (trimmed.equals(anchor)) {
+                            return i;
+                        }
+                    }
+                }
+            }
         }
         List<String> first = rows.get(0);
         if (first == null || first.isEmpty()) {
@@ -204,7 +269,6 @@ public final class ExcelHelper {
         if (rows.size() < 2) {
             return 0;
         }
-        // 说明行通常只有第 1 列有值；但即使带多列空串，也同样视为说明行。
         return 1;
     }
 

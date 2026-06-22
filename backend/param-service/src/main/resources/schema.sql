@@ -319,7 +319,14 @@ CREATE TABLE system_parameter (
   impact_level_en VARCHAR(512) NULL,
   figure_example_cn VARCHAR(1024) NULL,
   figure_example_en VARCHAR(2048) NULL,
-  internal_description VARCHAR(1024) NULL
+  internal_description VARCHAR(1024) NULL,
+  is_published VARCHAR(10) NULL,
+  no_publish_reason VARCHAR(1024) NULL,
+  related_license VARCHAR(255) NULL,
+  product_form_id VARCHAR(50) NULL,
+  platform_generation VARCHAR(50) NULL,
+  application_region VARCHAR(50) NULL,
+  value_range_segments TEXT NULL
 );
 
 CREATE TABLE config_change_description (

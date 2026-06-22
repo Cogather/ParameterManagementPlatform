@@ -11,7 +11,7 @@
 
 | 项 | 说明 |
 |----|------|
-| **范围** | 参数管理系统：命令与类型配置、主数据配置、参数主数据与变更说明；不含第一版「参数同步」（见 `function.md`）。 |
+| **范围** | 参数管理系统：命令与类型配置、主数据配置、参数主数据与变更说明；含 **§5.5 新增版本继承**、**§13.4.3 参数同步**（自第二版起实现，替代 `function.md` §2.3.8「第一版暂不实现」）。 |
 | **读者** | 架构/后端/前端/测试/运维；后续 OpenSpec 拆分责任人。 |
 
 ### 0.2 DDD 子域与文档章节映射
@@ -274,7 +274,7 @@
 | **入口** | 在**主数据/配置列表**表格**上方**工具区域**最右侧**提供 **文字按钮「操作日志」**（`el-button` text 类型，风格见 `frontend-style.md` 文字按钮规范）。 |
 | **展现** | 点击后自右侧打开 **抽屉（Drawer）**，不跳转路由；内嵌**表格**或简洁列表。 |
 | **列（冻结）** | **操作类型**（展示：新增/修改/删除）｜**变更项**（删除场景为 **§1.7.4** 固定文案如「删除对象」）｜**原值**｜**新值**（删除场景为被删对象**名称**）｜**修改人**（**直接展示 `operator_id` 文本**）｜**修改时间**（**服务器时区**下格式化，与全站统一）。 |
-| **空态** | 无日志时与全局空状态规范一致；未选产品时与 **spec-04-integration**「请先选择产品」等一致。 |
+| **空态** | 无日志时与全局空状态规范一致；未选产品时与 **integration** Spec「请先选择产品」等一致。 |
 | **排序** | 默认按**修改时间**倒序（新在上）。 |
 
 #### 1.7.8 OpenSpec 与实现阶段
@@ -476,8 +476,19 @@
 
 ### 5.1 功能说明
 
-- 版本增删改查；**新增版本**、**拉取分支**（选基线版本，可选复制参数）。
+- 版本增删改查；**新增版本**（可选 **继承版本**，见 **§5.5**）、**拉取分支**（选基线版本，可选复制参数，见 **§5.6**）。
 - **规则**：同一产品下 `version_name` 唯一；`version_id` = `version_xxxxx`。
+
+#### 5.1.1 新增版本表单（页面）
+
+在 **配置管理 → 产品版本** 页，点击 **「新增」** 弹窗除既有字段外，增加：
+
+| 表单项 | 请求字段（建议） | 必填 | 说明 |
+|--------|------------------|------|------|
+| 继承版本 | `inheritVersionId` | 否 | 下拉数据源：**当前顶栏产品**下**全部已启用版本**（`GET .../versions` 列表，展示 `version_name`，值为 `version_id`）；**不包含**本次即将创建的新版本。未选择时不触发参数复制。 |
+
+- **与表字段关系**：落库时可将 `inheritVersionId` 写入 `entity_version_info.baseline_version_id`（及可选 `baseline_version_name`），便于追溯「自哪一版继承」；**复制动作**由应用层在创建成功后执行，不依赖用户二次确认。
+- **编辑版本**：继承版本为**创建时**决策，**不在**编辑弹窗中变更（避免与已落库参数空间不一致）；若需调整应通过参数同步（§13.4.3）或运维脚本，不在本需求范围。
 
 ### 5.2 页面字段与表字段映射（`entity_version_info` 全量）
 
@@ -506,15 +517,80 @@
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/v1/products/{productId}/versions` | 列表 |
-| POST | `/api/v1/products/{productId}/versions` | 新增 |
-| POST | `/api/v1/products/{productId}/versions/branch` | 拉分支 + 是否复制参数 |
+| GET | `/api/v1/products/{productId}/versions` | 列表（供顶栏、版本页、继承版本下拉复用） |
+| POST | `/api/v1/products/{productId}/versions` | 新增；Body 可选 **`inheritVersionId`**（见 §5.5） |
+| POST | `/api/v1/products/{productId}/versions/branch` | 拉分支 + 是否复制参数（见 §5.6） |
 | PUT | `/api/v1/products/{productId}/versions/{versionId}` | 更新 |
+
+**`POST .../versions` 请求体补充（冻结，可验收）**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `versionName`、`versionType`、`ownerList` 等 | — | 是/否 | 与 §5.2 一致 |
+| `inheritVersionId` | String | 否 | 同 §5.1.1；须属于 `{productId}` 且为启用态版本 |
+
+**响应**：成功时返回新版本 `version_id`；若触发继承复制，**同一事务**内完成版本行 + 参数复制，失败则整体回滚。
 
 ### 5.4 异常 / 权限 / 测试
 
-- **异常**：`VERSION_NAME_DUPLICATE`
-- **测试**：分支复制后参数条数一致（若选同步）。
+- **异常**：`VERSION_NAME_DUPLICATE`；`INHERIT_VERSION_NOT_FOUND`（继承版本不存在或不属于该产品）；`INHERIT_VERSION_SAME_AS_NEW`（若误传与新建 ID 相同，创建前不应发生）。
+- **测试**：(1) 不选继承版本 → 仅新增空版本；(2) 选继承版本且源版无参数 → 仅新增空版本；(3) 选继承版本且源版有 N 条参数 → 新版 `system_parameter` 条数为 N，且 `owned_version_id` 指向新版；(4) 继承复制后变更说明条数与源版一致（按参数维度）。
+
+### 5.5 新增版本 · 继承版本与软参空间复制
+
+> **术语**：**软参管理空间**指某一 **`owned_product_id` + `owned_version_id`** 下 `system_parameter` 及其关联 `config_change_description` 的集合（参数管理页在该版本上下文中的全部参数数据）。
+
+#### 5.5.0 产品级参数治理与基线状态继承（冻结，可验收）
+
+在同一 **`owned_product_id`** 下，参数以 **`parameter_code`**（及命令/类型语义）作为跨版本的**稳定业务标识**（见 `table字段简介.md` §15「版本继承时保持不变」）。**各版本软参空间是同一产品参数集在不同版本上的投影**，治理规则如下：
+
+| 规则 | 说明 |
+|------|------|
+| **全样拷贝** | 继承/同步时拷贝**参数字段 + `data_status`（含「已基线」）** 及变更说明等业务列；**不得**在复制时重置为草稿以规避基线。 |
+| **源版已基线须可复制** | 源版本中 **`data_status = 已基线`** 的行**纳入**全量继承与参数同步的源数据范围，**不得**因已基线而排除。 |
+| **跨版本基线约束** | 若源行已基线，复制到目标版本后目标行 **`data_status` 仍为已基线**；在**已基线状态下**适用 §13.1（禁止修改/删除及导入覆盖等写操作），**与本版本其它已基线行规则相同**，并非跨版本永久锁死。用户可在**目标版本**对该行执行 **「解锁基线」** 后恢复可编辑。**禁止**的是：继承/同步时把源版已基线行落为草稿/可写态，从而在目标版**绕过**基线约束。 |
+| **与 `parameter_id` 关系** | 每版本仍生成**新 `parameter_id`**；跨版本一致性靠 **`parameter_code` + 产品**，不靠复用同一主键。 |
+| **解锁** | 目标版复制结果为已基线时，解除锁定方式与常规定义一致：行级 **「解锁基线」**（§13.1）；**不能**通过继承/同步在落库时直接写成非基线态以替代解锁。 |
+
+#### 5.5.1 触发条件
+
+- 用户 **新增版本** 且表单 **`inheritVersionId` 非空**。
+- 服务端校验继承版本属于当前产品、为启用态（`version_status=1` 或约定启用值）。
+
+#### 5.5.2 复制范围与粒度
+
+- 查询源版本（`inheritVersionId`）下 **全部业务有效参数**（`owned_version_id = inheritVersionId`）：**包含 `data_status = 已基线` 的行**；**排除** `Obsolete`（废弃）等明确作废态（若表内还有其它作废枚举，与 OpenSpec 对齐）。**不因已基线而跳过**（见 §5.5.0）。
+- 若源版本软参空间 **为空**（0 条参数）：**仅创建新版本**，不报错。
+- 若 **非空**：对源版每条参数（及关联变更说明）执行 **深拷贝** 至新版本：
+  - **新 `parameter_id`**：系统重新生成（全局唯一）。
+  - **`owned_version_id`**：改为新版本 `version_id`。
+  - **`parameter_code`**：按 `table字段简介.md` §15，**版本继承时保持不变**（`类型_序号` 不变）。
+  - **`data_status`**：**原样拷贝**（含 **已基线**）；复制后目标行基线锁定语义与 §13.1 一致（§5.5.0）。
+  - **其余业务字段**（名称、BIT、默认值、特性、变更来源等）：**原样拷贝**（除下文审计字段外）。
+  - **`introduce_type`**：建议置为 **继承（Inherit）**；**`inherit_reference_version_id`** 填源版 `version_id`。
+  - **`config_change_description`**：随参数复制，子表 `version_id` / `parameter_id` 指向新主键；`change_description_id` 重新生成。
+  - **审计字段**（`creator_id`、`creation_timestamp` 等）：按当前操作人与请求时刻写入，不沿用源行。
+
+#### 5.5.3 领域规则与冲突
+
+- 复制前加载 **目标新版本** 参数集（通常为空）；若因重试等导致目标版已有数据，须按 **「目标版是否已有相同 `parameter_code`（同产品+命令+类型语义）」** 检测：
+  - **默认策略（冻结）**：**整单失败**，`success=false`，`message` 指明冲突的 `parameter_code`（与 §13 BIT/序号规则衔接，避免半套空间）。
+- 复制过程 **不绕过** §13 的 BIT 占用、序号区段、变更来源黑名单等规则；因源数据已在源版合法，复制到空目标版时原则上应全部通过，若规则升级导致失败则按校验错误返回。
+- **事务**：`INSERT entity_version_info` + 批量插入参数与子表 **同一 `@Transactional`**。
+
+#### 5.5.4 操作日志
+
+- 版本创建：写 `entity_version_info` 的 **新增** 日志（§1.7）。
+- 参数复制：对每条成功复制的参数写 **`system_parameter` 新增** 日志（`owned_version_id` 为新版本）；批量复制可在 `detail` 中摘要「自版本 {源版名} 继承复制 N 条」。
+
+### 5.6 与「拉取分支」的差异（避免混用）
+
+| 能力 | 入口 | 版本行 | 参数复制 |
+|------|------|--------|----------|
+| **新增 + 继承版本**（§5.5） | 产品版本页 **「新增」** 单表单 | 用户填写的版本名/类型等 | 选了 **继承版本** 且源版有参数则 **全量** 复制 |
+| **拉取分支**（既有） | **「拉取分支」** 独立流程 | `branch` 接口生成新版本 | `copyParameters=true` 时复制基线版参数（与 §5.5 共用 **参数复制领域服务** `ParameterVersionCopyService` 或等价能力，避免两套实现） |
+
+实现时 **拉分支** 中 `VersionAppService.branch` 的 `copyParameters` 占位（当前未接表）应与 §5.5 **复用同一复制用例**。
 
 ---
 
@@ -758,50 +834,76 @@
   - 选择具体版本：右侧列表仅展示该版本参数（`owned_version_id = versionId`）。
   - 选择 **ALL**：右侧列表展示该产品下所有版本的参数；列表需额外展示 **所属版本（`owned_version_id`）** 列，便于定位与后续编辑。
   - **ALL 视图限制**：由于保存/导入/导出均依赖具体 `{versionId}` 路径，ALL 视图下应禁用或隐藏这些入口；行级操作若保留（编辑/删除/基线）必须使用行内 `owned_version_id` 作为目标版本。
-- **参数同步**：第一版不实现。
-- **基线**：基线动作仅修改 `data_status`（枚举新增 **已基线**）；基线后页面「修改/删除/导入」等入口置灰，后端拒绝写操作。
+- **参数同步**：见 **§13.4.3**（自第二版实现；工具栏按钮由「暂缓/禁用」改为可用）。
+- **基线**：基线动作仅修改 `data_status`（枚举新增 **已基线**）；基线后页面「修改/删除/导入」等入口置灰，后端拒绝写操作（`PARAM_BASELINE_LOCKED`）。
+- **基线跨版本（冻结）**：**继承/同步**须**原样拷贝** `data_status`（含已基线）；目标行在已基线态下不可写，**可在本版本解锁后编辑**（§5.5.0，与其它行一致）。**禁止**拷贝为可写态以规避源版基线。**参数同步**不因目标版已有已基线行而拒绝整单（§13.4.3）。
 
 ### 13.2 页面字段与 `system_parameter` 表映射（严格按表补齐）
 
 本节分三部分：**(A)** 与 `function.md` **§2.3.4 新增表单字段展示规则**一致的**页面交互**（只读、悬停提示、控件类型等），避免仅映射表字段而丢失前端实现要求；**(B)** 字段与表列对照摘要；**(C)** 表结构权威引用与关联子表。
 
-#### 13.2.A 新增/编辑表单：页面交互与落库字段（对齐 `function.md`）
+#### 13.2.A 新增/编辑表单：页面交互与落库字段（两段式，对齐 OpenSpec `parameter-form-two-section-refactor`）
 
 > 样式与组件库遵循 `docs/frontend-style.md`（Element Plus / 通用 UI）；**悬停提示**可用 `el-tooltip` / `el-popover`；**英文默认不手工填**可由自动翻译服务填充，前端展示为只读或占位文案。
+>
+> **分阶段必填（冻结）**：**新增**保存仅校验 **基础信息** 标 * 字段 + 变更说明中文；**编辑**保存叠加 **详细信息** 标 * 字段。服务端**禁止**为业务详细信息填 `待补充`/`TBD`/`默认` 等占位；新增时允许 NULL。
+>
+> **页面不展示（表列保留）**：`take_effect_immediately`、`change_source`、`patch_version`。
+>
+> **页面已移除**：`enumeration_values_*`、`parameter_range`。
 
-| # | 需求描述（function） | 主要落库字段 | 页面实现要点 |
-|---|----------------------|--------------|--------------|
-| 1 | 参数名称（中文） | `parameter_name_cn` | 框内**默认提示**为「参数标题」语义；**悬停**弹出提示框，内容为**示例**（样例1 / 样例2，多行） |
-| 2 | 参数名称（英文） | `parameter_name_en` | **不要求用户手填**；展示自动结果或占位；若可编辑则仅作校对场景 |
-| 3 | 参数编码（内部） | `parameter_code` | 存储格式：`类型_序号`（如 `BIT_8`、`DWORD_1`）。**后端生成**：由页面选择的“类型枚举 + 序号”拼装；页面不展示、不允许手工输入。序号合法范围来源于「命令-类型-版本区段」。 |
-| 4 | 取值范围 | `value_range` | 文本输入；**不做格式校验**（按业务约定填写）。 |
-| 5 | 使用 BIT 位 | `bit_usage` | **由 `type_bit_dict.bit_count` 驱动**：仅当当前类型 `bit_count > 0` 时展示 BIT 勾选（范围 `1..bit_count`）并要求填写；当 `bit_count = 0`（如 INT）时不展示且不校验。存储为英文逗号分隔（如 `1,2,3`）；**存储内容不做去重规范化**（业务上同一行不出现重复序号）。页面标签展示为 BIT1、BIT2…。同一**序号**若存在多行参数：各行所选 BIT 集合**两两不相交**（跨行不得重复占用同一 BIT）；单行内亦不得重复。 |
-| 6 | 取值说明（中文） | `value_description_cn` | **悬停**提示框给样例 |
-| 7 | 取值说明（英文） | `value_description_en` | **不手填英文** + **悬停**样例（同 function） |
-| 8 | 应用场景（中文） | `application_scenario_cn` | **悬停**样例 |
-| 9 | 应用场景（英文） | `application_scenario_en` | **不手填** + **悬停**样例 |
-| 10 | 参数默认值 | `parameter_default_value` | **仅允许数字**（int） |
-| 11 | 参数推荐值 | `parameter_recommended_value` | **仅允许数字**（int） |
-| 12 | 适用网元 | `applicable_ne` | **下拉**，数据源：当前产品 §8 网元配置；存库可为顿号分隔文本（与表一致） |
-| 13 | 所属特性 | `feature` | **下拉**，数据源：当前产品 + **当前版本** §11 特性 |
-| 14 | 所属特性 ID（内部） | `feature_id` | **禁止编辑**，随特性选择**自动带出**；页面不展示 |
-| 15 | 业务分类 | `business_classification`、`category_id` | **下拉**，数据源：当前产品 §6 |
-| 16 | 参数是否立即生效 | `take_effect_immediately` | **下拉**：是/否 |
-| 17 | 生效方式（中文） | `effective_mode_cn` | **下拉**，数据源：当前产品 §10 |
-| 18 | 生效方式（英文） | `effective_mode_en` | **禁止编辑**，随中文**自动带出** |
-| 19 | 项目组 | `project_team` | **下拉**，数据源：当前产品 §12 |
-| 20 | 归属模块 | `belonging_module` | **文本输入**，用户自填 |
-| 21 | 变更来源 | `change_source` | **文本输入**；**不对内容做 trim 后再保存**（除非业务另行约定）。**黑名单触发条件**：当且仅当字符串中存在**至少一个非空白字符**时才校验；若 **Java `String.isBlank()` 为 true**（整串仅空白），视为无效输入——**不触发黑名单校验**，落库建议 **`null` 或 `""`**（OpenSpec 冻结其一）。当存在非空白字符时，**整串原样持久化**（**保留首尾空格与串内空格**）。校验时拉取启用 `keyword_regex`；**任一命中即拒绝**；响应携带**命中的 `keyword_regex` 原文**（见 §13.3）。 |
-| 22 | 版本号 | `patch_version` 或与版本字段映射以表为准 | 用户填写；**默认带出当前版本**等规则由产品确认；格式 function 写为 `xxx` |
-| 23 | 引入版本 | `introduced_version` | function 标 **TODO**，落地前需与表字段、版本域统一 |
-| 24 | 参数含义（中文） | `parameter_description_cn` | 多行；**悬停**样例 |
-| 25 | 参数含义（英文） | `parameter_description_en` | 多行；**不手填英文**（默认/翻译） |
-| 26 | 影响说明（中文） | `impact_description_cn` | 多行；**悬停**样例 |
-| 27 | 影响说明（英文） | `impact_description_en` | 多行输入 |
-| 28 | 配置举例（中文） | `configuration_example_cn` | 多行；**悬停**样例 |
-| 29 | 配置举例（英文） | `configuration_example_en` | 多行 |
-| 30～31 | 关联参数描述 | `related_parameter_description_cn` / `en` 等 | 多行 |
-| 32 | 备注 | `remark` | 文本 |
+**参数编码（内部）** `parameter_code`：存储格式 `类型_序号`；由类型 + 序号拼装；**页面不展示、不可手输**（序号区段见下文 BIT 交互）。
+
+##### 一、基础信息（新增时全部 * 必填）
+
+| # | 字段 | 主要落库字段 | 页面实现要点 |
+|---|------|--------------|--------------|
+| 1 | 参数名称（中文）* | `parameter_name_cn` | 默认提示「参数标题」；悬停样例 |
+| 2 | 参数名称（英文） | `parameter_name_en` | 可选；可不手填 |
+| 3 | 归属命令* | `owned_command_id` | 下拉；编辑时不可改 |
+| 4 | 参数类型* | （编入 `parameter_code`） | 下拉；与序号联动 |
+| 5 | 序号* | `parameter_sequence` | 数字；可用序号 API |
+| 6 | 取值区间* | `value_range_segments`、`value_range` | **适用所有类型**。多段 min/max 录入，可增删段；**禁止**直接编辑 `value_range`。保存：JSON → `value_range_segments`；拼接 `min-max,min-max` → `value_range`（≤255）；段间**禁止重叠** |
+| 7 | 使用 BIT 位* | `bit_usage` | `bit_count > 0` 时展示必填；逗号分隔 BIT 序号；跨行 BIT 互斥（同 §13.2.A 原规则） |
+| 8 | 参数默认值* | `parameter_default_value` | 整数 |
+| 9 | 参数推荐值* | `parameter_recommended_value` | 整数 |
+| 10 | 引入版本* | `introduced_version` | 版本新增可编辑、默认当前版本；继承/同步**只读**（随源同步） |
+| 11 | 单位（中文）* | `parameter_unit_cn` | 原「参数单位」改名 |
+| 12 | 单位（英文） | `parameter_unit_en` | 可选 |
+
+##### 二、详细信息（编辑时标 * 必填；新增可不填）
+
+| # | 字段 | 主要落库字段 | 页面实现要点 |
+|---|------|--------------|--------------|
+| 1 | 取值说明（中文）* | `value_description_cn` | 多行；悬停样例 |
+| 2 | 取值说明（英文） | `value_description_en` | 可选 |
+| 3 | 应用场景（中文）* | `application_scenario_cn` | 多行；悬停样例 |
+| 4 | 应用场景（英文） | `application_scenario_en` | 可选 |
+| 5 | 适用网元* | `applicable_ne` | 多选下拉；顿号分隔落库 |
+| 6 | 业务分类* | `business_classification`、`category_id` | 下拉 §6 |
+| 7 | 生效方式（中文） | `effective_mode_cn` | 下拉 §10；可选 |
+| 8 | 生效方式（英文） | `effective_mode_en` | 随中文只读带出；可选 |
+| 9 | 项目组* | `project_team` | 下拉 §12 |
+| 10 | 归属模块 | `belonging_module` | 文本；可选 |
+| 11 | 参数含义（中文）* | `parameter_description_cn` | 多行 |
+| 12 | 参数含义（英文） | `parameter_description_en` | 可选 |
+| 13 | 影响说明（中文）* | `impact_description_cn` | 多行 |
+| 14 | 影响说明（英文） | `impact_description_en` | 可选 |
+| 15 | 配置举例（中文）* | `configuration_example_cn` | 多行 |
+| 16 | 配置举例（英文） | `configuration_example_en` | 可选 |
+| 17 | 是否发布* | `is_published` | 下拉 是/否 |
+| 18 | 不发布原因 | `no_publish_reason` | `is_published=否` 时编辑必填 |
+| 19 | 关联参数描述（中文） | `related_parameter_description_cn` | 可选 |
+| 20 | 关联参数描述（英文） | `related_parameter_description_en` | 可选 |
+| 21 | 所属特性* | `feature`、`feature_id` | 下拉 §11；`feature_id` 自动带出、不展示 |
+| 22 | 影响级别（中文） | `impact_level_cn` | 可选 |
+| 23 | 影响级别（英文） | `impact_level_en` | 可选 |
+| 24 | 关联 License | `related_license` | 可选 |
+| 25 | 内部功能描述 | `internal_description` | 可选 |
+| 26 | 产品形态 | `product_form_id` | 下拉：当前产品 `entity_basic_info`；可选 |
+| 27 | 平台代际* | `platform_generation` | 下拉：裸机形态、虚拟机形态 |
+| 28 | 应用区域* | `application_region` | 下拉：海外、全球 |
+| 29 | 备注 | `remark` | 可选 |
 
 **序号与 BIT 交互（function 补充要求）**
 
@@ -817,7 +919,8 @@
 | 列（function） | 落库字段 | 页面规则 |
 |----------------|----------|----------|
 | 变更类型 | `change_type` | **下拉**；**新增**表单仅可选「新增参数」；**编辑**表单可选：新增参数、修改参数含义、修改参数取值范围、修改关联参数、修改默认值、修改推荐值、修改适用网元、修改生效方式、修改参数取值说明 等（与字典 `config_change_type` 对齐） |
-| 变更原因（中/英）、变更影响（中/英） | `change_reason_*`、`change_impact_*` | 文本；四格均需按表结构校验长度 |
+| 变更原因（中）、变更影响（中） | `change_reason_cn`、`change_impact_cn` | 文本；**中文两格必填** |
+| 变更原因（英）、变更影响（英） | `change_reason_en`、`change_impact_en` | 文本；**可选**，不强制校验 |
 | 是否导出 | `export_delta` | 页面与数据库**仅允许**中文 **「是」/「否」**（见 §1.11）。选「否」时 **不导出原因** 必填 |
 | 不导出原因 | `no_export_reason` | 条件必填 |
 
@@ -830,29 +933,34 @@
 | 参数名称（中文） | `parameter_name_cn` | 交互见 §13.2.A 行 1 |
 | 参数名称（英文） | `parameter_name_en` | 交互见 §13.2.A 行 2 |
 | 参数 ID | `parameter_code` | `类型_序号`，序号来自区段范围；交互见 §13.2.A 行 3 |
-| 取值范围 | `value_range` | 不做格式校验；交互见 §13.2.A 行 4 |
+| 取值区间 / 取值范围 | `value_range_segments`、`value_range` | 多段 min/max；拼接落 `value_range`；见 §13.2.A 基础信息 #6 |
 | 使用 BIT 位 | `bit_usage` | 逗号分隔 BIT 位序号；交互见 §13.2.A 行 5 |
 | 取值/场景/含义/影响/配置举例等中英文 | `value_description_*`、`application_scenario_*`、`parameter_description_*`、`impact_description_*`、`configuration_example_*` | 悬停样例见 §13.2.A |
 | 默认/推荐值 | `parameter_default_value`、`parameter_recommended_value` | 仅数字 |
 | 适用网元 | `applicable_ne` | 下拉；顿号分隔落库 |
 | 所属特性 / ID | `feature`、`feature_id` | 特性 ID 只读自动填 |
 | 业务分类 / ID | `business_classification`、`category_id` | §6 |
-| 立即生效 | `take_effect_immediately` | 下拉 |
-| 生效方式中/英 | `effective_mode_cn`、`effective_mode_en` | 英文只读自动填 |
+| 生效方式中/英 | `effective_mode_cn`、`effective_mode_en` | 英文只读自动填；可选 |
 | 项目组 | `project_team` | §12 |
-| 归属模块 | `belonging_module` | 手输 |
-| 变更来源 | `change_source` | 黑名单 |
-| 补丁版本 / 引入版本 | `patch_version`、`introduced_version` | 引入版本 TODO |
+| 归属模块 | `belonging_module` | 手输；可选 |
+| 引入版本 | `introduced_version` | 基础信息；继承只读 |
+| 单位 | `parameter_unit_cn`、`parameter_unit_en` | 基础信息 |
+| 是否发布 / 不发布原因 | `is_published`、`no_publish_reason` | 详细信息 |
+| 平台代际 / 应用区域 | `platform_generation`、`application_region` | 详细信息；枚举见 §13.2.A |
+| 产品形态 | `product_form_id` | 关联 `entity_basic_info` |
+| 关联 License | `related_license` | 可选 |
+| 影响级别 / 内部功能描述 | `impact_level_*`、`internal_description` | 详细信息 |
 | 关联参数与描述 | `related_parameter_*`、`related_parameter_description_*` | |
 | 备注 | `remark` | |
-| 枚举/单位/范围等 | `enumeration_values_*`、`parameter_unit_*`、`parameter_range` 等 | 表预留 |
+| **页面隐藏** | `take_effect_immediately`、`change_source`、`patch_version` | 表保留，表单不展示 |
+| **页面已移除** | `enumeration_values_*`、`parameter_range` | 表列可保留，新保存不写 |
 | 数据状态 | `data_status` | Draft/Inwork/… |
 | 租户/空间 | `tenant_id`、`domain_id` | |
 | 引入类型 | `introduce_type`、`inherit_reference_version_id` | |
 
 #### 13.2.D `system_parameter` 表字段全量
 
-**共 74 个业务字段（含审计）**，定义以 **`docs/table字段简介.md` §15「表 15」** 为唯一权威来源（字段序号 1～74）；实施 DDL、MyBatis-Plus 实体与 OpenSpec **逐列对齐**，本文不重复誊写以避免漂移。
+**共 81 个业务字段（含审计，含 2026-06 新增的 7 列）**，定义以 **`docs/table字段简介.md` §15「表 15」** 为唯一权威来源（字段序号 1～81）；实施 DDL、MyBatis-Plus 实体与 OpenSpec **逐列对齐**，本文不重复誊写以避免漂移。
 
 #### 13.2.E `config_change_description` 表字段全量
 
@@ -863,8 +971,8 @@
 | `change_type` | 变更类型 | String 255 | 是 | 关联 `config_change_type` |
 | `change_reason_cn` | 变更原因（中文） | String 1024 | 是 | |
 | `change_impact_cn` | 变更影响（中文） | String 1024 | 是 | |
-| `change_reason_en` | 变更原因（英文） | String 1024 | 是 | |
-| `change_impact_en` | 变更影响（英文） | String 1024 | 是 | |
+| `change_reason_en` | 变更原因（英文） | String 1024 | 否 | 页面不强制校验 |
+| `change_impact_en` | 变更影响（英文） | String 1024 | 否 | 页面不强制校验 |
 | `export_delta` | 是否导出 delta | String 50 | 是 | 仅 **「是」/「否」**，与 UI 一致 |
 | `no_export_reason` | 不导出原因 | String 1024 | 否 | 否导出时必填 |
 | `updater_id` | 修改人 | String 50 | 否 | |
@@ -905,6 +1013,32 @@
 | 16 | 修改生效方式 | 修改生效方式 | Modified the effective mode. | 11 |
 | 17 | 修改参数取值说明 | 修改参数取值说明 | Value Description modified | 4 |
 
+#### 13.2.G 参数 Excel 导入/导出列（与 `parameterExportHeadersZh` 一致，2026-06）
+
+> 实现：`ParameterAppService.parameterExportHeadersZh()`；模板下载与 export 共用表头。文件开头为 **多行说明**（`ExcelInstructions.parameterImportExportInstructionLines()`），表头以「参数ID」列识别。
+
+**主表列顺序（44 列 + 变更说明 7 列）**
+
+| 序号 | Excel 列名 | 落库字段 / 说明 |
+|------|------------|-----------------|
+| 1 | 参数ID | `parameter_id`（导出带出；新建导入留空） |
+| 2 | 归属命令 | 展示命令名称（导入以 Query `commandId` 为准） |
+| 3 | 参数编码 | `parameter_code`（匹配键） |
+| 4 | 序号 | `parameter_sequence` |
+| 5～14 | 基础信息 | 名称中/英、**取值区间**（JSON → `value_range_segments`）、**取值范围**（只读拼接 → `value_range`）、BIT、默认/推荐、引入版本、**单位（中文）/（英文）** |
+| 15～43 | 详细信息 | 取值/场景/网元/分类/生效/项目组/含义/影响/举例/是否发布/不发布原因/关联描述/特性/影响级别/License/内部功能描述/产品形态ID/平台代际/应用区域/备注 |
+| 44 | 数据状态 | `data_status` |
+| 45～51 | 变更说明 | 类型、原因/影响中英文、`导出 delta`、不导出原因（仅首条；中文原因/影响必填） |
+
+**已自导出/模板移除（表列保留）**：立即生效、变更来源、版本号、枚举值中/英、参数范围。
+
+**导入规则摘要**
+
+- 新建行：`ParameterSaveValidation.assertCreate`（与页面新增一致）。
+- 更新行：`mergeHiddenFields` + `assertUpdate`（隐藏三字段保留库值）。
+- 取值区间：**优先**「取值区间」JSON；为空则解析「取值范围」文本（如 `1-10,20-30`）。
+- 表头别名：`单位（中）`/`参数单位（中）`、`value_range`、`value_range_segments` 等兼容旧文件。
+
 ### 13.3 业务规则（领域核心）
 
 - **参数 ID 与 BIT 占用**：按 `function.md` 2.3.4（BIT/BYTE/DWORD/STRING 不重复与占用规则）；领域服务 **`ParameterAllocationService`** 计算可用序号与 BIT 占用；保存前加载**当前版本下全部参数**做校验。
@@ -933,6 +1067,9 @@
 | POST | `.../parameters/{parameterId}/baseline` | 基线 |
 | GET | `/api/v1/products/{productId}/versions/{versionId}/parameters/baseline-count` | 版本维度已基线数量 |
 | GET | `/api/v1/products/{productId}/parameters/baseline-count` | 产品维度已基线数量（ALL 视图） |
+| GET | `.../versions/{sourceVersionId}/parameter-sync/type-options` | 参数同步：源版本下可选类型（§13.4.3） |
+| GET | `.../versions/{sourceVersionId}/parameter-sync/parameters` | 参数同步：源版本+类型下可选参数 |
+| POST | `.../versions/{targetVersionId}/parameter-sync/commands` | 参数同步：执行复制（§13.4.3） |
 
 #### 13.4.1 `available-bits` 响应示例（字段名在 OpenSpec 冻结）
 
@@ -967,6 +1104,57 @@
 | **其它校验** | 变更来源**黑名单**、序号与 `parameter_code` 一致、`bit_usage` 与版本+命令下其它参数**不冲突**等，与保存路径一致。 |
 | **模板** | `GET` `/api/v1/products/{productId}/versions/{versionId}/parameters/import-templates` 下载；列名与导出一致。 |
 
+#### 13.4.3 参数同步（自其他版本同步到当前版本）
+
+> 对齐 `function.md` §2.3 工具栏「参数同步」；**扩展**为支持 **单条或多条** 参数一次提交（`function.md` 原写「一次只能同步一个参数」以本设计为准）。接口路径见上表三行。
+
+**入口与前置条件**
+
+| 项 | 约定 |
+|----|------|
+| **入口** | 参数管理页工具栏 **「参数同步」**；点击打开对话框。 |
+| **版本上下文** | 须已选 **具体版本**（非 **ALL** 全产品视图）；未选版本时按钮 **禁用** 并提示。 |
+| **目标版本** | 页内当前选中的 **`versionId`（当前版本）**，同步结果写入该版本。 |
+| **源版本** | 用户在弹窗选择，**不得与当前版本相同**。 |
+| **基线** | **源版已基线参数可选、可同步**（§5.5.0）；同步后目标行 **`data_status` 原样继承**（含已基线 → 目标行亦锁定）。**不因**目标版已存在其它已基线行而 **拒绝整次同步**。 |
+
+**弹窗交互（级联选择）**
+
+对话框包含三级选择，**自上而下级联加载**（未选上级时下级禁用）：
+
+| 序号 | 控件 | 数据源 | 规则 |
+|------|------|--------|------|
+| 1 | **版本选择** | `GET /api/v1/products/{productId}/versions` | 展示当前产品下全部启用版本；**排除当前版本**；展示 `version_name`，值为 `version_id`。 |
+| 2 | **类型选择** | `GET .../parameter-sync/type-options` | 须先选源版本；展示 **自定义类型**（含所属命令名称）。 |
+| 3 | **参数选择** | `GET .../parameter-sync/parameters` | 须先选类型；**多选**；展示 **参数名称（中文）** 等，**不展示** `parameter_id` / `parameter_code`（§1.4.1）。 |
+
+- **类型列表**：在已选 **源版本** 下，列出产品中 **在该版本存在至少一条参数** 的 **「命令 + 自定义类型」** 组合（与参数页左树一致；仅包含有参数的类型）。
+- **参数列表**：在源版本 + 类型（及隐含命令）下列出全部可同步参数（**含已基线行**，列表可用标签区分）；支持 **勾选 1 条或多条** 后 **确定同步**。
+
+**同步语义**
+
+- **方向**：源版本选中参数 → **当前版本**（拉取复制）；目的为在新版本软参空间中 **继承** 源版选中参数的完整定义与治理状态（§5.5.0）。
+- 每条在目标版本 **新增一行**：新 `parameter_id`；`owned_version_id` = 当前版本；**`parameter_code` 不变**；**`data_status` 原样拷贝**（含 **已基线**）；**`introduce_type`** = 继承（Inherit）；**`inherit_reference_version_id`** = 源版本 ID；**其余主表业务字段原样拷贝**；**`config_change_description`** 一并复制。
+- **冲突**：目标版已有相同 **`parameter_code`** 时该条失败，**不影响** 同批其它条（部分成功，汇总结构同 §1.6）。若目标版已有同码行且亦为已基线，仍按「已存在编码」失败，**不允许**用同步覆盖解锁。
+- **校验**：写入前执行 BIT/序号/黑名单/变更说明等校验；**已基线源行不因「禁止修改源行」而拒绝同步**——复制完成后目标行若已基线则在**该状态下**不可编辑，**本版本解锁后**与其它已基线行相同、可再改。
+
+**`POST .../parameter-sync/commands` 请求体（冻结）**：
+
+```json
+{
+  "sourceVersionId": "version_xxx",
+  "items": [
+    { "sourceParameterId": 12345, "commandId": "command_xxx", "commandTypeId": "customType_xxx" }
+  ]
+}
+```
+
+- `items` 至少 1 条；服务端校验源行 `owned_version_id === sourceVersionId`。
+
+**响应 `data`（建议）**：`successCount`、`failureCount`、`failures[]`（含 `parameterNameCn`、`reason`）、`successes[]`（含 `newParameterId`）。全部失败时 `success=false`；部分成功时 `success=true` 且 `message` 提示成功/失败条数。
+
+**其它**：ALL 视图禁用同步；成功后刷新列表。操作日志：每条成功同步记 **`system_parameter` 新增**（§1.7）。与 **§5.5** 共用 **参数版本复制** 领域服务（全量继承 vs 用户勾选集合）。
+
 ### 13.5 异常（示例）
 
 | 编码 | 场景 |
@@ -976,15 +1164,17 @@
 | `PARAM_CHANGE_DESC_REQUIRED` | 未填变更说明 |
 | `PARAM_CHANGE_SOURCE_FORBIDDEN` | 命中关键字黑名单（`message`/`data.violatedKeywordRegex` 含命中正则原文） |
 | `PARAM_BASELINE_LOCKED` | 基线后编辑 |
+| `PARAM_SYNC_CONFLICT` | 目标版本已存在相同 `parameter_code` |
+| `PARAM_SYNC_SOURCE_INVALID` | 源参数不属于所选源版本 |
 
 ### 13.6 权限点
 
-- `param:parameter:read`、`param:parameter:write`、`param:parameter:import`、`param:parameter:export`、`param:parameter:baseline`
+- `param:parameter:read`、`param:parameter:write`、`param:parameter:import`、`param:parameter:export`、`param:parameter:baseline`、`param:parameter:sync`（参数同步，可与 write 合并授权）
 
 ### 13.7 实现方案
 
-- **领域**：`Parameter` 充血模型封装 BIT 占用校验；`ParameterChangeRecord` 值对象列表；领域事件（可选）用于审计。
-- **应用**：`ParameterApplicationService` 协调聚合、变更说明持久化、导入导出。
+- **领域**：`Parameter` 充血模型封装 BIT 占用校验；`ParameterChangeRecord` 值对象列表；领域事件（可选）用于审计；**`ParameterVersionCopyService`（或等价领域服务）** 承载 §5.5 全量继承与 §13.4.3 按需同步的复制规则（新 ID、`parameter_code` 保留、**`data_status` 含已基线原样拷贝**（§5.5.0）、`introduce_type`/子表处理）。
+- **应用**：`ParameterApplicationService` 协调聚合、变更说明持久化、导入导出；**`ParameterSyncAppService`**（命名示例）编排同步弹窗用例；**`VersionAppService.create`** 在 `inheritVersionId` 非空时调用复制服务。
 - **基础设施**：`SystemParameterMapper`、`ConfigChangeDescriptionMapper`；禁止复杂 SQL。
 
 ### 13.8 DFX
@@ -1004,6 +1194,13 @@
 | TC-PAR-003 | 黑名单拒绝且响应含命中 `keyword_regex` 原文 |
 | TC-PAR-004 | 基线后编辑拒绝 |
 | TC-PAR-005 | 导入错误行报告 |
+| TC-PAR-006 | 参数同步：单条成功、编码冲突部分失败 |
+| TC-PAR-007 | 参数同步：多选批量、ALL 视图按钮禁用 |
+| TC-VER-006 | 新增版本选继承版：源版有 N 条参数则新版 N 条 |
+| TC-VER-007 | 新增版本选继承版：源版无参数则仅建版本行 |
+| TC-VER-008 | 源版含已基线参数：新版同码行 `data_status=已基线`；未解锁时不可编辑，**本版本解锁后**可编辑 |
+| TC-PAR-008 | 同步源版已基线行：目标行已基线；未解锁不可编辑，解锁后与常规定义一致 |
+| TC-PAR-009 | 目标版已有已基线行：仍可同步其它无冲突编码；不因整版有基线而拒绝 |
 
 ---
 
@@ -1167,7 +1364,7 @@ param-web/                                  # 前端工程根目录示例
 
 - **`@plmcsdk/common-ui` / Element Plus**：在 `components/common` 或各 `views` 中按需引入；业务表格样式遵循 `frontend-style.md` 设计令牌。
 - **嵌入宿主框架**时：`router` 可作为子路由挂载；`stores` 中的产品/版本从宿主注入或 URL Query 同步（实现细节见集成 Spec）。
-- **子应用壳层与留白（`spec-04` 落地）**：`App.vue` 使用**单行上下文工具条**（`el-radio-group`：**命令管理 / 配置管理 / 参数管理** ↔ `/command`、`/config`、`/parameter`）+ **产品选择器**；**不**再使用独立 `el-header` + 横向 `el-menu` 作为第二套顶栏。紧凑模式：`VITE_EMBEDDED` 或 Query `embed=1`（`src/utils/embed.ts`），根节点 **`app-shell--embedded`**。主业务区：主卡片 **`page-card` + `card-item`**，全局留白与 `border-card` Tab 内容区、`.common-main` 最大高度等在 **`public/assets/styles/common.scss`** 收紧；命令/配置/参数页**不再重复**与工具条同义的模块大标题。详见 **`openspec/spec-04-integration.md`** §3.1～§3.2。
+- **子应用壳层与留白（`spec-04` 落地）**：`App.vue` 使用**单行上下文工具条**（`el-radio-group`：**命令管理 / 配置管理 / 参数管理** ↔ `/command`、`/config`、`/parameter`）+ **产品选择器**；**不**再使用独立 `el-header` + 横向 `el-menu` 作为第二套顶栏。紧凑模式：`VITE_EMBEDDED` 或 Query `embed=1`（`src/utils/embed.ts`），根节点 **`app-shell--embedded`**。主业务区：主卡片 **`page-card` + `card-item`**，全局留白与 `border-card` Tab 内容区、`.common-main` 最大高度等在 **`public/assets/styles/common.scss`** 收紧；命令/配置/参数页**不再重复**与工具条同义的模块大标题。详见 **`openspec/specs/integration/spec.md`** §3.1～§3.2。
 - **API 分层**：`api/**` 仅负责 HTTP 与类型，不包含业务规则；复杂校验与 §13 BIT 逻辑以**后端为准**，前端做辅助提示。
 
 ---
@@ -1182,15 +1379,16 @@ param-web/                                  # 前端工程根目录示例
 
 **文档落盘位置**：项目根目录 **`openspec/`**（与 `openspec init` 生成的 `config.yaml` 同级）；索引与变更提案见 `openspec/README.md`、`openspec/PROPOSAL.md`。详细设计、表结构说明仍在 **`docs/`**。
 
-| 建议 Spec 文件（示例名） | 对应 `domain` 包（§14.1） | 纳入的本设计章节 | 内含页面/功能（分节即可） |
+| Capability（`openspec/specs/…/spec.md`） | 对应 `domain` 包（§14.1） | 纳入的本设计章节 | 内含页面/功能（分节即可） |
 |--------------------------|---------------------------|-------------------|---------------------------|
-| `spec-00-platform.md` | （非业务 domain：`shared` 接口 + 横切） | §0 导读要点、**§1 公共通用**、**§14 工程目录** | 分页、权限占位、导入导出约定、前后端目录 |
-| `spec-01-command-domain.md` | `domain/command/` | **§2～§4** | 命令配置、类型及范围、版本区段（三节） |
-| `spec-02-config-masterdata.md` | `domain/configdict/` | **§5～§12** | 版本、分类、关键字、网元、NF、生效方式、特性、项目组（八节） |
-| `spec-03-parameter-core.md` | `domain/parameter/` | **§13** | 参数管理核心（左树右表、BIT 规则、变更说明等） |
-| `spec-04-integration.md`（可选） | `ui` + 宿主适配 | **§15.3** 扩展 | 嵌入宿主、菜单、页签、上下文注入 |
+| `platform` | （非业务 domain：`shared` 接口 + 横切） | §0 导读要点、**§1 公共通用**、**§14 工程目录** | 分页、权限占位、导入导出约定、前后端目录 |
+| `command-domain` | `domain/command/` | **§2～§4** | 命令配置、类型及范围、版本区段（三节） |
+| `config-masterdata` | `domain/configdict/` | **§5～§12** | 版本、分类、关键字、网元、NF、生效方式、特性、项目组（八节） |
+| `parameter-core` | `domain/parameter/` | **§13** | 参数管理核心（左树右表、BIT 规则、变更说明等） |
+| `integration`（可选） | `ui` + 宿主适配 | **§15.3** 扩展 | 嵌入宿主、菜单、页签、上下文注入 |
+| `operation-log` | 横切审计 | **§1.7** | 操作日志单表、写入规约、查询 API、抽屉 |
 
-**若必须压缩为「恰好 4 个 Spec 文件」**：可将 **`spec-00-platform`** 中与目录无关的条文并入 `spec-01` 前言，或把 **集成** 并入 `spec-03` 附录，仅保留 **平台+公共、命令、配置、参数** 四份——由项目组在「文件数量」与「公共规范独立成册」之间权衡。
+**若必须压缩 capability 数量**：可将 **`platform`** 中与目录无关的条文并入 `command-domain` 前言，或把 **integration** 并入 `parameter-core` 附录——由项目组在「文件数量」与「公共规范独立成册」之间权衡。
 
 **不推荐**：为 §2～§13 各建独立 Spec（共 12+ 份），除非单页有独立发版/独立外包边界。
 
@@ -1201,7 +1399,7 @@ param-web/                                  # 前端工程根目录示例
 ### 15.3 与宿主框架集成（菜单）
 
 - 见 `function.md` 第 6 点：本系统以**页签**嵌入；建议**一级：参数管理**，二级：**命令 / 配置 / 参数** 扁平化，避免过深；具体菜单 JSON 由前端 Spec 补充。
-- **宿主零改动时的子应用侧（与 `openspec/spec-04-integration.md` 一致）**：
+- **宿主零改动时的子应用侧（与 `openspec/specs/integration/spec.md` 一致）**：
   - **模块切换**：由 `param-web` 内路由完成；工具条文案为 **命令管理 / 配置管理 / 参数管理**，不依赖宿主再挂三个子菜单。
     - **视觉尺寸**：模块切换按钮（`el-radio-button`）需与页面主体表格/Tab 的视觉重量匹配，避免因过小导致“上轻下重”；可通过增大按钮内边距与字号实现，嵌入模式（`app-shell--embedded`）下允许略收紧。
   - **上下文**：`productId` / `versionId` / 可选 `productName` 与 **Query `embed`** 由子应用解析；产品、版本变更时可回写当前路由 Query，便于宿主页签或外链联调。

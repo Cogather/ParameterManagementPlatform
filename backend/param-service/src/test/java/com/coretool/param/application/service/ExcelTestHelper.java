@@ -5,6 +5,7 @@
 package com.coretool.param.application.service;
 
 import com.coretool.param.infrastructure.util.ExcelHelper;
+import com.coretool.param.infrastructure.util.ExcelInstructions;
 
 import java.util.List;
 
@@ -18,6 +19,11 @@ final class ExcelTestHelper {
 
     static byte[] workbookBytes(String sheetName, String instruction, List<String> headersCn, List<List<String>> rows) {
         return ExcelHelper.buildWorkbook(sheetName, instruction, headersCn, rows);
+    }
+
+    static byte[] workbookBytes(
+            String sheetName, List<String> instructionLines, List<String> headersCn, List<List<String>> rows) {
+        return ExcelHelper.buildWorkbook(sheetName, instructionLines, headersCn, rows);
     }
 }
 

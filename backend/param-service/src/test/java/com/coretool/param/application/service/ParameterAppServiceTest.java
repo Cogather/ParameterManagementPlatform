@@ -14,6 +14,8 @@ import com.coretool.param.infrastructure.persistence.mapper.ConfigChangeDescript
 import com.coretool.param.infrastructure.persistence.mapper.EntityCommandMappingMapper;
 import com.coretool.param.infrastructure.persistence.mapper.EntityVersionInfoMapper;
 import com.coretool.param.infrastructure.persistence.mapper.SystemParameterMapper;
+import com.coretool.param.infrastructure.util.ExcelHelper;
+import com.coretool.param.infrastructure.util.ExcelInstructions;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -83,22 +86,89 @@ class ParameterAppServiceTest {
         return new ParameterAppService(persistence, collaboration);
     }
 
+    /** 与 {@code ParameterAppService.parameterExportHeadersZh} 对齐的中文表头 */
+    private static List<String> alignedExportHeadersZh() {
+        return List.of(
+                "参数ID",
+                "归属命令",
+                "参数编码",
+                "序号",
+                "参数名称（中）",
+                "参数名称（英）",
+                "取值区间",
+                "取值范围",
+                "BIT 占用",
+                "参数默认值",
+                "参数推荐值",
+                "引入版本",
+                "单位（中文）",
+                "单位（英文）",
+                "取值说明（中）",
+                "取值说明（英）",
+                "应用场景（中）",
+                "应用场景（英）",
+                "适用网元",
+                "业务分类",
+                "生效方式（中）",
+                "生效方式（英）",
+                "项目组",
+                "归属模块",
+                "参数含义（中）",
+                "参数含义（英）",
+                "影响说明（中）",
+                "影响说明（英）",
+                "配置举例（中）",
+                "配置举例（英）",
+                "是否发布",
+                "不发布原因",
+                "关联参数描述（中）",
+                "关联参数描述（英）",
+                "所属特性",
+                "影响级别（中文）",
+                "影响级别（英文）",
+                "关联 License",
+                "内部功能描述",
+                "产品形态ID",
+                "平台代际",
+                "应用区域",
+                "备注",
+                "数据状态",
+                "变更类型",
+                "变更原因（中）",
+                "变更影响（中）",
+                "变更原因（英）",
+                "变更影响（英）",
+                "导出 delta",
+                "不导出原因");
+    }
+
     private static byte[] validImportWorkbookBytesWithHeaderOnly() {
-        List<String> headers = List.of(
-                "parameter_id", "parameter_code", "parameter_name_cn", "parameter_name_en",
-                "parameter_sequence", "bit_usage", "change_source", "value_range",
-                "value_description_cn", "value_description_en", "application_scenario_cn",
-                "application_scenario_en", "parameter_default_value", "parameter_recommended_value",
-                "applicable_ne", "feature", "business_classification", "take_effect_immediately",
-                "effective_mode_cn", "effective_mode_en", "project_team", "belonging_module",
-                "patch_version", "introduced_version", "parameter_description_cn",
-                "parameter_description_en", "impact_description_cn", "impact_description_en",
-                "configuration_example_cn", "configuration_example_en",
-                "related_parameter_description_cn", "related_parameter_description_en",
-                "remark", "enumeration_values_cn", "enumeration_values_en", "parameter_unit_cn",
-                "parameter_unit_en", "parameter_range", "data_status", "变更类型", "变更原因（中）",
-                "变更影响（中）", "变更原因（英）", "变更影响（英）", "export_delta", "不导出原因");
-        return ExcelTestHelper.workbookBytes("parameters", "hint", headers, List.of());
+        return ExcelTestHelper.workbookBytes(
+                "parameters",
+                ExcelInstructions.parameterImportExportInstructionLines(),
+                alignedExportHeadersZh(),
+                List.of());
+    }
+
+    private static List<String> emptyRow(List<String> headers) {
+        List<String> row = new ArrayList<>();
+        for (int i = 0; i < headers.size(); i++) {
+            row.add("");
+        }
+        return row;
+    }
+
+    private static List<String> minimalCreateRow(List<String> headers) {
+        List<String> row = emptyRow(headers);
+        row.set(headers.indexOf("参数编码"), "BIT_1");
+        row.set(headers.indexOf("参数名称（中）"), "参数中文");
+        row.set(headers.indexOf("BIT 占用"), "1");
+        row.set(headers.indexOf("参数默认值"), "0");
+        row.set(headers.indexOf("参数推荐值"), "0");
+        row.set(headers.indexOf("引入版本"), "V1");
+        row.set(headers.indexOf("单位（中文）"), "个");
+        row.set(headers.indexOf("取值范围"), "0-255");
+        return row;
     }
 
     @Test
@@ -133,11 +203,23 @@ class ParameterAppServiceTest {
     }
 
     @Test
+    void export_shouldIncludeAlignedHeaders() {
+        when(systemParameterMapper.selectList(any())).thenReturn(List.of());
+
+        ExcelHelper.ParsedSheet sheet = ExcelHelper.parseFirstSheet(newSvc().export("p1", "v1", null, null));
+        Map<String, Integer> hi =
+                ExcelHelper.headerIndex(
+                        sheet.rows()
+                                .get(ExcelHelper.detectHeaderRowIndex(sheet.rows(), "参数ID", "参数编码")));
+        assertThat(hi).containsKeys("取值区间", "是否发布", "单位（中文）", "产品形态ID");
+        assertThat(hi).doesNotContainKeys("立即生效", "变更来源", "枚举值（中）", "参数范围");
+    }
+
+    @Test
     void importParameters_full_shouldInsertOneRow_whenSingleValidLine() {
         lenient().when(changeSourceKeywordRepository.listEnabledRegexesByProduct("p1")).thenReturn(List.of());
         lenient().doNothing().when(configChangeTypeAppService).validateChangeTypesForParameterSave(any(Boolean.class), any());
 
-        // FULL：先按 scope 查询并删除，再为 BIT 冲突多次加载命令下参数列表；空库时均为空列表。
         when(systemParameterMapper.selectList(any())).thenReturn(List.of());
 
         lenient().doAnswer(inv -> {
@@ -148,40 +230,129 @@ class ParameterAppServiceTest {
             return 1;
         }).when(systemParameterMapper).insert(any(SystemParameterPo.class));
 
-        // Build a sheet with all required headers using the "code keys" accepted by ImportSheetColumns.fromHeader.
-        List<String> headers = List.of(
-                "parameter_id", "parameter_code", "parameter_name_cn", "parameter_name_en",
-                "parameter_sequence", "bit_usage", "change_source", "value_range",
-                "value_description_cn", "value_description_en", "application_scenario_cn",
-                "application_scenario_en", "parameter_default_value", "parameter_recommended_value",
-                "applicable_ne", "feature", "business_classification", "take_effect_immediately",
-                "effective_mode_cn", "effective_mode_en", "project_team", "belonging_module",
-                "patch_version", "introduced_version", "parameter_description_cn",
-                "parameter_description_en", "impact_description_cn", "impact_description_en",
-                "configuration_example_cn", "configuration_example_en",
-                "related_parameter_description_cn", "related_parameter_description_en",
-                "remark", "enumeration_values_cn", "enumeration_values_en", "parameter_unit_cn",
-                "parameter_unit_en", "parameter_range", "data_status", "变更类型", "变更原因（中）",
-                "变更影响（中）", "变更原因（英）", "变更影响（英）", "export_delta", "不导出原因");
-
-        List<String> row = new ArrayList<>();
-        for (int i = 0; i < headers.size(); i++) {
-            row.add("");
-        }
-        row.set(headers.indexOf("parameter_code"), "BIT_1");
-        row.set(headers.indexOf("parameter_name_cn"), "参数中文");
-        row.set(headers.indexOf("parameter_name_en"), "ParamEn");
-        // keep other optional columns blank
-
-        byte[] bytes = ExcelTestHelper.workbookBytes("parameters", "hint", headers, List.of(row));
+        List<String> headers = alignedExportHeadersZh();
+        List<String> row = minimalCreateRow(headers);
+        byte[] bytes =
+                ExcelTestHelper.workbookBytes(
+                        "parameters",
+                        ExcelInstructions.parameterImportExportInstructionLines(),
+                        headers,
+                        List.of(row));
 
         var out = newSvc().importParameters("p1", "v1", "FULL", "c1", "BIT", bytes);
 
         assertThat(out.getTotalRows()).isGreaterThanOrEqualTo(1);
-        assertThat(out.getSuccessCount() + out.getFailureCount()).isGreaterThanOrEqualTo(1);
-        assertThat(out.getSuccessCount() + out.getFailureCount()).isLessThanOrEqualTo(out.getTotalRows());
-        // importParameters 拆分后仍会多次 loadParametersForCommand（scope / peers / 行后刷新等）
+        assertThat(out.getSuccessCount()).isGreaterThanOrEqualTo(1);
         verify(systemParameterMapper, atLeast(2)).selectList(any());
+    }
+
+    @Test
+    void importParameters_createMissingRequired_shouldFailRow() {
+        lenient().when(changeSourceKeywordRepository.listEnabledRegexesByProduct("p1")).thenReturn(List.of());
+        when(systemParameterMapper.selectList(any())).thenReturn(List.of());
+
+        List<String> headers = alignedExportHeadersZh();
+        List<String> row = emptyRow(headers);
+        row.set(headers.indexOf("参数编码"), "BIT_1");
+        row.set(headers.indexOf("参数名称（中）"), "参数中文");
+        byte[] bytes =
+                ExcelTestHelper.workbookBytes(
+                        "parameters",
+                        ExcelInstructions.parameterImportExportInstructionLines(),
+                        headers,
+                        List.of(row));
+
+        var out = newSvc().importParameters("p1", "v1", "FULL", "c1", "BIT", bytes);
+
+        assertThat(out.getFailureCount()).isGreaterThanOrEqualTo(1);
+        assertThat(out.getFailures().get(0).getReason()).contains("必填");
+    }
+
+    @Test
+    void importParameters_oldValueRangeText_shouldParseSegments() {
+        lenient().when(changeSourceKeywordRepository.listEnabledRegexesByProduct("p1")).thenReturn(List.of());
+        lenient().doNothing().when(configChangeTypeAppService).validateChangeTypesForParameterSave(any(Boolean.class), any());
+        when(systemParameterMapper.selectList(any())).thenReturn(List.of());
+        lenient().doAnswer(inv -> {
+            SystemParameterPo po = inv.getArgument(0);
+            po.setParameterId(1);
+            assertThat(po.getValueRange()).isEqualTo("1-10,20-30");
+            assertThat(po.getValueRangeSegments()).contains("\"min\":1");
+            return 1;
+        }).when(systemParameterMapper).insert(any(SystemParameterPo.class));
+
+        List<String> headers = alignedExportHeadersZh();
+        List<String> row = minimalCreateRow(headers);
+        row.set(headers.indexOf("取值范围"), "1-10,20-30");
+        byte[] bytes =
+                ExcelTestHelper.workbookBytes(
+                        "parameters",
+                        ExcelInstructions.parameterImportExportInstructionLines(),
+                        headers,
+                        List.of(row));
+
+        var out = newSvc().importParameters("p1", "v1", "FULL", "c1", "BIT", bytes);
+        assertThat(out.getSuccessCount()).isGreaterThanOrEqualTo(1);
+    }
+
+    @Test
+    void importParameters_update_shouldMergeHiddenFields() {
+        lenient().when(changeSourceKeywordRepository.listEnabledRegexesByProduct("p1")).thenReturn(List.of());
+        lenient().doNothing().when(configChangeTypeAppService).validateChangeTypesForParameterSave(any(Boolean.class), any());
+
+        SystemParameterPo existing = new SystemParameterPo();
+        existing.setParameterId(9);
+        existing.setParameterCode("BIT_1");
+        existing.setOwnedProductId("p1");
+        existing.setOwnedVersionId("v1");
+        existing.setOwnedCommandId("c1");
+        existing.setTakeEffectImmediately("是");
+        existing.setChangeSource("legacy-src");
+        existing.setPatchVersion("P1");
+        existing.setParameterNameCn("旧名");
+        existing.setParameterDefaultValue("0");
+        existing.setParameterRecommendedValue("0");
+        existing.setIntroducedVersion("V0");
+        existing.setParameterUnitCn("个");
+        existing.setValueRangeSegments("[{\"min\":0,\"max\":255}]");
+        existing.setValueRange("0-255");
+        existing.setBitUsage("1");
+        existing.setValueDescriptionCn("说明");
+        existing.setApplicationScenarioCn("场景");
+        existing.setApplicableNe("NE1");
+        existing.setBusinessClassification("类");
+        existing.setCategoryId("cat1");
+        existing.setProjectTeam("组");
+        existing.setParameterDescriptionCn("含义");
+        existing.setImpactDescriptionCn("影响");
+        existing.setConfigurationExampleCn("举例");
+        existing.setIsPublished("是");
+        existing.setFeatureId("f1");
+        existing.setPlatformGeneration("裸机形态");
+        existing.setApplicationRegion("全球");
+
+        when(systemParameterMapper.selectList(any())).thenReturn(List.of(existing));
+        when(systemParameterMapper.updateById(any(SystemParameterPo.class))).thenAnswer(inv -> {
+            SystemParameterPo po = inv.getArgument(0);
+            assertThat(po.getTakeEffectImmediately()).isEqualTo("是");
+            assertThat(po.getChangeSource()).isEqualTo("legacy-src");
+            assertThat(po.getPatchVersion()).isEqualTo("P1");
+            return 1;
+        });
+
+        List<String> headers = alignedExportHeadersZh();
+        List<String> row = minimalCreateRow(headers);
+        row.set(headers.indexOf("参数名称（中）"), "新名");
+        byte[] bytes =
+                ExcelTestHelper.workbookBytes(
+                        "parameters",
+                        ExcelInstructions.parameterImportExportInstructionLines(),
+                        headers,
+                        List.of(row));
+
+        var out = newSvc().importParameters("p1", "v1", "INCREMENTAL", "c1", "BIT", bytes);
+        assertThat(out.getSuccessCount()).isGreaterThanOrEqualTo(1);
+        verify(systemParameterMapper).updateById(any(SystemParameterPo.class));
     }
 
     @Test
@@ -192,6 +363,10 @@ class ParameterAppServiceTest {
         p.setOwnedCommandId("c1");
         p.setParameterId(1);
         p.setParameterCode("BIT_1");
+        p.setValueRangeSegments("[{\"min\":1,\"max\":3}]");
+        p.setValueRange("1-3");
+        p.setIsPublished("是");
+        p.setPlatformGeneration("裸机形态");
 
         when(systemParameterMapper.selectList(any())).thenReturn(List.of(p));
 
@@ -201,8 +376,12 @@ class ParameterAppServiceTest {
         when(entityCommandMappingMapper.selectList(any())).thenReturn(List.of(cmd));
         when(configChangeDescriptionMapper.selectList(any())).thenReturn(List.of());
 
-        byte[] out = newSvc().export("p1", "v1", "c1", null);
-        assertThat(out).isNotEmpty();
+        ExcelHelper.ParsedSheet sheet = ExcelHelper.parseFirstSheet(newSvc().export("p1", "v1", "c1", null));
+        int headerIdx = ExcelHelper.detectHeaderRowIndex(sheet.rows(), "参数ID", "参数编码");
+        List<String> dataRow = sheet.rows().get(headerIdx + 1);
+        Map<String, Integer> hi = ExcelHelper.headerIndex(sheet.rows().get(headerIdx));
+        assertThat(dataRow.get(hi.get("取值区间"))).contains("\"min\":1");
+        assertThat(dataRow.get(hi.get("是否发布"))).isEqualTo("是");
+        assertThat(dataRow.get(hi.get("归属命令"))).isEqualTo("CMD");
     }
 }
-

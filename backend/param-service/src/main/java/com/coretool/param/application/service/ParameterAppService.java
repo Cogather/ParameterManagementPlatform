@@ -8,6 +8,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.coretool.param.application.support.ImportResultCollector;
 import com.coretool.param.application.support.ParameterDefaults;
+import com.coretool.param.application.support.ParameterSaveValidation;
+import com.coretool.param.application.support.ValueRangeSegmentsSupport;
 import com.coretool.param.application.support.RequestOperatorIds;
 import com.coretool.param.domain.config.keyword.repository.ChangeSourceKeywordRepository;
 import com.coretool.param.domain.exception.BlacklistViolationException;
@@ -300,7 +302,8 @@ public class ParameterAppService {
         if (StringUtils.isBlank(main.getOwnedCommandId())) {
             throw new DomainRuleException("owned_command_id 必填");
         }
-        ParameterDefaults.applyForCreate(main);
+        ParameterDefaults.applySystemDefaults(main);
+        ParameterSaveValidation.assertCreate(main, requiresBitUsage(main.getParameterCode()));
         validateAndApplyBlacklist(productId, main);
         ParameterSaveInvariant.assertSequenceMatchesCode(main.getParameterCode(), main.getParameterSequence());
         validateChangeDescriptions(true, request.getChangeDescriptions());
@@ -347,7 +350,8 @@ public class ParameterAppService {
         if (StringUtils.isBlank(main.getOwnedCommandId())) {
             main.setOwnedCommandId(existing.getOwnedCommandId());
         }
-        ParameterDefaults.applyForCreate(main);
+        ParameterSaveValidation.mergeHiddenFields(main, existing);
+        ParameterSaveValidation.assertUpdate(main, requiresBitUsage(main.getParameterCode()));
         validateAndApplyBlacklist(productId, main);
         ParameterSaveInvariant.assertSequenceMatchesCode(main.getParameterCode(), main.getParameterSequence());
         validateChangeDescriptions(false, request.getChangeDescriptions());
@@ -482,7 +486,8 @@ public class ParameterAppService {
                     po.getParameterId() == null ? null : changeByPid.get(po.getParameterId());
             rows.add(buildParameterExportRow(po, commandNameById, ch));
         }
-        return ExcelHelper.buildWorkbook("parameters", ExcelInstructions.PARAMETER_IMPORT_EXPORT_HINT, headers, rows);
+        return ExcelHelper.buildWorkbook(
+                "parameters", ExcelInstructions.parameterImportExportInstructionLines(), headers, rows);
     }
 
     /**
@@ -492,7 +497,8 @@ public class ParameterAppService {
      */
     public byte[] importTemplate() {
         List<String> headers = parameterExportHeadersZh();
-        return ExcelHelper.buildTemplate("parameters", ExcelInstructions.PARAMETER_IMPORT_EXPORT_HINT, headers);
+        return ExcelHelper.buildTemplate(
+                "parameters", ExcelInstructions.parameterImportExportInstructionLines(), headers);
     }
 
     /**
@@ -503,44 +509,48 @@ public class ParameterAppService {
     private static List<String> parameterExportHeadersZh() {
         return List.of(
                 "参数ID",
-                "参数名称（中）",
-                "参数名称（英）",
                 "归属命令",
                 "参数编码",
                 "序号",
+                "参数名称（中）",
+                "参数名称（英）",
+                "取值区间",
                 "取值范围",
                 "BIT 占用",
+                "参数默认值",
+                "参数推荐值",
+                "引入版本",
+                "单位（中文）",
+                "单位（英文）",
                 "取值说明（中）",
                 "取值说明（英）",
                 "应用场景（中）",
                 "应用场景（英）",
-                "参数默认值",
-                "参数推荐值",
                 "适用网元",
-                "所属特性",
                 "业务分类",
-                "立即生效",
                 "生效方式（中）",
                 "生效方式（英）",
                 "项目组",
                 "归属模块",
-                "变更来源",
-                "版本号",
-                "引入版本",
                 "参数含义（中）",
                 "参数含义（英）",
                 "影响说明（中）",
                 "影响说明（英）",
                 "配置举例（中）",
                 "配置举例（英）",
+                "是否发布",
+                "不发布原因",
                 "关联参数描述（中）",
                 "关联参数描述（英）",
+                "所属特性",
+                "影响级别（中文）",
+                "影响级别（英文）",
+                "关联 License",
+                "内部功能描述",
+                "产品形态ID",
+                "平台代际",
+                "应用区域",
                 "备注",
-                "枚举值（中）",
-                "枚举值（英）",
-                "参数单位（中）",
-                "参数单位（英）",
-                "参数范围",
                 "数据状态",
                 "变更类型",
                 "变更原因（中）",
@@ -606,20 +616,50 @@ public class ParameterAppService {
 
     private List<String> parameterExportMainCells(SystemParameterPo po, String cmdName, String idCell) {
         return List.of(
-                idCell, nz(po.getParameterNameCn()), nz(po.getParameterNameEn()), cmdName, nz(po.getParameterCode()),
+                idCell,
+                cmdName,
+                nz(po.getParameterCode()),
                 po.getParameterSequence() == null ? "" : String.valueOf(po.getParameterSequence()),
-                nz(po.getValueRange()), nz(po.getBitUsage()), nz(po.getValueDescriptionCn()),
-                nz(po.getValueDescriptionEn()), nz(po.getApplicationScenarioCn()), nz(po.getApplicationScenarioEn()),
-                nz(po.getParameterDefaultValue()), nz(po.getParameterRecommendedValue()), nz(po.getApplicableNe()),
-                nz(po.getFeature()), nz(po.getBusinessClassification()), nz(po.getTakeEffectImmediately()),
-                nz(po.getEffectiveModeCn()), nz(po.getEffectiveModeEn()), nz(po.getProjectTeam()),
-                nz(po.getBelongingModule()), nz(po.getChangeSource()), nz(po.getPatchVersion()),
-                nz(po.getIntroducedVersion()), nz(po.getParameterDescriptionCn()), nz(po.getParameterDescriptionEn()),
-                nz(po.getImpactDescriptionCn()), nz(po.getImpactDescriptionEn()), nz(po.getConfigurationExampleCn()),
-                nz(po.getConfigurationExampleEn()), nz(po.getRelatedParameterDescriptionCn()),
-                nz(po.getRelatedParameterDescriptionEn()), nz(po.getRemark()), nz(po.getEnumerationValuesCn()),
-                nz(po.getEnumerationValuesEn()), nz(po.getParameterUnitCn()), nz(po.getParameterUnitEn()),
-                nz(po.getParameterRange()), nz(po.getDataStatus()));
+                nz(po.getParameterNameCn()),
+                nz(po.getParameterNameEn()),
+                nz(po.getValueRangeSegments()),
+                nz(po.getValueRange()),
+                nz(po.getBitUsage()),
+                nz(po.getParameterDefaultValue()),
+                nz(po.getParameterRecommendedValue()),
+                nz(po.getIntroducedVersion()),
+                nz(po.getParameterUnitCn()),
+                nz(po.getParameterUnitEn()),
+                nz(po.getValueDescriptionCn()),
+                nz(po.getValueDescriptionEn()),
+                nz(po.getApplicationScenarioCn()),
+                nz(po.getApplicationScenarioEn()),
+                nz(po.getApplicableNe()),
+                nz(po.getBusinessClassification()),
+                nz(po.getEffectiveModeCn()),
+                nz(po.getEffectiveModeEn()),
+                nz(po.getProjectTeam()),
+                nz(po.getBelongingModule()),
+                nz(po.getParameterDescriptionCn()),
+                nz(po.getParameterDescriptionEn()),
+                nz(po.getImpactDescriptionCn()),
+                nz(po.getImpactDescriptionEn()),
+                nz(po.getConfigurationExampleCn()),
+                nz(po.getConfigurationExampleEn()),
+                nz(po.getIsPublished()),
+                nz(po.getNoPublishReason()),
+                nz(po.getRelatedParameterDescriptionCn()),
+                nz(po.getRelatedParameterDescriptionEn()),
+                nz(po.getFeature()),
+                nz(po.getImpactLevelCn()),
+                nz(po.getImpactLevelEn()),
+                nz(po.getRelatedLicense()),
+                nz(po.getInternalDescription()),
+                nz(po.getProductFormId()),
+                nz(po.getPlatformGeneration()),
+                nz(po.getApplicationRegion()),
+                nz(po.getRemark()),
+                nz(po.getDataStatus()));
     }
 
     private static List<String> parameterExportChangeCells(ConfigChangeDescriptionPo ch) {
@@ -687,7 +727,8 @@ public class ParameterAppService {
         if (rows.isEmpty()) {
             throw new DomainRuleException("文件无内容");
         }
-        int headerIdx = ExcelHelper.detectHeaderRowIndex(rows);
+        int headerIdx =
+                ExcelHelper.detectHeaderRowIndex(rows, "参数ID", "参数编码", "parameter_code");
         if (rows.size() <= headerIdx) {
             throw new DomainRuleException("表头缺失");
         }
@@ -887,8 +928,9 @@ public class ParameterAppService {
             ImportSheetColumns cols,
             SystemParameterPo incoming,
             ImportResultCollector c) {
-        ParameterDefaults.applyForCreate(incoming);
+        ParameterDefaults.applySystemDefaults(incoming);
         applyOptionalString(line, cols.colDataStatus, incoming::setDataStatus);
+        ParameterSaveValidation.assertCreate(incoming, requiresBitUsage(incoming.getParameterCode()));
         validateAndApplyBlacklist(productId, incoming);
         ParameterSaveInvariant.assertSequenceMatchesCode(
                 incoming.getParameterCode(), incoming.getParameterSequence());
@@ -938,6 +980,8 @@ public class ParameterAppService {
         BeanUtils.copyProperties(matched, incoming);
         cols.applyMainFromLine(productId, versionId, commandId, code, incoming, line);
         applyOptionalString(line, cols.colDataStatus, incoming::setDataStatus);
+        ParameterSaveValidation.mergeHiddenFields(incoming, matched);
+        ParameterSaveValidation.assertUpdate(incoming, requiresBitUsage(incoming.getParameterCode()));
         validateAndApplyBlacklist(productId, incoming);
         ParameterSaveInvariant.assertSequenceMatchesCode(
                 incoming.getParameterCode(), incoming.getParameterSequence());
@@ -1038,38 +1082,42 @@ public class ParameterAppService {
         private final int colNameEn;
         private final int colSeq;
         private final int colBit;
-        private final int colCs;
+        private final int colValueRangeSegments;
         private final int colValueRange;
+        private final int colDef;
+        private final int colRec;
+        private final int colIntroVer;
+        private final int colUnitCn;
+        private final int colUnitEn;
         private final int colValueDescCn;
         private final int colValueDescEn;
         private final int colSceneCn;
         private final int colSceneEn;
-        private final int colDef;
-        private final int colRec;
         private final int colNe;
-        private final int colFeature;
         private final int colBiz;
-        private final int colImmediate;
         private final int colEmCn;
         private final int colEmEn;
         private final int colTeam;
         private final int colModule;
-        private final int colPatch;
-        private final int colIntroVer;
         private final int colDescCn;
         private final int colDescEn;
         private final int colImpactCn;
         private final int colImpactEn;
         private final int colExCn;
         private final int colExEn;
+        private final int colIsPublished;
+        private final int colNoPublishReason;
         private final int colRelCn;
         private final int colRelEn;
+        private final int colFeature;
+        private final int colImpactLevelCn;
+        private final int colImpactLevelEn;
+        private final int colRelatedLicense;
+        private final int colInternalDesc;
+        private final int colProductFormId;
+        private final int colPlatformGeneration;
+        private final int colApplicationRegion;
         private final int colRemark;
-        private final int colEnumCn;
-        private final int colEnumEn;
-        private final int colUnitCn;
-        private final int colUnitEn;
-        private final int colPr;
         private final int colDataStatus;
         private final int colChType;
         private final int colChReasonCn;
@@ -1085,38 +1133,42 @@ public class ParameterAppService {
                 int colNameEn,
                 int colSeq,
                 int colBit,
-                int colCs,
+                int colValueRangeSegments,
                 int colValueRange,
+                int colDef,
+                int colRec,
+                int colIntroVer,
+                int colUnitCn,
+                int colUnitEn,
                 int colValueDescCn,
                 int colValueDescEn,
                 int colSceneCn,
                 int colSceneEn,
-                int colDef,
-                int colRec,
                 int colNe,
-                int colFeature,
                 int colBiz,
-                int colImmediate,
                 int colEmCn,
                 int colEmEn,
                 int colTeam,
                 int colModule,
-                int colPatch,
-                int colIntroVer,
                 int colDescCn,
                 int colDescEn,
                 int colImpactCn,
                 int colImpactEn,
                 int colExCn,
                 int colExEn,
+                int colIsPublished,
+                int colNoPublishReason,
                 int colRelCn,
                 int colRelEn,
+                int colFeature,
+                int colImpactLevelCn,
+                int colImpactLevelEn,
+                int colRelatedLicense,
+                int colInternalDesc,
+                int colProductFormId,
+                int colPlatformGeneration,
+                int colApplicationRegion,
                 int colRemark,
-                int colEnumCn,
-                int colEnumEn,
-                int colUnitCn,
-                int colUnitEn,
-                int colPr,
                 int colDataStatus,
                 int colChType,
                 int colChReasonCn,
@@ -1130,38 +1182,42 @@ public class ParameterAppService {
             this.colNameEn = colNameEn;
             this.colSeq = colSeq;
             this.colBit = colBit;
-            this.colCs = colCs;
+            this.colValueRangeSegments = colValueRangeSegments;
             this.colValueRange = colValueRange;
+            this.colDef = colDef;
+            this.colRec = colRec;
+            this.colIntroVer = colIntroVer;
+            this.colUnitCn = colUnitCn;
+            this.colUnitEn = colUnitEn;
             this.colValueDescCn = colValueDescCn;
             this.colValueDescEn = colValueDescEn;
             this.colSceneCn = colSceneCn;
             this.colSceneEn = colSceneEn;
-            this.colDef = colDef;
-            this.colRec = colRec;
             this.colNe = colNe;
-            this.colFeature = colFeature;
             this.colBiz = colBiz;
-            this.colImmediate = colImmediate;
             this.colEmCn = colEmCn;
             this.colEmEn = colEmEn;
             this.colTeam = colTeam;
             this.colModule = colModule;
-            this.colPatch = colPatch;
-            this.colIntroVer = colIntroVer;
             this.colDescCn = colDescCn;
             this.colDescEn = colDescEn;
             this.colImpactCn = colImpactCn;
             this.colImpactEn = colImpactEn;
             this.colExCn = colExCn;
             this.colExEn = colExEn;
+            this.colIsPublished = colIsPublished;
+            this.colNoPublishReason = colNoPublishReason;
             this.colRelCn = colRelCn;
             this.colRelEn = colRelEn;
+            this.colFeature = colFeature;
+            this.colImpactLevelCn = colImpactLevelCn;
+            this.colImpactLevelEn = colImpactLevelEn;
+            this.colRelatedLicense = colRelatedLicense;
+            this.colInternalDesc = colInternalDesc;
+            this.colProductFormId = colProductFormId;
+            this.colPlatformGeneration = colPlatformGeneration;
+            this.colApplicationRegion = colApplicationRegion;
             this.colRemark = colRemark;
-            this.colEnumCn = colEnumCn;
-            this.colEnumEn = colEnumEn;
-            this.colUnitCn = colUnitCn;
-            this.colUnitEn = colUnitEn;
-            this.colPr = colPr;
             this.colDataStatus = colDataStatus;
             this.colChType = colChType;
             this.colChReasonCn = colChReasonCn;
@@ -1185,38 +1241,42 @@ public class ParameterAppService {
                     findColumn(hi, "parameter_name_en", "参数名称（英）"),
                     findColumn(hi, "parameter_sequence", "序号"),
                     findColumn(hi, "bit_usage", "BIT 占用"),
-                    findColumn(hi, "change_source", "变更来源"),
+                    findColumn(hi, "value_range_segments", "取值区间"),
                     findColumn(hi, "value_range", "取值范围"),
+                    findColumn(hi, "parameter_default_value", "参数默认值"),
+                    findColumn(hi, "parameter_recommended_value", "参数推荐值"),
+                    findColumn(hi, "introduced_version", "引入版本"),
+                    findColumn(hi, "parameter_unit_cn", "单位（中文）", "单位（中）", "参数单位（中）"),
+                    findColumn(hi, "parameter_unit_en", "单位（英文）", "单位（英）", "参数单位（英）"),
                     findColumn(hi, "value_description_cn", "取值说明（中）"),
                     findColumn(hi, "value_description_en", "取值说明（英）"),
                     findColumn(hi, "application_scenario_cn", "应用场景（中）"),
                     findColumn(hi, "application_scenario_en", "应用场景（英）"),
-                    findColumn(hi, "parameter_default_value", "参数默认值"),
-                    findColumn(hi, "parameter_recommended_value", "参数推荐值"),
                     findColumn(hi, "applicable_ne", "适用网元"),
-                    findColumn(hi, "feature", "所属特性"),
                     findColumn(hi, "business_classification", "业务分类"),
-                    findColumn(hi, "take_effect_immediately", "立即生效"),
                     findColumn(hi, "effective_mode_cn", "生效方式（中）"),
                     findColumn(hi, "effective_mode_en", "生效方式（英）"),
                     findColumn(hi, "project_team", "项目组"),
                     findColumn(hi, "belonging_module", "归属模块"),
-                    findColumn(hi, "patch_version", "版本号"),
-                    findColumn(hi, "introduced_version", "引入版本"),
                     findColumn(hi, "parameter_description_cn", "参数含义（中）"),
                     findColumn(hi, "parameter_description_en", "参数含义（英）"),
                     findColumn(hi, "impact_description_cn", "影响说明（中）"),
                     findColumn(hi, "impact_description_en", "影响说明（英）"),
                     findColumn(hi, "configuration_example_cn", "配置举例（中）"),
                     findColumn(hi, "configuration_example_en", "配置举例（英）"),
+                    findColumn(hi, "is_published", "是否发布"),
+                    findColumn(hi, "no_publish_reason", "不发布原因"),
                     findColumn(hi, "related_parameter_description_cn", "关联参数描述（中）"),
                     findColumn(hi, "related_parameter_description_en", "关联参数描述（英）"),
+                    findColumn(hi, "feature", "所属特性"),
+                    findColumn(hi, "impact_level_cn", "影响级别（中文）"),
+                    findColumn(hi, "impact_level_en", "影响级别（英文）"),
+                    findColumn(hi, "related_license", "关联 License"),
+                    findColumn(hi, "internal_description", "内部功能描述"),
+                    findColumn(hi, "product_form_id", "产品形态ID"),
+                    findColumn(hi, "platform_generation", "平台代际"),
+                    findColumn(hi, "application_region", "应用区域"),
                     findColumn(hi, "remark", "备注"),
-                    findColumn(hi, "enumeration_values_cn", "枚举值（中）"),
-                    findColumn(hi, "enumeration_values_en", "枚举值（英）"),
-                    findColumn(hi, "parameter_unit_cn", "参数单位（中）"),
-                    findColumn(hi, "parameter_unit_en", "参数单位（英）"),
-                    findColumn(hi, "parameter_range", "参数范围"),
                     findColumn(hi, "data_status", "数据状态"),
                     findColumn(hi, "变更类型"),
                     findColumn(hi, "变更原因（中）"),
@@ -1258,6 +1318,7 @@ public class ParameterAppService {
                 SystemParameterPo target, List<String> line) {
             applyMainKeysFromLine(productId, versionId, commandId, parameterCode, target, line);
             applyMainOptionalFieldsFromLine(target, line);
+            applyValueRangeFromLine(target, line);
         }
 
         private void applyMainKeysFromLine(String productId, String versionId, String commandId, String parameterCode,
@@ -1285,38 +1346,49 @@ public class ParameterAppService {
 
         private void applyMainOptionalFieldsFromLine(SystemParameterPo target, List<String> line) {
             applyOptionalString(line, colBit, target::setBitUsage);
-            applyOptionalString(line, colCs, target::setChangeSource);
-            applyOptionalString(line, colValueRange, target::setValueRange);
+            applyOptionalString(line, colDef, target::setParameterDefaultValue);
+            applyOptionalString(line, colRec, target::setParameterRecommendedValue);
+            applyOptionalString(line, colIntroVer, target::setIntroducedVersion);
+            applyOptionalString(line, colUnitCn, target::setParameterUnitCn);
+            applyOptionalString(line, colUnitEn, target::setParameterUnitEn);
             applyOptionalString(line, colValueDescCn, target::setValueDescriptionCn);
             applyOptionalString(line, colValueDescEn, target::setValueDescriptionEn);
             applyOptionalString(line, colSceneCn, target::setApplicationScenarioCn);
             applyOptionalString(line, colSceneEn, target::setApplicationScenarioEn);
-            applyOptionalString(line, colDef, target::setParameterDefaultValue);
-            applyOptionalString(line, colRec, target::setParameterRecommendedValue);
             applyOptionalString(line, colNe, target::setApplicableNe);
-            applyOptionalString(line, colFeature, target::setFeature);
             applyOptionalString(line, colBiz, target::setBusinessClassification);
-            applyOptionalString(line, colImmediate, target::setTakeEffectImmediately);
             applyOptionalString(line, colEmCn, target::setEffectiveModeCn);
             applyOptionalString(line, colEmEn, target::setEffectiveModeEn);
             applyOptionalString(line, colTeam, target::setProjectTeam);
             applyOptionalString(line, colModule, target::setBelongingModule);
-            applyOptionalString(line, colPatch, target::setPatchVersion);
-            applyOptionalString(line, colIntroVer, target::setIntroducedVersion);
             applyOptionalString(line, colDescCn, target::setParameterDescriptionCn);
             applyOptionalString(line, colDescEn, target::setParameterDescriptionEn);
             applyOptionalString(line, colImpactCn, target::setImpactDescriptionCn);
             applyOptionalString(line, colImpactEn, target::setImpactDescriptionEn);
             applyOptionalString(line, colExCn, target::setConfigurationExampleCn);
             applyOptionalString(line, colExEn, target::setConfigurationExampleEn);
+            applyOptionalString(line, colIsPublished, target::setIsPublished);
+            applyOptionalString(line, colNoPublishReason, target::setNoPublishReason);
             applyOptionalString(line, colRelCn, target::setRelatedParameterDescriptionCn);
             applyOptionalString(line, colRelEn, target::setRelatedParameterDescriptionEn);
+            applyOptionalString(line, colFeature, target::setFeature);
+            applyOptionalString(line, colImpactLevelCn, target::setImpactLevelCn);
+            applyOptionalString(line, colImpactLevelEn, target::setImpactLevelEn);
+            applyOptionalString(line, colRelatedLicense, target::setRelatedLicense);
+            applyOptionalString(line, colInternalDesc, target::setInternalDescription);
+            applyOptionalString(line, colProductFormId, target::setProductFormId);
+            applyOptionalString(line, colPlatformGeneration, target::setPlatformGeneration);
+            applyOptionalString(line, colApplicationRegion, target::setApplicationRegion);
             applyOptionalString(line, colRemark, target::setRemark);
-            applyOptionalString(line, colEnumCn, target::setEnumerationValuesCn);
-            applyOptionalString(line, colEnumEn, target::setEnumerationValuesEn);
-            applyOptionalString(line, colUnitCn, target::setParameterUnitCn);
-            applyOptionalString(line, colUnitEn, target::setParameterUnitEn);
-            applyOptionalString(line, colPr, target::setParameterRange);
+        }
+
+        private void applyValueRangeFromLine(SystemParameterPo target, List<String> line) {
+            String segments = colValueRangeSegments >= 0 ? trimCell(line, colValueRangeSegments) : "";
+            String joined = colValueRange >= 0 ? trimCell(line, colValueRange) : "";
+            if (StringUtils.isBlank(segments) && StringUtils.isBlank(joined)) {
+                return;
+            }
+            ValueRangeSegmentsSupport.applyFromImport(segments, joined, target);
         }
     }
 
@@ -1431,11 +1503,8 @@ public class ParameterAppService {
             if ("否".equals(d.getExportDelta()) && StringUtils.isBlank(d.getNoExportReason())) {
                 throw new DomainRuleException("export_delta 为「否」时 no_export_reason 必填");
             }
-            if (StringUtils.isBlank(d.getChangeReasonCn())
-                    || StringUtils.isBlank(d.getChangeImpactCn())
-                    || StringUtils.isBlank(d.getChangeReasonEn())
-                    || StringUtils.isBlank(d.getChangeImpactEn())) {
-                throw new DomainRuleException("变更说明中英四格均需填写");
+            if (StringUtils.isBlank(d.getChangeReasonCn()) || StringUtils.isBlank(d.getChangeImpactCn())) {
+                throw new DomainRuleException("变更说明中文原因与影响必填");
             }
         }
     }
@@ -1631,5 +1700,22 @@ public class ParameterAppService {
             return def.getCommandType();
         }
         return typeKey;
+    }
+
+    /**
+     * INT 类型无 BIT 位要求；其余类型须填写 bit_usage。
+     *
+     * @param parameterCode 参数编码
+     * @return 是否要求 BIT 占用
+     */
+    private static boolean requiresBitUsage(String parameterCode) {
+        if (StringUtils.isBlank(parameterCode)) {
+            return false;
+        }
+        int idx = parameterCode.lastIndexOf('_');
+        if (idx <= 0) {
+            return false;
+        }
+        return !"INT".equalsIgnoreCase(parameterCode.substring(0, idx));
     }
 }

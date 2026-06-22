@@ -425,6 +425,8 @@
 - **时间戳精度**：创建时间和更新时间精确到毫秒级
 - **数据状态管理**：支持草稿、工作中、基线评审、过程评审、已发布、废弃等多种状态
 - **多语言支持**：参数名称、描述、取值说明、应用场景、影响说明、配置举例等字段都支持中英文
+- **表单两段式（2026-06）**：页面分 **基础信息**（12 项）与 **详细信息**（29 项）；**新增**仅校验基础信息必填 + 变更说明中文；**编辑**叠加详细信息必填。服务端禁止业务字段占位默认值。
+- **取值区间**：`value_range_segments`（JSON 多段 min/max）拼接生成 `value_range`（如 `1-10,20-30`）；适用所有参数类型；段间禁止重叠。
 
 ### 表字段结构
 
@@ -443,33 +445,34 @@
 | 11 | introduce_type | 引入类型 | 引入类型 | String | 50 | 必填 | 版本新增Version additions、继承Inherit、引用Reference、其他Others                           |
 | 12 | inherit_reference_version_id | 继承/引用版本ID | 继承/引用版本ID | String | 255 | 可选 |                                                                                |
 | 13 | parameter_name_cn | 参数名称（中文） | 参数名称（中文） | String | 255 | 必填 | 参数标题，参数ID+参数功能描述                                                               |
-| 14 | parameter_name_en | 参数名称（英文） | 参数名称（英文） | String | 512 | 必填 |                                                                                |
-| 15 | bit_usage | 使用BIT位 | 使用BIT位 | String | 255 | 可选 | 逗号分隔，列出当前序号占用的BIT位，IT管理字段                                                      |
+| 14 | parameter_name_en | 参数名称（英文） | 参数名称（英文） | String | 512 | 可选 | 页面可选填                                                                                |
+| 15 | bit_usage | 使用BIT位 | 使用BIT位 | String | 255 | 条件必填 | `bit_count>0` 时新增必填；逗号分隔 BIT 序号                                                      |
 | 16 | parameter_sequence | 参数序号 | 参数序号 | Integer | - | 可选 |                                                                                |
-| 17 | value_range | 使用情况（取值范围） | 使用情况（取值范围） | String | 255 | 必填 |                                                                                |
-| 18 | value_description_cn | 取值说明（中文） | 取值说明（中文） | String | 1024 | 必填 |                                                                                |
-| 19 | value_description_en | 取值说明（英文） | 取值说明（英文） | String | 2048 | 必填 |                                                                                |
-| 20 | application_scenario_cn | 应用场景（中文） | 应用场景（中文） | String | 1024 | 必填 |                                                                                |
-| 21 | application_scenario_en | 应用场景（英文） | 应用场景（英文） | String | 2048 | 必填 |                                                                                |
-| 22 | parameter_default_value | 参数默认值 | 参数默认值 | String | 255 | 必填 | 不支持中文字符                                                                        |
-| 23 | parameter_recommended_value | 参数推荐值 | 参数推荐值 | String | 255 | 可选 |                                                                                |
-| 24 | applicable_ne | 适用网元 | 适用网元 | String | 255 | 必填 | 以顿号分隔                                                                          |
-| 25 | feature | 所属特性 | 所属特性 | String | 512 | 可选 |                                                                                |
+| 17 | value_range | 取值范围（拼接） | 由 `value_range_segments` 拼接的展示值，如 `1-10,20-30` | String | 255 | 新增必填 | 页面不可直接编辑；编辑时由区间段自动生成 |
+| 17a | value_range_segments | 取值区间（结构化） | JSON 数组，元素含 min/max 整数 | Text | - | 新增必填 | 与 `value_range` 同步写入；段间禁止重叠 |
+| 18 | value_description_cn | 取值说明（中文） | 取值说明（中文） | String | 1024 | 编辑必填 | 新增可不填（NULL）                                                                                |
+| 19 | value_description_en | 取值说明（英文） | 取值说明（英文） | String | 2048 | 可选 |                                                                                |
+| 20 | application_scenario_cn | 应用场景（中文） | 应用场景（中文） | String | 1024 | 编辑必填 | 新增可不填                                                                                |
+| 21 | application_scenario_en | 应用场景（英文） | 应用场景（英文） | String | 2048 | 可选 |                                                                                |
+| 22 | parameter_default_value | 参数默认值 | 参数默认值 | String | 255 | 新增必填 | 整数；不支持中文字符                                                                        |
+| 23 | parameter_recommended_value | 参数推荐值 | 参数推荐值 | String | 255 | 新增必填 |                                                                                |
+| 24 | applicable_ne | 适用网元 | 适用网元 | String | 255 | 编辑必填 | 以顿号分隔；新增可不填                                                                          |
+| 25 | feature | 所属特性 | 所属特性 | String | 512 | 编辑必填 | 新增可不填                                                                                |
 | 26 | feature_id | 所属特性ID | 所属特性ID | String | 255 | 可选 |                                                                                |
 | 27 | business_classification | 业务分类 | 业务分类 | String | 255 | 必填 |                                                                                |
 | 28 | category_id | 业务分类ID | 业务分类ID | String | 255 | 必填 |                                                                                |
-| 29 | take_effect_immediately | 参数是否立即生效 | 参数是否立即生效 | String | 50 | 必填 | 是/否、yes/no                                                                     |
+| 29 | take_effect_immediately | 参数是否立即生效 | 参数是否立即生效 | String | 50 | 可选 | 页面隐藏；表保留                                                                     |
 | 30 | effective_mode_cn | 生效方式（中文） | 生效方式（中文） | String | 255 | 可选 |                                                                                |
 | 31 | effective_mode_en | 生效方式（英文） | 生效方式（英文） | String | 512 | 可选 |                                                                                |
-| 32 | project_team | 项目组 | 项目组 | String | 255 | 必填 |                                                                                |
+| 32 | project_team | 项目组 | 项目组 | String | 255 | 编辑必填 | 新增可不填                                                                                |
 | 33 | belonging_module | 归属模块 | 归属模块 | String | 255 | 可选 |                                                                                |
-| 34 | patch_version | 补丁版本号 | 补丁版本号 | String | 255 | 可选 |                                                                                |
-| 35 | introduced_version | 引入版本 | 引入版本 | String | 255 | 必填 | 支持配置                                                                           |
-| 36 | parameter_description_cn | 参数含义（中文） | 参数含义（中文） | String | 1024 | 必填 |                                                                                |
-| 37 | parameter_description_en | 参数含义（英文） | 参数含义（英文） | String | 2048 | 必填 |                                                                                |
-| 38 | impact_description_cn | 影响说明（中文） | 影响说明（中文） | String | 1024 | 必填 |                                                                                |
-| 39 | impact_description_en | 影响说明（英文） | 影响说明（英文） | String | 2048 | 必填 |                                                                                |
-| 40 | configuration_example_cn | 配置举例（中文） | 配置举例（中文） | Text | - | 可选 |                                                                                |
+| 34 | patch_version | 补丁版本号 | 补丁版本号 | String | 255 | 可选 | 页面隐藏                                                                                |
+| 35 | introduced_version | 引入版本 | 引入版本 | String | 255 | 新增必填 | 继承/同步只读                                                                           |
+| 36 | parameter_description_cn | 参数含义（中文） | 参数含义（中文） | String | 1024 | 编辑必填 | 新增可不填                                                                                |
+| 37 | parameter_description_en | 参数含义（英文） | 参数含义（英文） | String | 2048 | 可选 |                                                                                |
+| 38 | impact_description_cn | 影响说明（中文） | 影响说明（中文） | String | 1024 | 编辑必填 | 新增可不填                                                                                |
+| 39 | impact_description_en | 影响说明（英文） | 影响说明（英文） | String | 2048 | 可选 |                                                                                |
+| 40 | configuration_example_cn | 配置举例（中文） | 配置举例（中文） | Text | - | 编辑必填 | 新增可不填                                                                                |
 | 41 | configuration_example_en | 配置举例（英文） | 配置举例（英文） | Text | - | 可选 |                                                                                |
 | 42 | help_document_in_database | 帮助是否入库 | 帮助是否入库 | String | 50 | 必填 | Y/N                                                                            |
 | 43 | related_parameter_cn | 关联参数（中文） | 关联参数（中文） | String | 255 | 必填 | 支持配置                                                                           |
@@ -479,22 +482,22 @@
 | 47 | related_parameter_description_en | 关联参数描述（英文） | 关联参数描述（英文） | String | 2048 | 可选 |                                                                                |
 | 48 | remark | 备注 | 备注 | String | 1024 | 可选 |                                                                                |
 | 49 | parameter_bit | 参数Bit位 | 参数Bit位 | String | 255 | 可选 | 不支持中文字符                                                                        |
-| 50 | enumeration_values_cn | 参数枚举值（中文） | 参数枚举值（中文） | String | 512 | 可选 | 说明每个枚举的用途                                                                      |
-| 51 | enumeration_values_en | 参数枚举值（英文） | 参数枚举值（英文） | String | 1024 | 可选 |                                                                                |
+| 50 | enumeration_values_cn | 参数枚举值（中文） | 参数枚举值（中文） | String | 512 | 可选 | **页面已移除**                                                                      |
+| 51 | enumeration_values_en | 参数枚举值（英文） | 参数枚举值（英文） | String | 1024 | 可选 | **页面已移除**                                                                                |
 | 52 | applicable_logical_entity_cn | 适用逻辑实体（中文） | 适用逻辑实体（中文） | String | 255 | 可选 |                                                                                |
 | 53 | applicable_logical_entity_en | 适用逻辑实体（英文） | 适用逻辑实体（英文） | String | 512 | 可选 |                                                                                |
 | 54 | related_feature_cn | 关联特性（中文） | 关联特性（中文） | String | 512 | 可选 | 从特性库查询                                                                         |
 | 55 | related_feature_en | 关联特性（英文） | 关联特性（英文） | String | 1024 | 必填 | 从特性库查询                                                                         |
 | 56 | change_factors | 变更因素 | 变更因素 | String | 100 | 必填 | IT管理字段，AR/DTS                                                                  |
 | 57 | change_related_number | 变更关联单号 | 变更关联单号 | String | 255 | 必填 | IT管理字段，AR编号或者DTS编号                                                             |
-| 58 | change_source | 变更来源 | 变更来源 | String | 512 | 可选 |                                                                                |
+| 58 | change_source | 变更来源 | 变更来源 | String | 512 | 可选 | 页面隐藏                                                                                |
 | 59 | creator_id | 创建人 | 创建者标识 | String | 50 | 可选 |                                                                                |
 | 60 | creation_timestamp | 创建时间 | 创建时间戳 | DateTime | - | 可选 | 精确到毫秒                                                                          |
 | 61 | updater_id | 修改人 | 更新者标识 | String | 50 | 可选 |                                                                                |
 | 62 | update_timestamp | 修改时间 | 更新时间戳 | DateTime | - | 可选 | 精确到毫秒                                                                          |
-| 63 | parameter_unit_cn | 单位（中文） | 参数单位（中文） | String | 50 | 可选 |                                                                                |
-| 64 | parameter_unit_en | 单位（英文） | 参数单位（英文） | String | 50 | 可选 |                                                                                |
-| 65 | parameter_range | 范围 | 参数范围 | String | 100 | 可选 |                                                                                |
+| 63 | parameter_unit_cn | 单位（中文） | 单位（中文） | String | 50 | 新增必填 | 原「参数单位」；基础信息区块                                                                                |
+| 64 | parameter_unit_en | 单位（英文） | 单位（英文） | String | 50 | 可选 |                                                                                |
+| 65 | parameter_range | 范围 | 参数范围 | String | 100 | 可选 | **页面已移除**，新保存不写                                                                                |
 | 66 | effective_form_cn | 生效形态（中文） | 生效形态（中文） | String | 255 | 可选 |                                                                                |
 | 67 | effective_form_en | 生效形态（英文） | 生效形态（英文） | String | 512 | 可选 |                                                                                |
 | 68 | implementation_principle_cn | 实现原理（中文） | 实现原理（中文） | String | 512 | 可选 |                                                                                |
@@ -503,7 +506,18 @@
 | 71 | impact_level_en | 影响级别（英文） | 影响级别（英文） | String | 50 | 可选 |                                                                                |
 | 72 | figure_example_cn | 图形示例（中文） | 图形示例（中文） | String | 1024 | 可选 |                                                                                |
 | 73 | figure_example_en | 图形示例（英文） | 图形示例（英文） | String | 2048 | 可选 |                                                                                |
-| 74 | internal_description | 内部功能描述 | 内部功能描述 | String | 1024 | 可选 |                                                                                |
+| 74 | internal_description | 内部功能描述 | 内部功能描述 | String | 1024 | 可选 | 详细信息区块展示                                                                                |
+| 75 | is_published | 是否发布 | 是否发布 | String | 10 | 编辑必填 | 是/否；新增可不填                                                                                |
+| 76 | no_publish_reason | 不发布原因 | 不发布原因 | String | 1024 | 条件必填 | `is_published=否` 时编辑必填                                                                                |
+| 77 | related_license | 关联 License | 关联 License | String | 255 | 可选 |                                                                                |
+| 78 | product_form_id | 产品形态 ID | 产品形态 | String | 50 | 可选 | 关联 `entity_basic_info.product_form_id`；下拉数据源为当前产品配置                                                                                |
+| 79 | platform_generation | 平台代际 | 平台代际 | String | 50 | 编辑必填 | 枚举：裸机形态、虚拟机形态                                                                                |
+| 80 | application_region | 应用区域 | 应用区域 | String | 50 | 编辑必填 | 枚举：海外、全球                                                                                |
+
+**Excel 导入/导出列名（2026-06，与详设 §13.2.G 一致）**
+
+参数模板/导出使用中文表头，顺序为：参数ID、归属命令、参数编码、序号 → 基础信息（含 **取值区间** JSON、**取值范围** 拼接串、**单位（中文/英文）**）→ 详细信息（含是否发布、产品形态ID、平台代际、应用区域等）→ 数据状态 → 变更说明 7 列。**不再导出**：立即生效、变更来源、版本号、枚举值、参数范围。旧模板仅含「取值范围」文本时仍可导入（自动解析为 `value_range_segments`）。
+
 ---
 
 ## 16. config_change_description 表（参数变更说明表）
@@ -530,8 +544,8 @@
 | 3 | change_type | 变更类型 | 变更类型 | String | 255 | 必填 | 关联 config_change_type |
 | 4 | change_reason_cn | 变更原因（中文） | 变更原因（中文） | String | 1024 | 必填 | |
 | 5 | change_impact_cn | 变更影响（中文） | 变更影响（中文） | String | 1024 | 必填 | |
-| 6 | change_reason_en | 变更原因（英文） | 变更原因（英文） | String | 1024 | 必填 | |
-| 7 | change_impact_en | 变更影响（英文） | 变更影响（英文） | String | 1024 | 必填 | |
+| 6 | change_reason_en | 变更原因（英文） | 变更原因（英文） | String | 1024 | 可选 | 页面不强制校验 |
+| 7 | change_impact_en | 变更影响（英文） | 变更影响（英文） | String | 1024 | 可选 | 页面不强制校验 |
 | 8 | export_delta | 是否导出delta | 是否导出delta | String | 50 | 必填 | |
 | 9 | no_export_reason | 不导出原因 | 不导出原因 | String | 1024 | 可选 | |
 | 10 | updater_id | 修改人 | 修改人 | String | 50 | 可选 | |
