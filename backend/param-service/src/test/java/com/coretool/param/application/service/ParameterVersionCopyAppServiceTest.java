@@ -5,7 +5,6 @@
 package com.coretool.param.application.service;
 
 import com.coretool.param.domain.config.keyword.repository.ChangeSourceKeywordRepository;
-import com.coretool.param.domain.exception.DomainRuleException;
 import com.coretool.param.domain.parameter.ParameterBaselinePolicy;
 import com.coretool.param.infrastructure.persistence.entity.SystemParameterPo;
 import com.coretool.param.infrastructure.persistence.mapper.ConfigChangeDescriptionMapper;
@@ -22,7 +21,6 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;

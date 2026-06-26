@@ -4,6 +4,7 @@
 
 package com.coretool.param.application.service;
 
+import com.coretool.param.application.support.ParameterExportHeadersZh;
 import com.coretool.param.domain.config.keyword.repository.ChangeSourceKeywordRepository;
 import com.coretool.param.domain.exception.DomainRuleException;
 import com.coretool.param.infrastructure.persistence.entity.EntityCommandMappingPo;
@@ -88,58 +89,7 @@ class ParameterAppServiceTest {
 
     /** 与 {@code ParameterAppService.parameterExportHeadersZh} 对齐的中文表头 */
     private static List<String> alignedExportHeadersZh() {
-        return List.of(
-                "参数ID",
-                "归属命令",
-                "参数编码",
-                "序号",
-                "参数名称（中）",
-                "参数名称（英）",
-                "取值区间",
-                "取值范围",
-                "BIT 占用",
-                "参数默认值",
-                "参数推荐值",
-                "引入版本",
-                "单位（中文）",
-                "单位（英文）",
-                "取值说明（中）",
-                "取值说明（英）",
-                "应用场景（中）",
-                "应用场景（英）",
-                "适用网元",
-                "业务分类",
-                "生效方式（中）",
-                "生效方式（英）",
-                "项目组",
-                "归属模块",
-                "参数含义（中）",
-                "参数含义（英）",
-                "影响说明（中）",
-                "影响说明（英）",
-                "配置举例（中）",
-                "配置举例（英）",
-                "是否发布",
-                "不发布原因",
-                "关联参数描述（中）",
-                "关联参数描述（英）",
-                "所属特性",
-                "影响级别（中文）",
-                "影响级别（英文）",
-                "关联 License",
-                "内部功能描述",
-                "产品形态ID",
-                "平台代际",
-                "应用区域",
-                "备注",
-                "数据状态",
-                "变更类型",
-                "变更原因（中）",
-                "变更影响（中）",
-                "变更原因（英）",
-                "变更影响（英）",
-                "导出 delta",
-                "不导出原因");
+        return ParameterExportHeadersZh.list();
     }
 
     private static byte[] validImportWorkbookBytesWithHeaderOnly() {
@@ -295,11 +245,7 @@ class ParameterAppServiceTest {
         assertThat(out.getSuccessCount()).isGreaterThanOrEqualTo(1);
     }
 
-    @Test
-    void importParameters_update_shouldMergeHiddenFields() {
-        lenient().when(changeSourceKeywordRepository.listEnabledRegexesByProduct("p1")).thenReturn(List.of());
-        lenient().doNothing().when(configChangeTypeAppService).validateChangeTypesForParameterSave(any(Boolean.class), any());
-
+    private static SystemParameterPo existingParameterForHiddenFieldMerge() {
         SystemParameterPo existing = new SystemParameterPo();
         existing.setParameterId(9);
         existing.setParameterCode("BIT_1");
@@ -330,7 +276,10 @@ class ParameterAppServiceTest {
         existing.setFeatureId("f1");
         existing.setPlatformGeneration("裸机形态");
         existing.setApplicationRegion("全球");
+        return existing;
+    }
 
+    private void stubHiddenFieldMergeUpdate(SystemParameterPo existing) {
         when(systemParameterMapper.selectList(any())).thenReturn(List.of(existing));
         when(systemParameterMapper.updateById(any(SystemParameterPo.class))).thenAnswer(inv -> {
             SystemParameterPo po = inv.getArgument(0);
@@ -339,18 +288,29 @@ class ParameterAppServiceTest {
             assertThat(po.getPatchVersion()).isEqualTo("P1");
             return 1;
         });
+    }
+
+    private static byte[] importWorkbookBytes(List<String> headers, List<String> row) {
+        return ExcelTestHelper.workbookBytes(
+                "parameters",
+                ExcelInstructions.parameterImportExportInstructionLines(),
+                headers,
+                List.of(row));
+    }
+
+    @Test
+    void importParameters_update_shouldMergeHiddenFields() {
+        lenient().when(changeSourceKeywordRepository.listEnabledRegexesByProduct("p1")).thenReturn(List.of());
+        lenient().doNothing().when(configChangeTypeAppService).validateChangeTypesForParameterSave(any(Boolean.class), any());
+
+        SystemParameterPo existing = existingParameterForHiddenFieldMerge();
+        stubHiddenFieldMergeUpdate(existing);
 
         List<String> headers = alignedExportHeadersZh();
         List<String> row = minimalCreateRow(headers);
         row.set(headers.indexOf("参数名称（中）"), "新名");
-        byte[] bytes =
-                ExcelTestHelper.workbookBytes(
-                        "parameters",
-                        ExcelInstructions.parameterImportExportInstructionLines(),
-                        headers,
-                        List.of(row));
 
-        var out = newSvc().importParameters("p1", "v1", "INCREMENTAL", "c1", "BIT", bytes);
+        var out = newSvc().importParameters("p1", "v1", "INCREMENTAL", "c1", "BIT", importWorkbookBytes(headers, row));
         assertThat(out.getSuccessCount()).isGreaterThanOrEqualTo(1);
         verify(systemParameterMapper).updateById(any(SystemParameterPo.class));
     }

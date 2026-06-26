@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.coretool.param.application.support.ImportResultCollector;
 import com.coretool.param.application.support.ParameterDefaults;
+import com.coretool.param.application.support.ParameterExportHeadersZh;
 import com.coretool.param.application.support.ParameterSaveValidation;
 import com.coretool.param.application.support.ValueRangeSegmentsSupport;
 import com.coretool.param.application.support.RequestOperatorIds;
@@ -507,58 +508,7 @@ public class ParameterAppService {
      * @return 表头列名列表
      */
     private static List<String> parameterExportHeadersZh() {
-        return List.of(
-                "参数ID",
-                "归属命令",
-                "参数编码",
-                "序号",
-                "参数名称（中）",
-                "参数名称（英）",
-                "取值区间",
-                "取值范围",
-                "BIT 占用",
-                "参数默认值",
-                "参数推荐值",
-                "引入版本",
-                "单位（中文）",
-                "单位（英文）",
-                "取值说明（中）",
-                "取值说明（英）",
-                "应用场景（中）",
-                "应用场景（英）",
-                "适用网元",
-                "业务分类",
-                "生效方式（中）",
-                "生效方式（英）",
-                "项目组",
-                "归属模块",
-                "参数含义（中）",
-                "参数含义（英）",
-                "影响说明（中）",
-                "影响说明（英）",
-                "配置举例（中）",
-                "配置举例（英）",
-                "是否发布",
-                "不发布原因",
-                "关联参数描述（中）",
-                "关联参数描述（英）",
-                "所属特性",
-                "影响级别（中文）",
-                "影响级别（英文）",
-                "关联 License",
-                "内部功能描述",
-                "产品形态ID",
-                "平台代际",
-                "应用区域",
-                "备注",
-                "数据状态",
-                "变更类型",
-                "变更原因（中）",
-                "变更影响（中）",
-                "变更原因（英）",
-                "变更影响（英）",
-                "导出 delta",
-                "不导出原因");
+        return ParameterExportHeadersZh.list();
     }
 
     /**
@@ -1235,56 +1185,186 @@ public class ParameterAppService {
          * @return 列映射对象
          */
         private static ImportSheetColumns fromHeader(Map<String, Integer> hi) {
-            return new ImportSheetColumns(
-                    findColumn(hi, "parameter_code", "参数编码"),
-                    findColumn(hi, "parameter_name_cn", "参数名称（中）", "参数名称"),
-                    findColumn(hi, "parameter_name_en", "参数名称（英）"),
-                    findColumn(hi, "parameter_sequence", "序号"),
-                    findColumn(hi, "bit_usage", "BIT 占用"),
-                    findColumn(hi, "value_range_segments", "取值区间"),
-                    findColumn(hi, "value_range", "取值范围"),
-                    findColumn(hi, "parameter_default_value", "参数默认值"),
-                    findColumn(hi, "parameter_recommended_value", "参数推荐值"),
-                    findColumn(hi, "introduced_version", "引入版本"),
-                    findColumn(hi, "parameter_unit_cn", "单位（中文）", "单位（中）", "参数单位（中）"),
-                    findColumn(hi, "parameter_unit_en", "单位（英文）", "单位（英）", "参数单位（英）"),
-                    findColumn(hi, "value_description_cn", "取值说明（中）"),
-                    findColumn(hi, "value_description_en", "取值说明（英）"),
-                    findColumn(hi, "application_scenario_cn", "应用场景（中）"),
-                    findColumn(hi, "application_scenario_en", "应用场景（英）"),
-                    findColumn(hi, "applicable_ne", "适用网元"),
-                    findColumn(hi, "business_classification", "业务分类"),
-                    findColumn(hi, "effective_mode_cn", "生效方式（中）"),
-                    findColumn(hi, "effective_mode_en", "生效方式（英）"),
-                    findColumn(hi, "project_team", "项目组"),
-                    findColumn(hi, "belonging_module", "归属模块"),
-                    findColumn(hi, "parameter_description_cn", "参数含义（中）"),
-                    findColumn(hi, "parameter_description_en", "参数含义（英）"),
-                    findColumn(hi, "impact_description_cn", "影响说明（中）"),
-                    findColumn(hi, "impact_description_en", "影响说明（英）"),
-                    findColumn(hi, "configuration_example_cn", "配置举例（中）"),
-                    findColumn(hi, "configuration_example_en", "配置举例（英）"),
-                    findColumn(hi, "is_published", "是否发布"),
-                    findColumn(hi, "no_publish_reason", "不发布原因"),
-                    findColumn(hi, "related_parameter_description_cn", "关联参数描述（中）"),
-                    findColumn(hi, "related_parameter_description_en", "关联参数描述（英）"),
-                    findColumn(hi, "feature", "所属特性"),
-                    findColumn(hi, "impact_level_cn", "影响级别（中文）"),
-                    findColumn(hi, "impact_level_en", "影响级别（英文）"),
-                    findColumn(hi, "related_license", "关联 License"),
-                    findColumn(hi, "internal_description", "内部功能描述"),
-                    findColumn(hi, "product_form_id", "产品形态ID"),
-                    findColumn(hi, "platform_generation", "平台代际"),
-                    findColumn(hi, "application_region", "应用区域"),
-                    findColumn(hi, "remark", "备注"),
-                    findColumn(hi, "data_status", "数据状态"),
-                    findColumn(hi, "变更类型"),
-                    findColumn(hi, "变更原因（中）"),
-                    findColumn(hi, "变更影响（中）"),
-                    findColumn(hi, "变更原因（英）"),
-                    findColumn(hi, "变更影响（英）"),
-                    findColumn(hi, "export_delta", "导出 delta", "导出delta"),
-                    findColumn(hi, "不导出原因", "no_export_reason"));
+            return ImportSheetColumns.builder(hi).mapCoreFields().mapDetailFields().mapChangeFields().build();
+        }
+
+        private static final class Builder {
+            private final Map<String, Integer> hi;
+            private int colCode = -1;
+            private int colName = -1;
+            private int colNameEn = -1;
+            private int colSeq = -1;
+            private int colBit = -1;
+            private int colValueRangeSegments = -1;
+            private int colValueRange = -1;
+            private int colDef = -1;
+            private int colRec = -1;
+            private int colIntroVer = -1;
+            private int colUnitCn = -1;
+            private int colUnitEn = -1;
+            private int colValueDescCn = -1;
+            private int colValueDescEn = -1;
+            private int colSceneCn = -1;
+            private int colSceneEn = -1;
+            private int colNe = -1;
+            private int colBiz = -1;
+            private int colEmCn = -1;
+            private int colEmEn = -1;
+            private int colTeam = -1;
+            private int colModule = -1;
+            private int colDescCn = -1;
+            private int colDescEn = -1;
+            private int colImpactCn = -1;
+            private int colImpactEn = -1;
+            private int colExCn = -1;
+            private int colExEn = -1;
+            private int colIsPublished = -1;
+            private int colNoPublishReason = -1;
+            private int colRelCn = -1;
+            private int colRelEn = -1;
+            private int colFeature = -1;
+            private int colImpactLevelCn = -1;
+            private int colImpactLevelEn = -1;
+            private int colRelatedLicense = -1;
+            private int colInternalDesc = -1;
+            private int colProductFormId = -1;
+            private int colPlatformGeneration = -1;
+            private int colApplicationRegion = -1;
+            private int colRemark = -1;
+            private int colDataStatus = -1;
+            private int colChType = -1;
+            private int colChReasonCn = -1;
+            private int colChImpactCn = -1;
+            private int colChReasonEn = -1;
+            private int colChImpactEn = -1;
+            private int colExportDelta = -1;
+            private int colNoExportReason = -1;
+
+            private Builder(Map<String, Integer> hi) {
+                this.hi = hi;
+            }
+
+            private static Builder of(Map<String, Integer> hi) {
+                return new Builder(hi);
+            }
+
+            private Builder mapCoreFields() {
+                colCode = findColumn(hi, "parameter_code", "参数编码");
+                colName = findColumn(hi, "parameter_name_cn", "参数名称（中）", "参数名称");
+                colNameEn = findColumn(hi, "parameter_name_en", "参数名称（英）");
+                colSeq = findColumn(hi, "parameter_sequence", "序号");
+                colBit = findColumn(hi, "bit_usage", "BIT 占用");
+                colValueRangeSegments = findColumn(hi, "value_range_segments", "取值区间");
+                colValueRange = findColumn(hi, "value_range", "取值范围");
+                colDef = findColumn(hi, "parameter_default_value", "参数默认值");
+                colRec = findColumn(hi, "parameter_recommended_value", "参数推荐值");
+                colIntroVer = findColumn(hi, "introduced_version", "引入版本");
+                colUnitCn = findColumn(hi, "parameter_unit_cn", "单位（中文）", "单位（中）", "参数单位（中）");
+                colUnitEn = findColumn(hi, "parameter_unit_en", "单位（英文）", "单位（英）", "参数单位（英）");
+                return this;
+            }
+
+            private Builder mapDetailFields() {
+                colValueDescCn = findColumn(hi, "value_description_cn", "取值说明（中）");
+                colValueDescEn = findColumn(hi, "value_description_en", "取值说明（英）");
+                colSceneCn = findColumn(hi, "application_scenario_cn", "应用场景（中）");
+                colSceneEn = findColumn(hi, "application_scenario_en", "应用场景（英）");
+                colNe = findColumn(hi, "applicable_ne", "适用网元");
+                colBiz = findColumn(hi, "business_classification", "业务分类");
+                colEmCn = findColumn(hi, "effective_mode_cn", "生效方式（中）");
+                colEmEn = findColumn(hi, "effective_mode_en", "生效方式（英）");
+                colTeam = findColumn(hi, "project_team", "项目组");
+                colModule = findColumn(hi, "belonging_module", "归属模块");
+                colDescCn = findColumn(hi, "parameter_description_cn", "参数含义（中）");
+                colDescEn = findColumn(hi, "parameter_description_en", "参数含义（英）");
+                colImpactCn = findColumn(hi, "impact_description_cn", "影响说明（中）");
+                colImpactEn = findColumn(hi, "impact_description_en", "影响说明（英）");
+                colExCn = findColumn(hi, "configuration_example_cn", "配置举例（中）");
+                colExEn = findColumn(hi, "configuration_example_en", "配置举例（英）");
+                colIsPublished = findColumn(hi, "is_published", "是否发布");
+                colNoPublishReason = findColumn(hi, "no_publish_reason", "不发布原因");
+                colRelCn = findColumn(hi, "related_parameter_description_cn", "关联参数描述（中）");
+                colRelEn = findColumn(hi, "related_parameter_description_en", "关联参数描述（英）");
+                colFeature = findColumn(hi, "feature", "所属特性");
+                colImpactLevelCn = findColumn(hi, "impact_level_cn", "影响级别（中文）");
+                colImpactLevelEn = findColumn(hi, "impact_level_en", "影响级别（英文）");
+                colRelatedLicense = findColumn(hi, "related_license", "关联 License");
+                colInternalDesc = findColumn(hi, "internal_description", "内部功能描述");
+                colProductFormId = findColumn(hi, "product_form_id", "产品形态ID");
+                colPlatformGeneration = findColumn(hi, "platform_generation", "平台代际");
+                colApplicationRegion = findColumn(hi, "application_region", "应用区域");
+                colRemark = findColumn(hi, "remark", "备注");
+                colDataStatus = findColumn(hi, "data_status", "数据状态");
+                return this;
+            }
+
+            private Builder mapChangeFields() {
+                colChType = findColumn(hi, "变更类型");
+                colChReasonCn = findColumn(hi, "变更原因（中）");
+                colChImpactCn = findColumn(hi, "变更影响（中）");
+                colChReasonEn = findColumn(hi, "变更原因（英）");
+                colChImpactEn = findColumn(hi, "变更影响（英）");
+                colExportDelta = findColumn(hi, "export_delta", "导出 delta", "导出delta");
+                colNoExportReason = findColumn(hi, "不导出原因", "no_export_reason");
+                return this;
+            }
+
+            private ImportSheetColumns build() {
+                return new ImportSheetColumns(
+                        colCode,
+                        colName,
+                        colNameEn,
+                        colSeq,
+                        colBit,
+                        colValueRangeSegments,
+                        colValueRange,
+                        colDef,
+                        colRec,
+                        colIntroVer,
+                        colUnitCn,
+                        colUnitEn,
+                        colValueDescCn,
+                        colValueDescEn,
+                        colSceneCn,
+                        colSceneEn,
+                        colNe,
+                        colBiz,
+                        colEmCn,
+                        colEmEn,
+                        colTeam,
+                        colModule,
+                        colDescCn,
+                        colDescEn,
+                        colImpactCn,
+                        colImpactEn,
+                        colExCn,
+                        colExEn,
+                        colIsPublished,
+                        colNoPublishReason,
+                        colRelCn,
+                        colRelEn,
+                        colFeature,
+                        colImpactLevelCn,
+                        colImpactLevelEn,
+                        colRelatedLicense,
+                        colInternalDesc,
+                        colProductFormId,
+                        colPlatformGeneration,
+                        colApplicationRegion,
+                        colRemark,
+                        colDataStatus,
+                        colChType,
+                        colChReasonCn,
+                        colChImpactCn,
+                        colChReasonEn,
+                        colChImpactEn,
+                        colExportDelta,
+                        colNoExportReason);
+            }
+        }
+
+        private static Builder builder(Map<String, Integer> hi) {
+            return Builder.of(hi);
         }
 
         /**

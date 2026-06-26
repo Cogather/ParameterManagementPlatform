@@ -92,35 +92,68 @@ public final class ExcelHelper {
             String sheetName, List<String> instructionLines, List<String> headersCn, List<List<String>> rows) {
         try (Workbook wb = new XSSFWorkbook();
                 ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            Sheet sheet = wb.createSheet(sheetName == null ? "sheet1" : sheetName);
-            int r = 0;
-            if (instructionLines != null) {
-                for (String instruction : instructionLines) {
-                    if (instruction == null || instruction.isBlank()) {
-                        continue;
-                    }
-                    Row row0 = sheet.createRow(r++);
-                    row0.createCell(0).setCellValue(instruction);
-                }
-            }
-            Row header = sheet.createRow(r++);
-            for (int i = 0; i < headersCn.size(); i++) {
-                header.createCell(i).setCellValue(headersCn.get(i));
-            }
-            for (List<String> data : rows) {
-                Row rr = sheet.createRow(r++);
-                for (int i = 0; i < headersCn.size(); i++) {
-                    String v = i < data.size() ? data.get(i) : null;
-                    rr.createCell(i).setCellValue(v == null ? "" : v);
-                }
-            }
-            for (int i = 0; i < headersCn.size(); i++) {
-                sheet.autoSizeColumn(i);
-            }
+            Sheet sheet = wb.createSheet(resolveSheetName(sheetName));
+            int nextRow = writeInstructionRows(sheet, instructionLines, 0);
+            nextRow = writeHeaderRow(sheet, headersCn, nextRow);
+            writeDataRows(sheet, headersCn, rows, nextRow);
+            autoSizeColumns(sheet, headersCn.size());
             wb.write(out);
             return out.toByteArray();
         } catch (Exception e) {
             throw new DomainRuleException("Excel 生成失败: " + e.getMessage());
+        }
+    }
+
+    private static String resolveSheetName(String sheetName) {
+        return sheetName == null ? "sheet1" : sheetName;
+    }
+
+    private static int writeInstructionRows(Sheet sheet, List<String> instructionLines, int startRow) {
+        if (instructionLines == null) {
+            return startRow;
+        }
+        int r = startRow;
+        for (String instruction : instructionLines) {
+            if (isBlankInstruction(instruction)) {
+                continue;
+            }
+            Row row0 = sheet.createRow(r++);
+            row0.createCell(0).setCellValue(instruction);
+        }
+        return r;
+    }
+
+    private static boolean isBlankInstruction(String instruction) {
+        return instruction == null || instruction.isBlank();
+    }
+
+    private static int writeHeaderRow(Sheet sheet, List<String> headersCn, int rowIndex) {
+        Row header = sheet.createRow(rowIndex);
+        for (int i = 0; i < headersCn.size(); i++) {
+            header.createCell(i).setCellValue(headersCn.get(i));
+        }
+        return rowIndex + 1;
+    }
+
+    private static void writeDataRows(
+            Sheet sheet, List<String> headersCn, List<List<String>> rows, int startRow) {
+        int r = startRow;
+        for (List<String> data : rows) {
+            Row dataRow = sheet.createRow(r++);
+            fillDataRowCells(dataRow, headersCn, data);
+        }
+    }
+
+    private static void fillDataRowCells(Row dataRow, List<String> headersCn, List<String> data) {
+        for (int i = 0; i < headersCn.size(); i++) {
+            String v = i < data.size() ? data.get(i) : null;
+            dataRow.createCell(i).setCellValue(v == null ? "" : v);
+        }
+    }
+
+    private static void autoSizeColumns(Sheet sheet, int columnCount) {
+        for (int i = 0; i < columnCount; i++) {
+            sheet.autoSizeColumn(i);
         }
     }
 
@@ -239,25 +272,51 @@ public final class ExcelHelper {
         if (rows == null || rows.isEmpty()) {
             return 0;
         }
-        if (anchorHeaders != null && anchorHeaders.length > 0) {
-            for (int i = 0; i < rows.size(); i++) {
-                List<String> row = rows.get(i);
-                if (row == null) {
-                    continue;
-                }
-                for (String cell : row) {
-                    if (cell == null || cell.isBlank()) {
-                        continue;
-                    }
-                    String trimmed = cell.trim();
-                    for (String anchor : anchorHeaders) {
-                        if (trimmed.equals(anchor)) {
-                            return i;
-                        }
-                    }
-                }
+        int byAnchor = findRowIndexByAnchorHeaders(rows, anchorHeaders);
+        if (byAnchor >= 0) {
+            return byAnchor;
+        }
+        return detectHeaderAfterInstructionLine(rows);
+    }
+
+    private static int findRowIndexByAnchorHeaders(List<List<String>> rows, String... anchorHeaders) {
+        if (anchorHeaders == null || anchorHeaders.length == 0) {
+            return -1;
+        }
+        for (int i = 0; i < rows.size(); i++) {
+            if (rowContainsAnchorHeader(rows.get(i), anchorHeaders)) {
+                return i;
             }
         }
+        return -1;
+    }
+
+    private static boolean rowContainsAnchorHeader(List<String> row, String... anchorHeaders) {
+        if (row == null) {
+            return false;
+        }
+        for (String cell : row) {
+            if (cellMatchesAnyAnchor(cell, anchorHeaders)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean cellMatchesAnyAnchor(String cell, String... anchorHeaders) {
+        if (cell == null || cell.isBlank()) {
+            return false;
+        }
+        String trimmed = cell.trim();
+        for (String anchor : anchorHeaders) {
+            if (trimmed.equals(anchor)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static int detectHeaderAfterInstructionLine(List<List<String>> rows) {
         List<String> first = rows.get(0);
         if (first == null || first.isEmpty()) {
             return 0;

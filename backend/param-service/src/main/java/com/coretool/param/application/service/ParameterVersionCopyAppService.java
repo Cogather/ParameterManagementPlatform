@@ -6,9 +6,9 @@ package com.coretool.param.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.coretool.param.domain.config.keyword.repository.ChangeSourceKeywordRepository;
+import com.coretool.param.domain.exception.BlacklistViolationException;
 import com.coretool.param.domain.exception.DomainRuleException;
 import com.coretool.param.domain.parameter.ChangeSourceBlacklistPolicy;
-import com.coretool.param.domain.parameter.ParameterBaselinePolicy;
 import com.coretool.param.domain.parameter.ParameterSaveInvariant;
 import com.coretool.param.domain.support.IdGenerator;
 import com.coretool.param.infrastructure.persistence.entity.ConfigChangeDescriptionPo;
@@ -17,7 +17,6 @@ import com.coretool.param.infrastructure.persistence.entity.SystemParameterPo;
 import com.coretool.param.infrastructure.persistence.mapper.ConfigChangeDescriptionMapper;
 import com.coretool.param.infrastructure.persistence.mapper.EntityCommandMappingMapper;
 import com.coretool.param.infrastructure.persistence.mapper.SystemParameterMapper;
-import com.coretool.param.domain.exception.BlacklistViolationException;
 import com.coretool.param.ui.vo.ParameterSyncCommandRequest;
 import com.coretool.param.ui.vo.ParameterSyncItemRequest;
 import com.coretool.param.ui.vo.ParameterSyncParameterOption;
@@ -37,7 +36,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -402,19 +400,12 @@ public class ParameterVersionCopyAppService {
         o.setCommandId(commandId);
         o.setCommandName(commandNames.getOrDefault(commandId, commandId));
         o.setCommandTypeId(typeKey);
-        o.setCommandTypeName(typeKeyFromCode(sample.getParameterCode()));
+        o.setCommandTypeName(resolveTypeKey(sample));
         return o;
     }
 
     private static String resolveTypeKey(SystemParameterPo p) {
-        String code = p.getParameterCode();
-        if (code == null || !code.contains("_")) {
-            return "";
-        }
-        return code.substring(0, code.indexOf('_'));
-    }
-
-    private static String typeKeyFromCode(String code) {
+        String code = p == null ? null : p.getParameterCode();
         if (code == null || !code.contains("_")) {
             return "";
         }

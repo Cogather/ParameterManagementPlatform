@@ -32,7 +32,10 @@ public final class ParameterDefaults {
     }
 
     /**
-     * @deprecated 使用 {@link #applySystemDefaults(SystemParameterPo)}；不再填充业务占位。
+     * 创建参数时补齐系统级默认值（已废弃）。
+     *
+     * @param p 参数持久化对象
+     * @deprecated 使用 {@link #applySystemDefaults(SystemParameterPo)}；不再填充业务占位
      */
     @Deprecated
     public static void applyForCreate(SystemParameterPo p) {
