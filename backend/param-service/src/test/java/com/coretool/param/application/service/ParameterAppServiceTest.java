@@ -87,7 +87,11 @@ class ParameterAppServiceTest {
         return new ParameterAppService(persistence, collaboration);
     }
 
-    /** 与 {@code ParameterAppService.parameterExportHeadersZh} 对齐的中文表头 */
+    /**
+     * 返回与生产导出逻辑一致的中文表头列名。
+     *
+     * @return 表头列名列表
+     */
     private static List<String> alignedExportHeadersZh() {
         return ParameterExportHeadersZh.list();
     }

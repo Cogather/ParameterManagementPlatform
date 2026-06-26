@@ -1077,7 +1077,7 @@ public class ParameterAppService {
         private final int colExportDelta;
         private final int colNoExportReason;
 
-        private ImportSheetColumns(
+        private record CoreColumnIndices(
                 int colCode,
                 int colName,
                 int colNameEn,
@@ -1089,7 +1089,9 @@ public class ParameterAppService {
                 int colRec,
                 int colIntroVer,
                 int colUnitCn,
-                int colUnitEn,
+                int colUnitEn) {}
+
+        private record DetailColumnIndices(
                 int colValueDescCn,
                 int colValueDescEn,
                 int colSceneCn,
@@ -1119,63 +1121,71 @@ public class ParameterAppService {
                 int colPlatformGeneration,
                 int colApplicationRegion,
                 int colRemark,
-                int colDataStatus,
+                int colDataStatus) {}
+
+        private record ChangeColumnIndices(
                 int colChType,
                 int colChReasonCn,
                 int colChImpactCn,
                 int colChReasonEn,
                 int colChImpactEn,
                 int colExportDelta,
-                int colNoExportReason) {
-            this.colCode = colCode;
-            this.colName = colName;
-            this.colNameEn = colNameEn;
-            this.colSeq = colSeq;
-            this.colBit = colBit;
-            this.colValueRangeSegments = colValueRangeSegments;
-            this.colValueRange = colValueRange;
-            this.colDef = colDef;
-            this.colRec = colRec;
-            this.colIntroVer = colIntroVer;
-            this.colUnitCn = colUnitCn;
-            this.colUnitEn = colUnitEn;
-            this.colValueDescCn = colValueDescCn;
-            this.colValueDescEn = colValueDescEn;
-            this.colSceneCn = colSceneCn;
-            this.colSceneEn = colSceneEn;
-            this.colNe = colNe;
-            this.colBiz = colBiz;
-            this.colEmCn = colEmCn;
-            this.colEmEn = colEmEn;
-            this.colTeam = colTeam;
-            this.colModule = colModule;
-            this.colDescCn = colDescCn;
-            this.colDescEn = colDescEn;
-            this.colImpactCn = colImpactCn;
-            this.colImpactEn = colImpactEn;
-            this.colExCn = colExCn;
-            this.colExEn = colExEn;
-            this.colIsPublished = colIsPublished;
-            this.colNoPublishReason = colNoPublishReason;
-            this.colRelCn = colRelCn;
-            this.colRelEn = colRelEn;
-            this.colFeature = colFeature;
-            this.colImpactLevelCn = colImpactLevelCn;
-            this.colImpactLevelEn = colImpactLevelEn;
-            this.colRelatedLicense = colRelatedLicense;
-            this.colInternalDesc = colInternalDesc;
-            this.colProductFormId = colProductFormId;
-            this.colPlatformGeneration = colPlatformGeneration;
-            this.colApplicationRegion = colApplicationRegion;
-            this.colRemark = colRemark;
-            this.colDataStatus = colDataStatus;
-            this.colChType = colChType;
-            this.colChReasonCn = colChReasonCn;
-            this.colChImpactCn = colChImpactCn;
-            this.colChReasonEn = colChReasonEn;
-            this.colChImpactEn = colChImpactEn;
-            this.colExportDelta = colExportDelta;
-            this.colNoExportReason = colNoExportReason;
+                int colNoExportReason) {}
+
+        private ImportSheetColumns(CoreColumnIndices core, DetailColumnIndices detail, ChangeColumnIndices change) {
+            colCode = core.colCode();
+            colName = core.colName();
+            colNameEn = core.colNameEn();
+            colSeq = core.colSeq();
+            colBit = core.colBit();
+            colValueRangeSegments = core.colValueRangeSegments();
+            colValueRange = core.colValueRange();
+            colDef = core.colDef();
+            colRec = core.colRec();
+            colIntroVer = core.colIntroVer();
+            colUnitCn = core.colUnitCn();
+            colUnitEn = core.colUnitEn();
+            colValueDescCn = detail.colValueDescCn();
+            colValueDescEn = detail.colValueDescEn();
+            colSceneCn = detail.colSceneCn();
+            colSceneEn = detail.colSceneEn();
+            colNe = detail.colNe();
+            colBiz = detail.colBiz();
+            colEmCn = detail.colEmCn();
+            colEmEn = detail.colEmEn();
+            colTeam = detail.colTeam();
+            colModule = detail.colModule();
+            colDescCn = detail.colDescCn();
+            colDescEn = detail.colDescEn();
+            colImpactCn = detail.colImpactCn();
+            colImpactEn = detail.colImpactEn();
+            colExCn = detail.colExCn();
+            colExEn = detail.colExEn();
+            colIsPublished = detail.colIsPublished();
+            colNoPublishReason = detail.colNoPublishReason();
+            colRelCn = detail.colRelCn();
+            colRelEn = detail.colRelEn();
+            colFeature = detail.colFeature();
+            colImpactLevelCn = detail.colImpactLevelCn();
+            colImpactLevelEn = detail.colImpactLevelEn();
+            colRelatedLicense = detail.colRelatedLicense();
+            colInternalDesc = detail.colInternalDesc();
+            colProductFormId = detail.colProductFormId();
+            colPlatformGeneration = detail.colPlatformGeneration();
+            colApplicationRegion = detail.colApplicationRegion();
+            colRemark = detail.colRemark();
+            colDataStatus = detail.colDataStatus();
+            colChType = change.colChType();
+            colChReasonCn = change.colChReasonCn();
+            colChImpactCn = change.colChImpactCn();
+            colChReasonEn = change.colChReasonEn();
+            colChImpactEn = change.colChImpactEn();
+            colExportDelta = change.colExportDelta();
+            colNoExportReason = change.colNoExportReason();
+        }
+
+        private ImportSheetColumns(Builder b) {
+            this(b.coreColumnIndices(), b.detailColumnIndices(), b.changeColumnIndices());
         }
 
         /**
@@ -1310,7 +1320,11 @@ public class ParameterAppService {
             }
 
             private ImportSheetColumns build() {
-                return new ImportSheetColumns(
+                return new ImportSheetColumns(this);
+            }
+
+            private CoreColumnIndices coreColumnIndices() {
+                return new CoreColumnIndices(
                         colCode,
                         colName,
                         colNameEn,
@@ -1322,7 +1336,11 @@ public class ParameterAppService {
                         colRec,
                         colIntroVer,
                         colUnitCn,
-                        colUnitEn,
+                        colUnitEn);
+            }
+
+            private DetailColumnIndices detailColumnIndices() {
+                return new DetailColumnIndices(
                         colValueDescCn,
                         colValueDescEn,
                         colSceneCn,
@@ -1352,7 +1370,11 @@ public class ParameterAppService {
                         colPlatformGeneration,
                         colApplicationRegion,
                         colRemark,
-                        colDataStatus,
+                        colDataStatus);
+            }
+
+            private ChangeColumnIndices changeColumnIndices() {
+                return new ChangeColumnIndices(
                         colChType,
                         colChReasonCn,
                         colChImpactCn,
