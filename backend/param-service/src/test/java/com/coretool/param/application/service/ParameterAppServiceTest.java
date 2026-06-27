@@ -88,19 +88,19 @@ class ParameterAppServiceTest {
     }
 
     /**
-     * 返回与生产导出逻辑一致的中文表头列名。
+     * 返回与导入模板一致的中文表头列名（含变更说明列）。
      *
      * @return 表头列名列表
      */
-    private static List<String> alignedExportHeadersZh() {
-        return ParameterExportHeadersZh.list();
+    private static List<String> alignedImportHeadersZh() {
+        return ParameterExportHeadersZh.listForImport();
     }
 
     private static byte[] validImportWorkbookBytesWithHeaderOnly() {
         return ExcelTestHelper.workbookBytes(
                 "parameters",
                 ExcelInstructions.parameterImportExportInstructionLines(),
-                alignedExportHeadersZh(),
+                alignedImportHeadersZh(),
                 List.of());
     }
 
@@ -126,17 +126,13 @@ class ParameterAppServiceTest {
     }
 
     @Test
-    void importParameters_shouldValidateModeAndCommandId() {
+    void importParameters_shouldValidateMode() {
         ParameterAppService svc = newSvc();
         byte[] sheet = validImportWorkbookBytesWithHeaderOnly();
 
         assertThatThrownBy(() -> svc.importParameters("p1", "v1", "BAD", "c1", null, sheet))
                 .isInstanceOf(DomainRuleException.class)
                 .hasMessageContaining("mode");
-
-        assertThatThrownBy(() -> svc.importParameters("p1", "v1", "FULL", " ", null, sheet))
-                .isInstanceOf(DomainRuleException.class)
-                .hasMessageContaining("commandId");
     }
 
     @Test
@@ -165,8 +161,8 @@ class ParameterAppServiceTest {
                 ExcelHelper.headerIndex(
                         sheet.rows()
                                 .get(ExcelHelper.detectHeaderRowIndex(sheet.rows(), "参数ID", "参数编码")));
-        assertThat(hi).containsKeys("取值区间", "是否发布", "单位（中文）", "产品形态ID");
-        assertThat(hi).doesNotContainKeys("立即生效", "变更来源", "枚举值（中）", "参数范围");
+        assertThat(hi).containsKeys("取值范围", "是否发布", "单位（中文）", "产品形态ID");
+        assertThat(hi).doesNotContainKeys("取值区间", "变更类型", "立即生效", "变更来源", "枚举值（中）", "参数范围");
     }
 
     @Test
@@ -184,7 +180,7 @@ class ParameterAppServiceTest {
             return 1;
         }).when(systemParameterMapper).insert(any(SystemParameterPo.class));
 
-        List<String> headers = alignedExportHeadersZh();
+        List<String> headers = alignedImportHeadersZh();
         List<String> row = minimalCreateRow(headers);
         byte[] bytes =
                 ExcelTestHelper.workbookBytes(
@@ -205,7 +201,7 @@ class ParameterAppServiceTest {
         lenient().when(changeSourceKeywordRepository.listEnabledRegexesByProduct("p1")).thenReturn(List.of());
         when(systemParameterMapper.selectList(any())).thenReturn(List.of());
 
-        List<String> headers = alignedExportHeadersZh();
+        List<String> headers = alignedImportHeadersZh();
         List<String> row = emptyRow(headers);
         row.set(headers.indexOf("参数编码"), "BIT_1");
         row.set(headers.indexOf("参数名称（中）"), "参数中文");
@@ -235,7 +231,7 @@ class ParameterAppServiceTest {
             return 1;
         }).when(systemParameterMapper).insert(any(SystemParameterPo.class));
 
-        List<String> headers = alignedExportHeadersZh();
+        List<String> headers = alignedImportHeadersZh();
         List<String> row = minimalCreateRow(headers);
         row.set(headers.indexOf("取值范围"), "1-10,20-30");
         byte[] bytes =
@@ -284,6 +280,7 @@ class ParameterAppServiceTest {
     }
 
     private void stubHiddenFieldMergeUpdate(SystemParameterPo existing) {
+        when(systemParameterMapper.selectById(existing.getParameterId())).thenReturn(existing);
         when(systemParameterMapper.selectList(any())).thenReturn(List.of(existing));
         when(systemParameterMapper.updateById(any(SystemParameterPo.class))).thenAnswer(inv -> {
             SystemParameterPo po = inv.getArgument(0);
@@ -310,13 +307,67 @@ class ParameterAppServiceTest {
         SystemParameterPo existing = existingParameterForHiddenFieldMerge();
         stubHiddenFieldMergeUpdate(existing);
 
-        List<String> headers = alignedExportHeadersZh();
+        List<String> headers = alignedImportHeadersZh();
         List<String> row = minimalCreateRow(headers);
+        row.set(headers.indexOf("参数ID"), "9");
         row.set(headers.indexOf("参数名称（中）"), "新名");
 
         var out = newSvc().importParameters("p1", "v1", "INCREMENTAL", "c1", "BIT", importWorkbookBytes(headers, row));
         assertThat(out.getSuccessCount()).isGreaterThanOrEqualTo(1);
         verify(systemParameterMapper).updateById(any(SystemParameterPo.class));
+    }
+
+    @Test
+    void importParameters_updateByParameterId_shouldApplyBitAndValueDescription() {
+        lenient().when(changeSourceKeywordRepository.listEnabledRegexesByProduct("p1")).thenReturn(List.of());
+        lenient().doNothing().when(configChangeTypeAppService).validateChangeTypesForParameterSave(any(Boolean.class), any());
+
+        SystemParameterPo existing = existingParameterForHiddenFieldMerge();
+        when(systemParameterMapper.selectById(existing.getParameterId())).thenReturn(existing);
+        when(systemParameterMapper.selectList(any())).thenReturn(List.of(existing));
+        when(systemParameterMapper.updateById(any(SystemParameterPo.class))).thenAnswer(inv -> {
+            SystemParameterPo po = inv.getArgument(0);
+            assertThat(po.getParameterNameCn()).isEqualTo("新名称");
+            assertThat(po.getValueDescriptionCn()).isEqualTo("新取值说明");
+            return 1;
+        });
+
+        List<String> headers = alignedImportHeadersZh();
+        List<String> row = minimalCreateRow(headers);
+        row.set(headers.indexOf("参数ID"), "9");
+        row.set(headers.indexOf("参数名称（中）"), "新名称");
+        row.set(headers.indexOf("取值说明（中）"), "新取值说明");
+
+        var out = newSvc().importParameters("p1", "v1", "INCREMENTAL", "c1", "BIT", importWorkbookBytes(headers, row));
+        assertThat(out.getFailures()).as("%s", out.getFailures()).isEmpty();
+        assertThat(out.getSuccessCount()).isEqualTo(1);
+        verify(systemParameterMapper).updateById(any(SystemParameterPo.class));
+    }
+
+    @Test
+    void importParameters_withoutCommandId_shouldResolveOwnedCommandFromFile() {
+        lenient().when(changeSourceKeywordRepository.listEnabledRegexesByProduct("p1")).thenReturn(List.of());
+        lenient().doNothing().when(configChangeTypeAppService).validateChangeTypesForParameterSave(any(Boolean.class), any());
+
+        EntityCommandMappingPo cmd = new EntityCommandMappingPo();
+        cmd.setOwnedProductId("p1");
+        cmd.setCommandId("c1");
+        cmd.setCommandName("CMD");
+        when(entityCommandMappingMapper.selectList(any())).thenReturn(List.of(cmd));
+        when(systemParameterMapper.selectList(any())).thenReturn(List.of());
+        when(systemParameterMapper.insert(any(SystemParameterPo.class))).thenAnswer(inv -> {
+            SystemParameterPo po = inv.getArgument(0);
+            po.setParameterId(1);
+            assertThat(po.getOwnedCommandId()).isEqualTo("c1");
+            return 1;
+        });
+
+        List<String> headers = alignedImportHeadersZh();
+        List<String> row = minimalCreateRow(headers);
+        row.set(headers.indexOf("归属命令"), "CMD");
+
+        var out = newSvc().importParameters("p1", "v1", "FULL", null, "BIT", importWorkbookBytes(headers, row));
+        assertThat(out.getSuccessCount()).isEqualTo(1);
     }
 
     @Test
@@ -338,13 +389,14 @@ class ParameterAppServiceTest {
         cmd.setCommandId("c1");
         cmd.setCommandName("CMD");
         when(entityCommandMappingMapper.selectList(any())).thenReturn(List.of(cmd));
-        when(configChangeDescriptionMapper.selectList(any())).thenReturn(List.of());
 
         ExcelHelper.ParsedSheet sheet = ExcelHelper.parseFirstSheet(newSvc().export("p1", "v1", "c1", null));
         int headerIdx = ExcelHelper.detectHeaderRowIndex(sheet.rows(), "参数ID", "参数编码");
         List<String> dataRow = sheet.rows().get(headerIdx + 1);
         Map<String, Integer> hi = ExcelHelper.headerIndex(sheet.rows().get(headerIdx));
-        assertThat(dataRow.get(hi.get("取值区间"))).contains("\"min\":1");
+        assertThat(dataRow.get(hi.get("取值范围"))).isEqualTo("1-3");
+        assertThat(hi).doesNotContainKey("变更类型");
+        assertThat(hi).doesNotContainKey("取值区间");
         assertThat(dataRow.get(hi.get("是否发布"))).isEqualTo("是");
         assertThat(dataRow.get(hi.get("归属命令"))).isEqualTo("CMD");
     }

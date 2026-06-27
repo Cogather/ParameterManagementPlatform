@@ -52,6 +52,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -457,13 +458,13 @@ public class ParameterAppService {
     }
 
     /**
-     * 导出参数（XLSX）。
+     * 导出参数（XLSX）；表头不含变更说明，取值范围仅导出文本列。
      *
      * @param productId       产品 ID
      * @param versionId       版本 ID
      * @param commandId       命令 ID（可选）
      * @param commandTypeCode 类型键（可选）
-     * @return XLSX 字节
+     * @return XLSX 文件字节
      */
     public byte[] export(String productId, String versionId, String commandId, String commandTypeCode) {
         LambdaQueryWrapper<SystemParameterPo> w =
@@ -480,35 +481,41 @@ public class ParameterAppService {
         List<SystemParameterPo> list = systemParameterMapper.selectList(w);
         List<String> headers = parameterExportHeadersZh();
         Map<String, String> commandNameById = loadCommandNameMap(productId, list);
-        Map<Integer, ConfigChangeDescriptionPo> changeByPid = loadFirstChangeByParameterId(list);
         List<List<String>> rows = new ArrayList<>();
         for (SystemParameterPo po : list) {
-            ConfigChangeDescriptionPo ch =
-                    po.getParameterId() == null ? null : changeByPid.get(po.getParameterId());
-            rows.add(buildParameterExportRow(po, commandNameById, ch));
+            rows.add(buildParameterExportRow(po, commandNameById));
         }
         return ExcelHelper.buildWorkbook(
-                "parameters", ExcelInstructions.parameterImportExportInstructionLines(), headers, rows);
+                "parameters", ExcelInstructions.parameterExportInstructionLines(), headers, rows);
     }
 
     /**
-     * 获取参数导入模板（XLSX）。
+     * 获取参数导入模板（XLSX）；表头含取值区间与变更说明列，与导入解析一致。
      *
-     * @return 模板 XLSX 字节
+     * @return 导入模板 XLSX 文件字节
      */
     public byte[] importTemplate() {
-        List<String> headers = parameterExportHeadersZh();
+        List<String> headers = parameterImportHeadersZh();
         return ExcelHelper.buildTemplate(
-                "parameters", ExcelInstructions.parameterImportExportInstructionLines(), headers);
+                "parameters", ExcelInstructions.parameterImportInstructionLines(), headers);
     }
 
     /**
-     * 参数导出/导入模板的中文表头（与页面列一致）。
+     * 参数导出中文表头（不含变更说明列）。
      *
      * @return 表头列名列表
      */
     private static List<String> parameterExportHeadersZh() {
-        return ParameterExportHeadersZh.list();
+        return ParameterExportHeadersZh.listForExport();
+    }
+
+    /**
+     * 参数导入模板中文表头（含变更说明列组，与导入解析一致）。
+     *
+     * @return 表头列名列表
+     */
+    private static List<String> parameterImportHeadersZh() {
+        return ParameterExportHeadersZh.listForImport();
     }
 
     /**
@@ -551,19 +558,23 @@ public class ParameterAppService {
      *
      * @param po              参数主表行
      * @param commandNameById 命令 ID → 名称
-     * @param ch              首条变更说明（可为 null）
      * @return 导出列值列表
      */
-    private List<String> buildParameterExportRow(
-            SystemParameterPo po, Map<String, String> commandNameById, ConfigChangeDescriptionPo ch) {
+    private List<String> buildParameterExportRow(SystemParameterPo po, Map<String, String> commandNameById) {
         String cmdId = StringUtils.defaultString(po.getOwnedCommandId()).trim();
         String cmdName = cmdId.isEmpty() ? "" : StringUtils.defaultIfBlank(commandNameById.get(cmdId), cmdId);
         String idCell = po.getParameterId() == null ? "" : String.valueOf(po.getParameterId());
-        List<String> row = new ArrayList<>(parameterExportMainCells(po, cmdName, idCell));
-        row.addAll(parameterExportChangeCells(ch));
-        return row;
+        return parameterExportMainCells(po, cmdName, idCell);
     }
 
+    /**
+     * 组装单行参数导出的主表单元格（不含变更说明列）。
+     *
+     * @param po      参数主表行
+     * @param cmdName 归属命令展示名
+     * @param idCell  参数 ID 单元格文本
+     * @return 与导出表头顺序一致的列值列表
+     */
     private List<String> parameterExportMainCells(SystemParameterPo po, String cmdName, String idCell) {
         return List.of(
                 idCell,
@@ -572,7 +583,6 @@ public class ParameterAppService {
                 po.getParameterSequence() == null ? "" : String.valueOf(po.getParameterSequence()),
                 nz(po.getParameterNameCn()),
                 nz(po.getParameterNameEn()),
-                nz(po.getValueRangeSegments()),
                 nz(po.getValueRange()),
                 nz(po.getBitUsage()),
                 nz(po.getParameterDefaultValue()),
@@ -612,62 +622,17 @@ public class ParameterAppService {
                 nz(po.getDataStatus()));
     }
 
-    private static List<String> parameterExportChangeCells(ConfigChangeDescriptionPo ch) {
-        if (ch == null) {
-            return List.of("", "", "", "", "", "", "");
-        }
-        return List.of(
-                nz(ch.getChangeType()), nz(ch.getChangeReasonCn()), nz(ch.getChangeImpactCn()),
-                nz(ch.getChangeReasonEn()), nz(ch.getChangeImpactEn()), nz(ch.getExportDelta()),
-                nz(ch.getNoExportReason()));
-    }
-
     /**
-     * 为导出填充「首条」变更说明：按更新时间倒序取一条。
-     *
-     * @param list 参数行列表
-     * @return parameterId → 变更说明
-     */
-    private Map<Integer, ConfigChangeDescriptionPo> loadFirstChangeByParameterId(List<SystemParameterPo> list) {
-        Map<Integer, ConfigChangeDescriptionPo> out = new HashMap<>();
-        if (list == null || list.isEmpty()) {
-            return out;
-        }
-        List<Integer> ids = new ArrayList<>();
-        for (SystemParameterPo p : list) {
-            if (p != null && p.getParameterId() != null) {
-                ids.add(p.getParameterId());
-            }
-        }
-        if (ids.isEmpty()) {
-            return out;
-        }
-        List<ConfigChangeDescriptionPo> all =
-                configChangeDescriptionMapper.selectList(
-                        new LambdaQueryWrapper<ConfigChangeDescriptionPo>()
-                                .in(ConfigChangeDescriptionPo::getParameterId, ids)
-                                .orderByDesc(ConfigChangeDescriptionPo::getUpdateTimestamp)
-                                .orderByDesc(ConfigChangeDescriptionPo::getChangeDescriptionId));
-        for (ConfigChangeDescriptionPo d : all) {
-            if (d == null || d.getParameterId() == null) {
-                continue;
-            }
-            out.putIfAbsent(d.getParameterId(), d);
-        }
-        return out;
-    }
-
-    /**
-     * 导入参数：按行落库，汇总成功/失败；与导出表头及新增表单主字段一致（含首条变更说明各列时可同步写入子表）。
+     * 导入参数：按行落库，汇总成功/失败；导入模板含变更说明列（可选填一条）。
      *
      * @param productId       产品 ID
      * @param versionId       版本 ID
      * @param mode            导入模式：FULL 或 INCREMENTAL
-     * @param commandId       命令 ID（必填）
+     * @param commandId       命令 ID（可选；空则按 Excel「归属命令」列逐行解析）
      * @param commandTypeCode 类型键（可选，用于缩小全量删除作用域）
      * @param fileBytes       Excel 文件字节
      * @return 导入结果
-     * @throws DomainRuleException 文件无内容、表头缺失、mode 非法或 commandId 为空时
+     * @throws DomainRuleException 文件无内容、表头缺失或 mode 非法时
      */
     @Transactional
     public BatchImportResult importParameters(String productId, String versionId, String mode, String commandId,
@@ -686,12 +651,32 @@ public class ParameterAppService {
         ImportResultCollector c = new ImportResultCollector();
         int dataRows = rows.size() - headerIdx - 1;
         String importMode = validateImportMode(mode);
-        validateCommandId(commandId);
-        applyFullImportIfNeeded(productId, versionId, commandId, commandTypeCode, importMode);
-        List<SystemParameterPo> peers = loadParametersForCommand(productId, versionId, commandId);
+        boolean resolveCommandFromFile = StringUtils.isBlank(commandId);
+        Map<String, String> commandIdByName =
+                resolveCommandFromFile ? loadCommandIdByNameMap(productId) : Map.of();
+        prepareImportScope(
+                productId, versionId, commandId, commandTypeCode, importMode, resolveCommandFromFile, rows,
+                headerIdx, cols, commandIdByName, c);
+        Map<String, List<SystemParameterPo>> peersByCommand = new HashMap<>();
         for (int i = headerIdx + 1; i < rows.size(); i++) {
-            peers = handleImportParameterRow(productId, versionId, commandId, peers, rows.get(i), i + 1,
-                    cols, cols.colCode, c);
+            int dataRowNumber = i + 1;
+            List<String> line = rows.get(i);
+            if (isImportDataRowBlank(line, cols)) {
+                continue;
+            }
+            String rowCommandId =
+                    resolveImportRowCommandId(
+                            commandId, resolveCommandFromFile, line, cols, commandIdByName, dataRowNumber, c);
+            if (rowCommandId == null) {
+                continue;
+            }
+            List<SystemParameterPo> peers =
+                    peersByCommand.computeIfAbsent(
+                            rowCommandId, id -> loadParametersForCommand(productId, versionId, id));
+            peers =
+                    handleImportParameterRow(
+                            productId, versionId, rowCommandId, peers, line, dataRowNumber, cols, cols.colCode, c);
+            peersByCommand.put(rowCommandId, peers);
         }
         return c.build(dataRows);
     }
@@ -704,10 +689,105 @@ public class ParameterAppService {
         return importMode;
     }
 
-    private static void validateCommandId(String commandId) {
-        if (StringUtils.isBlank(commandId)) {
-            throw new DomainRuleException("commandId 必填");
+    /**
+     * 全量导入前清理作用域（单命令或按文件内归属命令批量清理）。
+     */
+    private void prepareImportScope(
+            String productId,
+            String versionId,
+            String commandId,
+            String commandTypeCode,
+            String importMode,
+            boolean resolveCommandFromFile,
+            List<List<String>> rows,
+            int headerIdx,
+            ImportSheetColumns cols,
+            Map<String, String> commandIdByName,
+            ImportResultCollector c) {
+        if (!"FULL".equals(importMode)) {
+            return;
         }
+        if (!resolveCommandFromFile) {
+            applyFullImportIfNeeded(productId, versionId, commandId, commandTypeCode, importMode);
+            return;
+        }
+        Set<String> commandIds = new LinkedHashSet<>();
+        for (int i = headerIdx + 1; i < rows.size(); i++) {
+            List<String> line = rows.get(i);
+            if (isImportDataRowBlank(line, cols)) {
+                continue;
+            }
+            String rowCommandId =
+                    resolveImportRowCommandId(null, true, line, cols, commandIdByName, i + 1, c);
+            if (rowCommandId != null) {
+                commandIds.add(rowCommandId);
+            }
+        }
+        for (String cid : commandIds) {
+            List<SystemParameterPo> scope =
+                    filterScopeByCommandTypePrefix(
+                            loadParametersForCommand(productId, versionId, cid), commandTypeCode);
+            purgeFullImportScope(scope);
+        }
+    }
+
+    /**
+     * 解析单行导入所属命令 ID。
+     *
+     * @param scopedCommandId  树筛选命令 ID（非空时直接返回）
+     * @param resolveFromFile  是否从 Excel「归属命令」列解析
+     * @param line             当前行
+     * @param cols             列映射
+     * @param commandIdByName  命令名称或 ID → commandId
+     * @param dataRowNumber    Excel 行号
+     * @param c                结果收集器
+     * @return 命令 ID；解析失败时返回 null 并记失败行
+     */
+    private String resolveImportRowCommandId(
+            String scopedCommandId,
+            boolean resolveFromFile,
+            List<String> line,
+            ImportSheetColumns cols,
+            Map<String, String> commandIdByName,
+            int dataRowNumber,
+            ImportResultCollector c) {
+        if (!resolveFromFile) {
+            return scopedCommandId;
+        }
+        String token = trimCell(line, cols.colCommandName);
+        if (StringUtils.isBlank(token)) {
+            c.failure(dataRowNumber, "归属命令必填");
+            return null;
+        }
+        String resolved = commandIdByName.get(token.trim());
+        if (StringUtils.isBlank(resolved)) {
+            c.failure(dataRowNumber, "归属命令无法识别: " + token.trim());
+            return null;
+        }
+        return resolved;
+    }
+
+    /**
+     * 加载产品下命令名称（或命令 ID）到 commandId 的映射，供导入解析「归属命令」列。
+     */
+    private Map<String, String> loadCommandIdByNameMap(String productId) {
+        List<EntityCommandMappingPo> cmds =
+                entityCommandMappingMapper.selectList(
+                        new LambdaQueryWrapper<EntityCommandMappingPo>()
+                                .eq(EntityCommandMappingPo::getOwnedProductId, productId));
+        Map<String, String> out = new HashMap<>();
+        for (EntityCommandMappingPo cmd : cmds) {
+            if (cmd == null || StringUtils.isBlank(cmd.getCommandId())) {
+                continue;
+            }
+            String id = cmd.getCommandId().trim();
+            out.putIfAbsent(id, id);
+            String name = StringUtils.defaultIfBlank(cmd.getCommandName(), id).trim();
+            if (!name.isEmpty()) {
+                out.putIfAbsent(name, id);
+            }
+        }
+        return out;
     }
 
     private void applyFullImportIfNeeded(String productId, String versionId, String commandId,
@@ -831,7 +911,8 @@ public class ParameterAppService {
             ImportResultCollector c) {
         SystemParameterPo fromSheet = new SystemParameterPo();
         cols.applyMainFromLine(productId, versionId, commandId, code, fromSheet, line);
-        SystemParameterPo matched = findImportMatch(peersForBitCheck, fromSheet);
+        SystemParameterPo matched =
+                findImportMatch(productId, versionId, commandId, peersForBitCheck, line, cols, fromSheet);
         if (matched != null && ParameterBaselinePolicy.isBaselineLocked(matched.getDataStatus())) {
             c.failure(dataRowNumber, "已基线参数不会做更改，已跳过");
             return peersForBitCheck;
@@ -1027,6 +1108,8 @@ public class ParameterAppService {
      * 与导出表头/字段映射一致，供导入解析主表与变更说明子表列。
      */
     private static final class ImportSheetColumns {
+        private final int colParameterId;
+        private final int colCommandName;
         private final int colCode;
         private final int colName;
         private final int colNameEn;
@@ -1132,7 +1215,12 @@ public class ParameterAppService {
                 int colExportDelta,
                 int colNoExportReason) {}
 
-        private ImportSheetColumns(CoreColumnIndices core, DetailColumnIndices detail, ChangeColumnIndices change) {
+        private ImportSheetColumns(Builder b) {
+            colParameterId = b.colParameterId;
+            colCommandName = b.colCommandName;
+            CoreColumnIndices core = b.coreColumnIndices();
+            DetailColumnIndices detail = b.detailColumnIndices();
+            ChangeColumnIndices change = b.changeColumnIndices();
             colCode = core.colCode();
             colName = core.colName();
             colNameEn = core.colNameEn();
@@ -1184,10 +1272,6 @@ public class ParameterAppService {
             colNoExportReason = change.colNoExportReason();
         }
 
-        private ImportSheetColumns(Builder b) {
-            this(b.coreColumnIndices(), b.detailColumnIndices(), b.changeColumnIndices());
-        }
-
         /**
          * 根据表头映射构造列索引。
          *
@@ -1195,11 +1279,18 @@ public class ParameterAppService {
          * @return 列映射对象
          */
         private static ImportSheetColumns fromHeader(Map<String, Integer> hi) {
-            return ImportSheetColumns.builder(hi).mapCoreFields().mapDetailFields().mapChangeFields().build();
+            return ImportSheetColumns.builder(hi)
+                    .mapIdentityFields()
+                    .mapCoreFields()
+                    .mapDetailFields()
+                    .mapChangeFields()
+                    .build();
         }
 
         private static final class Builder {
             private final Map<String, Integer> hi;
+            private int colParameterId = -1;
+            private int colCommandName = -1;
             private int colCode = -1;
             private int colName = -1;
             private int colNameEn = -1;
@@ -1256,6 +1347,12 @@ public class ParameterAppService {
 
             private static Builder of(Map<String, Integer> hi) {
                 return new Builder(hi);
+            }
+
+            private Builder mapIdentityFields() {
+                colParameterId = findColumn(hi, "parameter_id", "参数ID");
+                colCommandName = findColumn(hi, "owned_command_id", "归属命令");
+                return this;
             }
 
             private Builder mapCoreFields() {
@@ -1513,13 +1610,87 @@ public class ParameterAppService {
     }
 
     /**
-     * 在同行参数中按编码（及 bit_usage）匹配导入目标行。
+     * 判断导入数据行是否为空（参数编码与参数 ID 均为空则视为空行）。
+     */
+    private static boolean isImportDataRowBlank(List<String> line, ImportSheetColumns cols) {
+        if (StringUtils.isNotBlank(trimCell(line, cols.colCode))) {
+            return false;
+        }
+        if (cols.colParameterId >= 0 && StringUtils.isNotBlank(trimCell(line, cols.colParameterId))) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 解析 Excel「参数 ID」列；空返回 null，非空但非法时抛出 DomainRuleException。
+     */
+    private static Integer parseImportParameterId(List<String> line, ImportSheetColumns cols) {
+        if (cols.colParameterId < 0) {
+            return null;
+        }
+        String raw = trimCell(line, cols.colParameterId);
+        if (StringUtils.isBlank(raw)) {
+            return null;
+        }
+        String normalized = raw.trim();
+        if (normalized.matches("\\d+\\.0+")) {
+            normalized = normalized.substring(0, normalized.indexOf('.'));
+        }
+        try {
+            return Integer.valueOf(normalized);
+        } catch (NumberFormatException e) {
+            throw new DomainRuleException("参数ID须为整数: " + raw.trim(), e);
+        }
+    }
+
+    /**
+     * 匹配导入目标：优先按参数 ID，否则在同命令下按编码（及 BIT）匹配。
+     *
+     * @param productId  产品 ID
+     * @param versionId  版本 ID
+     * @param commandId  行所属命令 ID
+     * @param peers      同命令下既有参数
+     * @param line       当前行
+     * @param cols       列映射
+     * @param fromSheet  从表解析出的参数
+     * @return 匹配到的参数；无匹配时 null
+     * @throws DomainRuleException 参数 ID 存在但无效或与归属命令不一致时
+     */
+    private SystemParameterPo findImportMatch(
+            String productId,
+            String versionId,
+            String commandId,
+            List<SystemParameterPo> peers,
+            List<String> line,
+            ImportSheetColumns cols,
+            SystemParameterPo fromSheet) {
+        Integer paramId = parseImportParameterId(line, cols);
+        if (paramId != null) {
+            SystemParameterPo byId = systemParameterMapper.selectById(paramId);
+            if (byId == null) {
+                throw new DomainRuleException("参数ID不存在: " + paramId);
+            }
+            if (!StringUtils.equals(productId, byId.getOwnedProductId())
+                    || !StringUtils.equals(versionId, byId.getOwnedVersionId())) {
+                throw new DomainRuleException("参数ID不属于当前产品/版本: " + paramId);
+            }
+            if (!StringUtils.equals(commandId, StringUtils.defaultString(byId.getOwnedCommandId()).trim())) {
+                throw new DomainRuleException("参数ID与归属命令不一致: " + paramId);
+            }
+            return byId;
+        }
+        return findImportMatchByCode(peers, fromSheet);
+    }
+
+    /**
+     * 在同命令参数中按编码（及 bit_usage）匹配导入目标行。
      *
      * @param peers    命令下既有参数
      * @param incoming 导入解析出的参数
      * @return 匹配到的参数，无匹配时 null
      */
-    private static SystemParameterPo findImportMatch(List<SystemParameterPo> peers, SystemParameterPo incoming) {
+    private static SystemParameterPo findImportMatchByCode(List<SystemParameterPo> peers, SystemParameterPo incoming) {
         String code = StringUtils.defaultString(incoming.getParameterCode()).trim();
         if (code.isEmpty()) {
             return null;

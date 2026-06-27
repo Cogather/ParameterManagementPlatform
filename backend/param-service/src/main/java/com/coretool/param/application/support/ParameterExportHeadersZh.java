@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 参数 Excel 导出/导入模板中文表头（与页面列一致）。
+ * 参数 Excel 导出/导入模板中文表头。
  *
  * @since 2026-06-11
  */
@@ -17,28 +17,63 @@ public final class ParameterExportHeadersZh {
     private ParameterExportHeadersZh() {}
 
     /**
-     * 完整表头列名列表。
+     * 导入模板表头（含取值区间、变更说明列组，与导入解析一致）。
      *
-     * @return 表头列名
+     * @return 表头列名列表
      */
-    public static List<String> list() {
+    public static List<String> listForImport() {
         List<String> headers = new ArrayList<>(52);
         headers.addAll(identityHeaders());
-        headers.addAll(basicInfoHeaders());
+        headers.addAll(basicInfoHeadersForImport());
         headers.addAll(detailInfoHeaders());
         headers.addAll(changeDescriptionHeaders());
         return List.copyOf(headers);
+    }
+
+    /**
+     * 导出表头（不含变更说明；仅「取值范围」文本列，不含 JSON「取值区间」列）。
+     *
+     * @return 表头列名列表
+     */
+    public static List<String> listForExport() {
+        List<String> headers = new ArrayList<>(45);
+        headers.addAll(identityHeaders());
+        headers.addAll(basicInfoHeadersForExport());
+        headers.addAll(detailInfoHeaders());
+        return List.copyOf(headers);
+    }
+
+    /**
+     * 导入表头别名（兼容旧调用，等同 {@link #listForImport()}）。
+     *
+     * @return 表头列名列表
+     */
+    public static List<String> list() {
+        return listForImport();
     }
 
     private static List<String> identityHeaders() {
         return List.of("参数ID", "归属命令", "参数编码", "序号");
     }
 
-    private static List<String> basicInfoHeaders() {
+    private static List<String> basicInfoHeadersForImport() {
         return List.of(
                 "参数名称（中）",
                 "参数名称（英）",
                 "取值区间",
+                "取值范围",
+                "BIT 占用",
+                "参数默认值",
+                "参数推荐值",
+                "引入版本",
+                "单位（中文）",
+                "单位（英文）");
+    }
+
+    private static List<String> basicInfoHeadersForExport() {
+        return List.of(
+                "参数名称（中）",
+                "参数名称（英）",
                 "取值范围",
                 "BIT 占用",
                 "参数默认值",

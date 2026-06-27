@@ -803,7 +803,7 @@
             <el-radio label="INCREMENTAL">增量导入（新增/修改；已基线参数不会被更改）</el-radio>
           </el-radio-group>
           <div v-if="importMode === 'INCREMENTAL'" style="margin-bottom: 10px; color: #666">
-            提示：增量导入时，命中“已基线”的参数会被跳过（不导入、不修改）。
+            提示：增量导入时，命中“已基线”的参数会被跳过。
           </div>
           <el-upload
             :disabled="!canImport"
@@ -2052,14 +2052,10 @@ function onBeforeImportUpload(file: File) {
 
 async function onImport(file: File) {
   if (!canImport.value) return
-  if (!filterCommandId.value) {
-    ElMessage.warning('请先在左侧选择命令后再导入')
-    return
-  }
   try {
     const data = await importParameters(selectedProductId.value!, versionId.value!, file, {
       mode: importMode.value,
-      commandId: filterCommandId.value,
+      commandId: filterCommandId.value || undefined,
       commandTypeCode: filterCommandType.value || undefined,
     })
     ElMessage.success(`导入结束：成功 ${data.successCount}，失败 ${data.failureCount}`)

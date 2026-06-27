@@ -285,7 +285,7 @@ export async function importParameters(
   productId: string,
   versionId: string,
   file: File,
-  opts: { mode: ParameterImportMode; commandId: string; commandTypeCode?: string },
+  opts: { mode: ParameterImportMode; commandId?: string; commandTypeCode?: string },
 ): Promise<BatchImportResult> {
   const fd = new FormData()
   fd.append('file', file)
@@ -294,7 +294,7 @@ export async function importParameters(
     method: 'POST',
     params: {
       mode: opts.mode,
-      commandId: opts.commandId,
+      ...(opts.commandId ? { commandId: opts.commandId } : {}),
       commandTypeCode: opts.commandTypeCode,
     },
     data: fd,

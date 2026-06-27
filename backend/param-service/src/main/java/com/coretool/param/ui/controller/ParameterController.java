@@ -204,7 +204,7 @@ public class ParameterController {
             @PathVariable("productId") String productId,
             @PathVariable("versionId") String versionId,
             @RequestParam("mode") String mode,
-            @RequestParam("commandId") String commandId,
+            @RequestParam(value = "commandId", required = false) String commandId,
             @RequestParam(value = "commandTypeCode", required = false) String commandTypeCode,
             @RequestPart("file") MultipartFile file)
             throws Exception {
