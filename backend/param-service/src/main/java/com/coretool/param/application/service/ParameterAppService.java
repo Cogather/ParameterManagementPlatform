@@ -684,19 +684,8 @@ public class ParameterAppService {
             List<SystemParameterPo> peers =
                     peersByCommand.computeIfAbsent(
                             rowCommandId, id -> loadParametersForCommand(productId, versionId, id));
-            peers =
-                    handleImportParameterRow(
-                            productId,
-                            versionId,
-                            rowCommandId,
-                            commandTypeCode,
-                            peers,
-                            line,
-                            dataRowNumber,
-                            cols,
-                            c,
-                            categoryIdByToken,
-                            featureIdByToken);
+            peers = handleImportParameterRow(productId, versionId, rowCommandId, commandTypeCode, peers, line,
+                    dataRowNumber, cols, c, categoryIdByToken, featureIdByToken);
             peersByCommand.put(rowCommandId, peers);
         }
         return c.build(dataRows);
@@ -945,18 +934,8 @@ public class ParameterAppService {
                 return peersForBitCheck;
             }
             String code = matched.getParameterCode();
-            return importParameterRowUpdate(
-                    productId,
-                    versionId,
-                    commandId,
-                    line,
-                    dataRowNumber,
-                    cols,
-                    matched,
-                    code,
-                    c,
-                    categoryIdByToken,
-                    featureIdByToken);
+            return importParameterRowUpdate(productId, versionId, commandId, line, dataRowNumber, cols, matched,
+                    code, c, categoryIdByToken, featureIdByToken);
         }
         String codeFromSheet = trimCell(line, cols.colCode());
         if (StringUtils.isNotBlank(codeFromSheet)) {
@@ -972,34 +951,16 @@ public class ParameterAppService {
                 c.failure(dataRowNumber, "已基线参数不会做更改，已跳过");
                 return peersForBitCheck;
             }
-            return importParameterRowUpdate(
-                    productId,
-                    versionId,
-                    commandId,
-                    line,
-                    dataRowNumber,
-                    cols,
-                    matched,
-                    codeFromSheet,
-                    c,
-                    categoryIdByToken,
-                    featureIdByToken);
+            return importParameterRowUpdate(productId, versionId, commandId, line, dataRowNumber, cols, matched,
+                    codeFromSheet, c, categoryIdByToken, featureIdByToken);
         }
         String generatedCode =
                 resolveImportCreateParameterCode(productId, commandId, commandTypeCode, line, cols);
         SystemParameterPo incoming = new SystemParameterPo();
         cols.applyMainFromLine(productId, versionId, commandId, generatedCode, incoming, line);
         applyImportDictionaryIds(incoming, line, cols, categoryIdByToken, featureIdByToken);
-        return importParameterRowCreate(
-                productId,
-                versionId,
-                commandId,
-                peersForBitCheck,
-                line,
-                dataRowNumber,
-                cols,
-                incoming,
-                c);
+        return importParameterRowCreate(productId, versionId, commandId, peersForBitCheck, line, dataRowNumber,
+                cols, incoming, c);
     }
 
     /**
@@ -1705,6 +1666,10 @@ public class ParameterAppService {
 
     /**
      * 判断导入数据行是否为空（参数编码、参数 ID、序号、参数名称均为空则视为空行）。
+     *
+     * @param line 当前行单元格
+     * @param cols 列映射
+     * @return 是否为空行
      */
     private static boolean isImportDataRowBlank(List<String> line, ImportSheetColumns cols) {
         if (StringUtils.isNotBlank(trimCell(line, cols.colCode()))) {

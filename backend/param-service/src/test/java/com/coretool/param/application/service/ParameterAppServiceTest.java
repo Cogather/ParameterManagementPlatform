@@ -359,7 +359,7 @@ class ParameterAppServiceTest {
     }
 
     @Test
-    void importParameters_withoutCommandId_shouldResolveOwnedCommandFromFile() {
+    void importParameters_withoutCommandId_resolvesCommandFromFile() {
         lenient().when(changeSourceKeywordRepository.listEnabledRegexesByProduct("p1")).thenReturn(List.of());
         lenient().doNothing().when(configChangeTypeAppService).validateChangeTypesForParameterSave(any(Boolean.class), any());
 
