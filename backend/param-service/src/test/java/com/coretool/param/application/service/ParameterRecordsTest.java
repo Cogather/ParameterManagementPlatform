@@ -8,9 +8,11 @@ import com.coretool.param.domain.config.keyword.repository.ChangeSourceKeywordRe
 import com.coretool.param.infrastructure.persistence.mapper.CommandTypeDefinitionMapper;
 import com.coretool.param.infrastructure.persistence.mapper.CommandTypeVersionRangeMapper;
 import com.coretool.param.infrastructure.persistence.mapper.ConfigChangeDescriptionMapper;
+import com.coretool.param.infrastructure.persistence.mapper.EntityBusinessCategoryMapper;
 import com.coretool.param.infrastructure.persistence.mapper.EntityCommandMappingMapper;
 import com.coretool.param.infrastructure.persistence.mapper.EntityVersionInfoMapper;
 import com.coretool.param.infrastructure.persistence.mapper.SystemParameterMapper;
+import com.coretool.param.infrastructure.persistence.mapper.VersionFeatureDictMapper;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -50,16 +52,22 @@ class ParameterRecordsTest {
         ConfigChangeTypeAppService configChangeTypeAppService = Mockito.mock(ConfigChangeTypeAppService.class);
         OperationLogAppService operationLogAppService = Mockito.mock(OperationLogAppService.class);
         EntityCommandMappingMapper entityCommandMappingMapper = Mockito.mock(EntityCommandMappingMapper.class);
+        EntityBusinessCategoryMapper entityBusinessCategoryMapper = Mockito.mock(EntityBusinessCategoryMapper.class);
+        VersionFeatureDictMapper versionFeatureDictMapper = Mockito.mock(VersionFeatureDictMapper.class);
 
         ParameterAppCollaboration c =
                 new ParameterAppCollaboration(
                         changeSourceKeywordRepository,
                         configChangeTypeAppService,
                         operationLogAppService,
-                        entityCommandMappingMapper);
+                        entityCommandMappingMapper,
+                        entityBusinessCategoryMapper,
+                        versionFeatureDictMapper);
 
         assertThat(c.operationLogAppService()).isSameAs(operationLogAppService);
         assertThat(c.entityCommandMappingMapper()).isSameAs(entityCommandMappingMapper);
+        assertThat(c.entityBusinessCategoryMapper()).isSameAs(entityBusinessCategoryMapper);
+        assertThat(c.versionFeatureDictMapper()).isSameAs(versionFeatureDictMapper);
     }
 }
 

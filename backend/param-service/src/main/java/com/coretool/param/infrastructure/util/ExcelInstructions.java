@@ -28,7 +28,7 @@ public final class ExcelInstructions {
     public static List<String> parameterExportInstructionLines() {
         return List.of(
                 "说明：请从下方表头行起填写数据，勿删表头。",
-                "1. 参数ID：新增时请留空；修改时保留导出值，系统将按 ID 更新。",
+                "1. 参数ID， 参数编码：新增时请留空；修改时保留导出值，系统将按 ID 更新。",
                 "2. 全量导入会先删除对应命令下既有参数再写入；增量导入时已基线行会跳过。",
                 "3. 取值范围单段写「最小值-最大值」，多段用英文逗号分隔。示例：0-255 或 1-10,20-30。");
     }

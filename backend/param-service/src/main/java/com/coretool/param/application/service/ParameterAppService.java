@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.coretool.param.application.support.ImportResultCollector;
 import com.coretool.param.application.support.ParameterDefaults;
 import com.coretool.param.application.support.ParameterExportHeadersZh;
+import com.coretool.param.application.support.ParameterImportMasterDataSupport;
 import com.coretool.param.application.support.ParameterSaveValidation;
 import com.coretool.param.application.support.ValueRangeSegmentsSupport;
 import com.coretool.param.application.support.RequestOperatorIds;
@@ -31,9 +32,11 @@ import com.coretool.param.infrastructure.persistence.entity.SystemParameterPo;
 import com.coretool.param.infrastructure.persistence.mapper.CommandTypeDefinitionMapper;
 import com.coretool.param.infrastructure.persistence.mapper.CommandTypeVersionRangeMapper;
 import com.coretool.param.infrastructure.persistence.mapper.ConfigChangeDescriptionMapper;
+import com.coretool.param.infrastructure.persistence.mapper.EntityBusinessCategoryMapper;
 import com.coretool.param.infrastructure.persistence.mapper.EntityCommandMappingMapper;
 import com.coretool.param.infrastructure.persistence.mapper.EntityVersionInfoMapper;
 import com.coretool.param.infrastructure.persistence.mapper.SystemParameterMapper;
+import com.coretool.param.infrastructure.persistence.mapper.VersionFeatureDictMapper;
 import com.coretool.param.infrastructure.util.ExcelHelper;
 import com.coretool.param.infrastructure.util.ExcelInstructions;
 import com.coretool.param.ui.response.AvailableBitsData;
@@ -82,6 +85,8 @@ public class ParameterAppService {
     private final ConfigChangeTypeAppService configChangeTypeAppService;
     private final OperationLogAppService operationLogAppService;
     private final EntityCommandMappingMapper entityCommandMappingMapper;
+    private final EntityBusinessCategoryMapper entityBusinessCategoryMapper;
+    private final VersionFeatureDictMapper versionFeatureDictMapper;
 
     /**
      * 构造应用服务（依赖分两组 {@link ParameterAppPersistenceMappers} / {@link ParameterAppCollaboration}，单组形参 ≤5）。
@@ -100,6 +105,8 @@ public class ParameterAppService {
         this.configChangeTypeAppService = collaboration.configChangeTypeAppService();
         this.operationLogAppService = collaboration.operationLogAppService();
         this.entityCommandMappingMapper = collaboration.entityCommandMappingMapper();
+        this.entityBusinessCategoryMapper = collaboration.entityBusinessCategoryMapper();
+        this.versionFeatureDictMapper = collaboration.versionFeatureDictMapper();
     }
 
     /**
@@ -654,6 +661,10 @@ public class ParameterAppService {
         boolean resolveCommandFromFile = StringUtils.isBlank(commandId);
         Map<String, String> commandIdByName =
                 resolveCommandFromFile ? loadCommandIdByNameMap(productId) : Map.of();
+        Map<String, String> categoryIdByToken =
+                ParameterImportMasterDataSupport.loadCategoryIdByTokenMap(productId, entityBusinessCategoryMapper);
+        Map<String, String> featureIdByToken =
+                ParameterImportMasterDataSupport.loadFeatureIdByTokenMap(productId, versionId, versionFeatureDictMapper);
         prepareImportScope(
                 productId, versionId, commandId, commandTypeCode, importMode, resolveCommandFromFile, rows,
                 headerIdx, cols, commandIdByName, c);
@@ -675,7 +686,17 @@ public class ParameterAppService {
                             rowCommandId, id -> loadParametersForCommand(productId, versionId, id));
             peers =
                     handleImportParameterRow(
-                            productId, versionId, rowCommandId, peers, line, dataRowNumber, cols, cols.colCode, c);
+                            productId,
+                            versionId,
+                            rowCommandId,
+                            commandTypeCode,
+                            peers,
+                            line,
+                            dataRowNumber,
+                            cols,
+                            c,
+                            categoryIdByToken,
+                            featureIdByToken);
             peersByCommand.put(rowCommandId, peers);
         }
         return c.build(dataRows);
@@ -769,6 +790,9 @@ public class ParameterAppService {
 
     /**
      * 加载产品下命令名称（或命令 ID）到 commandId 的映射，供导入解析「归属命令」列。
+     *
+     * @param productId 产品 ID
+     * @return 命令名称或命令 ID → commandId 的映射
      */
     private Map<String, String> loadCommandIdByNameMap(String productId) {
         List<EntityCommandMappingPo> cmds =
@@ -845,37 +869,38 @@ public class ParameterAppService {
      * @param peersForBitCheck 当前命令下用于 BIT 校验的同行参数
      * @param line             当前行单元格
      * @param dataRowNumber    Excel 行号（用于结果反馈）
+     * @param commandTypeCode  命令类型键（新增时用于生成参数编码）
      * @param cols             列映射
-     * @param colCode          参数编码列索引
-     * @param c                导入结果收集器
+     * @param c                    导入结果收集器
+     * @param categoryIdByToken    业务分类 token → categoryId
+     * @param featureIdByToken     所属特性 token → featureId
      * @return 更新后的同行参数列表
      */
     private List<SystemParameterPo> handleImportParameterRow(
             String productId,
             String versionId,
             String commandId,
+            String commandTypeCode,
             List<SystemParameterPo> peersForBitCheck,
             List<String> line,
             int dataRowNumber,
             ImportSheetColumns cols,
-            int colCode,
-            ImportResultCollector c) {
-        String code = cell(line, colCode);
-        if (StringUtils.isBlank(code)) {
-            c.failure(dataRowNumber, "parameter_code 为空");
-            return peersForBitCheck;
-        }
+            ImportResultCollector c,
+            Map<String, String> categoryIdByToken,
+            Map<String, String> featureIdByToken) {
         try {
             return applyImportRowWithMatchedDecision(
                     productId,
                     versionId,
                     commandId,
+                    commandTypeCode,
                     peersForBitCheck,
                     line,
                     dataRowNumber,
                     cols,
-                    code,
-                    c);
+                    c,
+                    categoryIdByToken,
+                    featureIdByToken);
         } catch (BlacklistViolationException e) {
             c.failure(dataRowNumber, e.getMessage());
             return peersForBitCheck;
@@ -894,8 +919,8 @@ public class ParameterAppService {
      * @param peersForBitCheck 同行参数（BIT 校验）
      * @param line             当前行
      * @param dataRowNumber    行号
+     * @param commandTypeCode  命令类型键（新增时用于生成参数编码）
      * @param cols             列映射
-     * @param code             参数编码
      * @param c                结果收集器
      * @return 更新后的同行参数列表
      */
@@ -903,34 +928,143 @@ public class ParameterAppService {
             String productId,
             String versionId,
             String commandId,
+            String commandTypeCode,
             List<SystemParameterPo> peersForBitCheck,
             List<String> line,
             int dataRowNumber,
             ImportSheetColumns cols,
-            String code,
-            ImportResultCollector c) {
-        SystemParameterPo fromSheet = new SystemParameterPo();
-        cols.applyMainFromLine(productId, versionId, commandId, code, fromSheet, line);
-        SystemParameterPo matched =
-                findImportMatch(productId, versionId, commandId, peersForBitCheck, line, cols, fromSheet);
-        if (matched != null && ParameterBaselinePolicy.isBaselineLocked(matched.getDataStatus())) {
-            c.failure(dataRowNumber, "已基线参数不会做更改，已跳过");
-            return peersForBitCheck;
-        }
-        if (matched == null) {
-            return importParameterRowCreate(
+            ImportResultCollector c,
+            Map<String, String> categoryIdByToken,
+            Map<String, String> featureIdByToken) {
+        Integer paramId = parseImportParameterId(line, cols);
+        if (paramId != null) {
+            SystemParameterPo matched =
+                    findImportMatch(productId, versionId, commandId, peersForBitCheck, line, cols, null);
+            if (matched != null && ParameterBaselinePolicy.isBaselineLocked(matched.getDataStatus())) {
+                c.failure(dataRowNumber, "已基线参数不会做更改，已跳过");
+                return peersForBitCheck;
+            }
+            String code = matched.getParameterCode();
+            return importParameterRowUpdate(
                     productId,
                     versionId,
                     commandId,
-                    peersForBitCheck,
                     line,
                     dataRowNumber,
                     cols,
-                    fromSheet,
-                    c);
+                    matched,
+                    code,
+                    c,
+                    categoryIdByToken,
+                    featureIdByToken);
         }
-        return importParameterRowUpdate(
-                productId, versionId, commandId, line, dataRowNumber, cols, matched, code, c);
+        String codeFromSheet = trimCell(line, cols.colCode());
+        if (StringUtils.isNotBlank(codeFromSheet)) {
+            SystemParameterPo fromSheet = new SystemParameterPo();
+            cols.applyMainFromLine(productId, versionId, commandId, codeFromSheet, fromSheet, line);
+            applyImportDictionaryIds(fromSheet, line, cols, categoryIdByToken, featureIdByToken);
+            SystemParameterPo matched = findImportMatchByCode(peersForBitCheck, fromSheet);
+            if (matched == null) {
+                c.failure(dataRowNumber, "未找到匹配的参数，新增导入请勿填写参数编码");
+                return peersForBitCheck;
+            }
+            if (ParameterBaselinePolicy.isBaselineLocked(matched.getDataStatus())) {
+                c.failure(dataRowNumber, "已基线参数不会做更改，已跳过");
+                return peersForBitCheck;
+            }
+            return importParameterRowUpdate(
+                    productId,
+                    versionId,
+                    commandId,
+                    line,
+                    dataRowNumber,
+                    cols,
+                    matched,
+                    codeFromSheet,
+                    c,
+                    categoryIdByToken,
+                    featureIdByToken);
+        }
+        String generatedCode =
+                resolveImportCreateParameterCode(productId, commandId, commandTypeCode, line, cols);
+        SystemParameterPo incoming = new SystemParameterPo();
+        cols.applyMainFromLine(productId, versionId, commandId, generatedCode, incoming, line);
+        applyImportDictionaryIds(incoming, line, cols, categoryIdByToken, featureIdByToken);
+        return importParameterRowCreate(
+                productId,
+                versionId,
+                commandId,
+                peersForBitCheck,
+                line,
+                dataRowNumber,
+                cols,
+                incoming,
+                c);
+    }
+
+    /**
+     * 新增导入时按命令类型与序号生成参数编码（与 UI {@code syncCode} 一致：类型_序号）。
+     *
+     * @param productId       产品 ID
+     * @param commandId       命令 ID
+     * @param commandTypeCode 类型键
+     * @param line            当前行
+     * @param cols            列映射
+     * @return 参数编码
+     * @throws DomainRuleException 未选类型或序号非法时
+     */
+    private String resolveImportCreateParameterCode(
+            String productId,
+            String commandId,
+            String commandTypeCode,
+            List<String> line,
+            ImportSheetColumns cols) {
+        if (StringUtils.isBlank(commandTypeCode)) {
+            throw new DomainRuleException("新增导入需选择命令类型");
+        }
+        int sequence = parseImportSequence(line, cols);
+        String typeEnum = resolveTypeEnumForAllocation(productId, commandId, commandTypeCode);
+        return typeEnum + "_" + sequence;
+    }
+
+    /**
+     * 解析导入行「序号」列。
+     *
+     * @param line 当前行
+     * @param cols 列映射
+     * @return 序号
+     * @throws DomainRuleException 未填或非法时
+     */
+    private static int parseImportSequence(List<String> line, ImportSheetColumns cols) {
+        if (cols.colSeq() < 0) {
+            throw new DomainRuleException("新增导入须填写序号");
+        }
+        String raw = trimCell(line, cols.colSeq());
+        if (StringUtils.isBlank(raw)) {
+            throw new DomainRuleException("新增导入须填写序号");
+        }
+        try {
+            return Integer.parseInt(raw.trim());
+        } catch (NumberFormatException e) {
+            throw new DomainRuleException("序号须为整数: " + raw.trim(), e);
+        }
+    }
+
+    /**
+     * 解析 Excel 中填写的业务分类、所属特性为主数据 ID。
+     */
+    private static void applyImportDictionaryIds(
+            SystemParameterPo po,
+            List<String> line,
+            ImportSheetColumns cols,
+            Map<String, String> categoryIdByToken,
+            Map<String, String> featureIdByToken) {
+        ParameterImportMasterDataSupport.applyDictionaryIdsFromImportCells(
+                po,
+                cols.businessClassificationCell(line),
+                cols.featureCell(line),
+                categoryIdByToken,
+                featureIdByToken);
     }
 
     /**
@@ -960,7 +1094,7 @@ public class ParameterAppService {
             SystemParameterPo incoming,
             ImportResultCollector c) {
         ParameterDefaults.applySystemDefaults(incoming);
-        applyOptionalString(line, cols.colDataStatus, incoming::setDataStatus);
+        applyOptionalString(line, cols.colDataStatus(), incoming::setDataStatus);
         ParameterSaveValidation.assertCreate(incoming, requiresBitUsage(incoming.getParameterCode()));
         validateAndApplyBlacklist(productId, incoming);
         ParameterSaveInvariant.assertSequenceMatchesCode(
@@ -1006,11 +1140,14 @@ public class ParameterAppService {
             ImportSheetColumns cols,
             SystemParameterPo matched,
             String code,
-            ImportResultCollector c) {
+            ImportResultCollector c,
+            Map<String, String> categoryIdByToken,
+            Map<String, String> featureIdByToken) {
         SystemParameterPo incoming = new SystemParameterPo();
         BeanUtils.copyProperties(matched, incoming);
         cols.applyMainFromLine(productId, versionId, commandId, code, incoming, line);
-        applyOptionalString(line, cols.colDataStatus, incoming::setDataStatus);
+        applyImportDictionaryIds(incoming, line, cols, categoryIdByToken, featureIdByToken);
+        applyOptionalString(line, cols.colDataStatus(), incoming::setDataStatus);
         ParameterSaveValidation.mergeHiddenFields(incoming, matched);
         ParameterSaveValidation.assertUpdate(incoming, requiresBitUsage(incoming.getParameterCode()));
         validateAndApplyBlacklist(productId, incoming);
@@ -1078,13 +1215,13 @@ public class ParameterAppService {
             return;
         }
         ConfigChangeDescriptionPo d = new ConfigChangeDescriptionPo();
-        d.setChangeType(trimCell(line, cols.colChType));
-        d.setChangeReasonCn(trimCell(line, cols.colChReasonCn));
-        d.setChangeImpactCn(trimCell(line, cols.colChImpactCn));
-        d.setChangeReasonEn(trimCell(line, cols.colChReasonEn));
-        d.setChangeImpactEn(trimCell(line, cols.colChImpactEn));
-        d.setExportDelta(trimCell(line, cols.colExportDelta));
-        d.setNoExportReason(trimCell(line, cols.colNoExportReason));
+        d.setChangeType(trimCell(line, cols.colChType()));
+        d.setChangeReasonCn(trimCell(line, cols.colChReasonCn()));
+        d.setChangeImpactCn(trimCell(line, cols.colChImpactCn()));
+        d.setChangeReasonEn(trimCell(line, cols.colChReasonEn()));
+        d.setChangeImpactEn(trimCell(line, cols.colChImpactEn()));
+        d.setExportDelta(trimCell(line, cols.colExportDelta()));
+        d.setNoExportReason(trimCell(line, cols.colNoExportReason()));
         validateChangeDescriptions(isNewParameter, List.of(d));
         deleteDescriptionsByParameter(parameterId);
         insertChangeDescriptions(parameterId, List.of(d), now);
@@ -1110,55 +1247,69 @@ public class ParameterAppService {
     private static final class ImportSheetColumns {
         private final int colParameterId;
         private final int colCommandName;
-        private final int colCode;
-        private final int colName;
-        private final int colNameEn;
-        private final int colSeq;
-        private final int colBit;
-        private final int colValueRangeSegments;
-        private final int colValueRange;
-        private final int colDef;
-        private final int colRec;
-        private final int colIntroVer;
-        private final int colUnitCn;
-        private final int colUnitEn;
-        private final int colValueDescCn;
-        private final int colValueDescEn;
-        private final int colSceneCn;
-        private final int colSceneEn;
-        private final int colNe;
-        private final int colBiz;
-        private final int colEmCn;
-        private final int colEmEn;
-        private final int colTeam;
-        private final int colModule;
-        private final int colDescCn;
-        private final int colDescEn;
-        private final int colImpactCn;
-        private final int colImpactEn;
-        private final int colExCn;
-        private final int colExEn;
-        private final int colIsPublished;
-        private final int colNoPublishReason;
-        private final int colRelCn;
-        private final int colRelEn;
-        private final int colFeature;
-        private final int colImpactLevelCn;
-        private final int colImpactLevelEn;
-        private final int colRelatedLicense;
-        private final int colInternalDesc;
-        private final int colProductFormId;
-        private final int colPlatformGeneration;
-        private final int colApplicationRegion;
-        private final int colRemark;
-        private final int colDataStatus;
-        private final int colChType;
-        private final int colChReasonCn;
-        private final int colChImpactCn;
-        private final int colChReasonEn;
-        private final int colChImpactEn;
-        private final int colExportDelta;
-        private final int colNoExportReason;
+        private final CoreColumnIndices core;
+        private final DetailColumnIndices detail;
+        private final ChangeColumnIndices change;
+
+        private ImportSheetColumns(Builder b) {
+            colParameterId = b.colParameterId;
+            colCommandName = b.colCommandName;
+            core = b.coreColumnIndices();
+            detail = b.detailColumnIndices();
+            change = b.changeColumnIndices();
+        }
+
+        private int colCode() {
+            return core.colCode();
+        }
+
+        private int colSeq() {
+            return core.colSeq();
+        }
+
+        private int colName() {
+            return core.colName();
+        }
+
+        private int colDataStatus() {
+            return detail.colDataStatus();
+        }
+
+        private int colChType() {
+            return change.colChType();
+        }
+
+        private int colChReasonCn() {
+            return change.colChReasonCn();
+        }
+
+        private int colChImpactCn() {
+            return change.colChImpactCn();
+        }
+
+        private int colChReasonEn() {
+            return change.colChReasonEn();
+        }
+
+        private int colChImpactEn() {
+            return change.colChImpactEn();
+        }
+
+        private int colExportDelta() {
+            return change.colExportDelta();
+        }
+
+        private int colNoExportReason() {
+            return change.colNoExportReason();
+        }
+
+        private String businessClassificationCell(List<String> line) {
+            return detail.colBiz() >= 0 ? trimCell(line, detail.colBiz()) : "";
+        }
+
+        private String featureCell(List<String> line) {
+            return detail.colFeature() >= 0 ? trimCell(line, detail.colFeature()) : "";
+        }
 
         private record CoreColumnIndices(
                 int colCode,
@@ -1214,63 +1365,6 @@ public class ParameterAppService {
                 int colChImpactEn,
                 int colExportDelta,
                 int colNoExportReason) {}
-
-        private ImportSheetColumns(Builder b) {
-            colParameterId = b.colParameterId;
-            colCommandName = b.colCommandName;
-            CoreColumnIndices core = b.coreColumnIndices();
-            DetailColumnIndices detail = b.detailColumnIndices();
-            ChangeColumnIndices change = b.changeColumnIndices();
-            colCode = core.colCode();
-            colName = core.colName();
-            colNameEn = core.colNameEn();
-            colSeq = core.colSeq();
-            colBit = core.colBit();
-            colValueRangeSegments = core.colValueRangeSegments();
-            colValueRange = core.colValueRange();
-            colDef = core.colDef();
-            colRec = core.colRec();
-            colIntroVer = core.colIntroVer();
-            colUnitCn = core.colUnitCn();
-            colUnitEn = core.colUnitEn();
-            colValueDescCn = detail.colValueDescCn();
-            colValueDescEn = detail.colValueDescEn();
-            colSceneCn = detail.colSceneCn();
-            colSceneEn = detail.colSceneEn();
-            colNe = detail.colNe();
-            colBiz = detail.colBiz();
-            colEmCn = detail.colEmCn();
-            colEmEn = detail.colEmEn();
-            colTeam = detail.colTeam();
-            colModule = detail.colModule();
-            colDescCn = detail.colDescCn();
-            colDescEn = detail.colDescEn();
-            colImpactCn = detail.colImpactCn();
-            colImpactEn = detail.colImpactEn();
-            colExCn = detail.colExCn();
-            colExEn = detail.colExEn();
-            colIsPublished = detail.colIsPublished();
-            colNoPublishReason = detail.colNoPublishReason();
-            colRelCn = detail.colRelCn();
-            colRelEn = detail.colRelEn();
-            colFeature = detail.colFeature();
-            colImpactLevelCn = detail.colImpactLevelCn();
-            colImpactLevelEn = detail.colImpactLevelEn();
-            colRelatedLicense = detail.colRelatedLicense();
-            colInternalDesc = detail.colInternalDesc();
-            colProductFormId = detail.colProductFormId();
-            colPlatformGeneration = detail.colPlatformGeneration();
-            colApplicationRegion = detail.colApplicationRegion();
-            colRemark = detail.colRemark();
-            colDataStatus = detail.colDataStatus();
-            colChType = change.colChType();
-            colChReasonCn = change.colChReasonCn();
-            colChImpactCn = change.colChImpactCn();
-            colChReasonEn = change.colChReasonEn();
-            colChImpactEn = change.colChImpactEn();
-            colExportDelta = change.colExportDelta();
-            colNoExportReason = change.colNoExportReason();
-        }
 
         /**
          * 根据表头映射构造列索引。
@@ -1493,13 +1587,13 @@ public class ParameterAppService {
          * @return 是否含变更说明载荷
          */
         private boolean hasChangePayload(List<String> line) {
-            return StringUtils.isNotBlank(trimCell(line, colChType))
-                    || StringUtils.isNotBlank(trimCell(line, colChReasonCn))
-                    || StringUtils.isNotBlank(trimCell(line, colChImpactCn))
-                    || StringUtils.isNotBlank(trimCell(line, colChReasonEn))
-                    || StringUtils.isNotBlank(trimCell(line, colChImpactEn))
-                    || StringUtils.isNotBlank(trimCell(line, colExportDelta))
-                    || StringUtils.isNotBlank(trimCell(line, colNoExportReason));
+            return StringUtils.isNotBlank(trimCell(line, change.colChType()))
+                    || StringUtils.isNotBlank(trimCell(line, change.colChReasonCn()))
+                    || StringUtils.isNotBlank(trimCell(line, change.colChImpactCn()))
+                    || StringUtils.isNotBlank(trimCell(line, change.colChReasonEn()))
+                    || StringUtils.isNotBlank(trimCell(line, change.colChImpactEn()))
+                    || StringUtils.isNotBlank(trimCell(line, change.colExportDelta()))
+                    || StringUtils.isNotBlank(trimCell(line, change.colNoExportReason()));
         }
 
         /**
@@ -1526,10 +1620,10 @@ public class ParameterAppService {
             target.setOwnedVersionId(versionId);
             target.setOwnedCommandId(commandId);
             target.setParameterCode(parameterCode);
-            applyOptionalString(line, colName, target::setParameterNameCn);
-            applyOptionalString(line, colNameEn, target::setParameterNameEn);
-            if (colSeq >= 0) {
-                String s = cell(line, colSeq);
+            applyOptionalString(line, core.colName(), target::setParameterNameCn);
+            applyOptionalString(line, core.colNameEn(), target::setParameterNameEn);
+            if (core.colSeq() >= 0) {
+                String s = cell(line, core.colSeq());
                 if (StringUtils.isNotBlank(s)) {
                     try {
                         target.setParameterSequence(Integer.parseInt(s.trim()));
@@ -1538,52 +1632,52 @@ public class ParameterAppService {
                     }
                 }
             }
-            if (target.getParameterSequence() == null) {
+            if (target.getParameterSequence() == null && StringUtils.isNotBlank(parameterCode)) {
                 target.setParameterSequence(ParameterCode.parse(parameterCode).sequence());
             }
         }
 
         private void applyMainOptionalFieldsFromLine(SystemParameterPo target, List<String> line) {
-            applyOptionalString(line, colBit, target::setBitUsage);
-            applyOptionalString(line, colDef, target::setParameterDefaultValue);
-            applyOptionalString(line, colRec, target::setParameterRecommendedValue);
-            applyOptionalString(line, colIntroVer, target::setIntroducedVersion);
-            applyOptionalString(line, colUnitCn, target::setParameterUnitCn);
-            applyOptionalString(line, colUnitEn, target::setParameterUnitEn);
-            applyOptionalString(line, colValueDescCn, target::setValueDescriptionCn);
-            applyOptionalString(line, colValueDescEn, target::setValueDescriptionEn);
-            applyOptionalString(line, colSceneCn, target::setApplicationScenarioCn);
-            applyOptionalString(line, colSceneEn, target::setApplicationScenarioEn);
-            applyOptionalString(line, colNe, target::setApplicableNe);
-            applyOptionalString(line, colBiz, target::setBusinessClassification);
-            applyOptionalString(line, colEmCn, target::setEffectiveModeCn);
-            applyOptionalString(line, colEmEn, target::setEffectiveModeEn);
-            applyOptionalString(line, colTeam, target::setProjectTeam);
-            applyOptionalString(line, colModule, target::setBelongingModule);
-            applyOptionalString(line, colDescCn, target::setParameterDescriptionCn);
-            applyOptionalString(line, colDescEn, target::setParameterDescriptionEn);
-            applyOptionalString(line, colImpactCn, target::setImpactDescriptionCn);
-            applyOptionalString(line, colImpactEn, target::setImpactDescriptionEn);
-            applyOptionalString(line, colExCn, target::setConfigurationExampleCn);
-            applyOptionalString(line, colExEn, target::setConfigurationExampleEn);
-            applyOptionalString(line, colIsPublished, target::setIsPublished);
-            applyOptionalString(line, colNoPublishReason, target::setNoPublishReason);
-            applyOptionalString(line, colRelCn, target::setRelatedParameterDescriptionCn);
-            applyOptionalString(line, colRelEn, target::setRelatedParameterDescriptionEn);
-            applyOptionalString(line, colFeature, target::setFeature);
-            applyOptionalString(line, colImpactLevelCn, target::setImpactLevelCn);
-            applyOptionalString(line, colImpactLevelEn, target::setImpactLevelEn);
-            applyOptionalString(line, colRelatedLicense, target::setRelatedLicense);
-            applyOptionalString(line, colInternalDesc, target::setInternalDescription);
-            applyOptionalString(line, colProductFormId, target::setProductFormId);
-            applyOptionalString(line, colPlatformGeneration, target::setPlatformGeneration);
-            applyOptionalString(line, colApplicationRegion, target::setApplicationRegion);
-            applyOptionalString(line, colRemark, target::setRemark);
+            applyOptionalString(line, core.colBit(), target::setBitUsage);
+            applyOptionalString(line, core.colDef(), target::setParameterDefaultValue);
+            applyOptionalString(line, core.colRec(), target::setParameterRecommendedValue);
+            applyOptionalString(line, core.colIntroVer(), target::setIntroducedVersion);
+            applyOptionalString(line, core.colUnitCn(), target::setParameterUnitCn);
+            applyOptionalString(line, core.colUnitEn(), target::setParameterUnitEn);
+            applyOptionalString(line, detail.colValueDescCn(), target::setValueDescriptionCn);
+            applyOptionalString(line, detail.colValueDescEn(), target::setValueDescriptionEn);
+            applyOptionalString(line, detail.colSceneCn(), target::setApplicationScenarioCn);
+            applyOptionalString(line, detail.colSceneEn(), target::setApplicationScenarioEn);
+            applyOptionalString(line, detail.colNe(), target::setApplicableNe);
+            applyOptionalString(line, detail.colBiz(), target::setBusinessClassification);
+            applyOptionalString(line, detail.colEmCn(), target::setEffectiveModeCn);
+            applyOptionalString(line, detail.colEmEn(), target::setEffectiveModeEn);
+            applyOptionalString(line, detail.colTeam(), target::setProjectTeam);
+            applyOptionalString(line, detail.colModule(), target::setBelongingModule);
+            applyOptionalString(line, detail.colDescCn(), target::setParameterDescriptionCn);
+            applyOptionalString(line, detail.colDescEn(), target::setParameterDescriptionEn);
+            applyOptionalString(line, detail.colImpactCn(), target::setImpactDescriptionCn);
+            applyOptionalString(line, detail.colImpactEn(), target::setImpactDescriptionEn);
+            applyOptionalString(line, detail.colExCn(), target::setConfigurationExampleCn);
+            applyOptionalString(line, detail.colExEn(), target::setConfigurationExampleEn);
+            applyOptionalString(line, detail.colIsPublished(), target::setIsPublished);
+            applyOptionalString(line, detail.colNoPublishReason(), target::setNoPublishReason);
+            applyOptionalString(line, detail.colRelCn(), target::setRelatedParameterDescriptionCn);
+            applyOptionalString(line, detail.colRelEn(), target::setRelatedParameterDescriptionEn);
+            applyOptionalString(line, detail.colFeature(), target::setFeature);
+            applyOptionalString(line, detail.colImpactLevelCn(), target::setImpactLevelCn);
+            applyOptionalString(line, detail.colImpactLevelEn(), target::setImpactLevelEn);
+            applyOptionalString(line, detail.colRelatedLicense(), target::setRelatedLicense);
+            applyOptionalString(line, detail.colInternalDesc(), target::setInternalDescription);
+            applyOptionalString(line, detail.colProductFormId(), target::setProductFormId);
+            applyOptionalString(line, detail.colPlatformGeneration(), target::setPlatformGeneration);
+            applyOptionalString(line, detail.colApplicationRegion(), target::setApplicationRegion);
+            applyOptionalString(line, detail.colRemark(), target::setRemark);
         }
 
         private void applyValueRangeFromLine(SystemParameterPo target, List<String> line) {
-            String segments = colValueRangeSegments >= 0 ? trimCell(line, colValueRangeSegments) : "";
-            String joined = colValueRange >= 0 ? trimCell(line, colValueRange) : "";
+            String segments = core.colValueRangeSegments() >= 0 ? trimCell(line, core.colValueRangeSegments()) : "";
+            String joined = core.colValueRange() >= 0 ? trimCell(line, core.colValueRange()) : "";
             if (StringUtils.isBlank(segments) && StringUtils.isBlank(joined)) {
                 return;
             }
@@ -1610,13 +1704,19 @@ public class ParameterAppService {
     }
 
     /**
-     * 判断导入数据行是否为空（参数编码与参数 ID 均为空则视为空行）。
+     * 判断导入数据行是否为空（参数编码、参数 ID、序号、参数名称均为空则视为空行）。
      */
     private static boolean isImportDataRowBlank(List<String> line, ImportSheetColumns cols) {
-        if (StringUtils.isNotBlank(trimCell(line, cols.colCode))) {
+        if (StringUtils.isNotBlank(trimCell(line, cols.colCode()))) {
             return false;
         }
         if (cols.colParameterId >= 0 && StringUtils.isNotBlank(trimCell(line, cols.colParameterId))) {
+            return false;
+        }
+        if (cols.colSeq() >= 0 && StringUtils.isNotBlank(trimCell(line, cols.colSeq()))) {
+            return false;
+        }
+        if (cols.colName() >= 0 && StringUtils.isNotBlank(trimCell(line, cols.colName()))) {
             return false;
         }
         return true;
@@ -1624,6 +1724,11 @@ public class ParameterAppService {
 
     /**
      * 解析 Excel「参数 ID」列；空返回 null，非空但非法时抛出 DomainRuleException。
+     *
+     * @param line 当前行单元格
+     * @param cols 列映射
+     * @return 参数 ID；列为空或未填时 null
+     * @throws DomainRuleException 单元格有值但无法解析为整数时
      */
     private static Integer parseImportParameterId(List<String> line, ImportSheetColumns cols) {
         if (cols.colParameterId < 0) {

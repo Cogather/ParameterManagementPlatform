@@ -8,9 +8,11 @@ import com.coretool.param.domain.config.keyword.repository.ChangeSourceKeywordRe
 import com.coretool.param.infrastructure.persistence.mapper.CommandTypeDefinitionMapper;
 import com.coretool.param.infrastructure.persistence.mapper.CommandTypeVersionRangeMapper;
 import com.coretool.param.infrastructure.persistence.mapper.ConfigChangeDescriptionMapper;
+import com.coretool.param.infrastructure.persistence.mapper.EntityBusinessCategoryMapper;
 import com.coretool.param.infrastructure.persistence.mapper.EntityCommandMappingMapper;
 import com.coretool.param.infrastructure.persistence.mapper.EntityVersionInfoMapper;
 import com.coretool.param.infrastructure.persistence.mapper.SystemParameterMapper;
+import com.coretool.param.infrastructure.persistence.mapper.VersionFeatureDictMapper;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,6 +38,12 @@ class ParameterAppWireRecordsTest {
     private EntityCommandMappingMapper entityCommandMappingMapper;
 
     @Mock
+    private EntityBusinessCategoryMapper entityBusinessCategoryMapper;
+
+    @Mock
+    private VersionFeatureDictMapper versionFeatureDictMapper;
+
+    @Mock
     private SystemParameterMapper systemParameterMapper;
 
     @Mock
@@ -57,12 +65,16 @@ class ParameterAppWireRecordsTest {
                         changeSourceKeywordRepository,
                         configChangeTypeAppService,
                         operationLogAppService,
-                        entityCommandMappingMapper);
+                        entityCommandMappingMapper,
+                        entityBusinessCategoryMapper,
+                        versionFeatureDictMapper);
 
         assertThat(r.changeSourceKeywordRepository()).isSameAs(changeSourceKeywordRepository);
         assertThat(r.configChangeTypeAppService()).isSameAs(configChangeTypeAppService);
         assertThat(r.operationLogAppService()).isSameAs(operationLogAppService);
         assertThat(r.entityCommandMappingMapper()).isSameAs(entityCommandMappingMapper);
+        assertThat(r.entityBusinessCategoryMapper()).isSameAs(entityBusinessCategoryMapper);
+        assertThat(r.versionFeatureDictMapper()).isSameAs(versionFeatureDictMapper);
     }
 
     @Test

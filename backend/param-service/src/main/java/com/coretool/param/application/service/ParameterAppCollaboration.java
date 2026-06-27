@@ -5,7 +5,9 @@
 package com.coretool.param.application.service;
 
 import com.coretool.param.domain.config.keyword.repository.ChangeSourceKeywordRepository;
+import com.coretool.param.infrastructure.persistence.mapper.EntityBusinessCategoryMapper;
 import com.coretool.param.infrastructure.persistence.mapper.EntityCommandMappingMapper;
+import com.coretool.param.infrastructure.persistence.mapper.VersionFeatureDictMapper;
 
 import org.springframework.stereotype.Component;
 
@@ -20,4 +22,6 @@ public record ParameterAppCollaboration(
         ChangeSourceKeywordRepository changeSourceKeywordRepository,
         ConfigChangeTypeAppService configChangeTypeAppService,
         OperationLogAppService operationLogAppService,
-        EntityCommandMappingMapper entityCommandMappingMapper) {}
+        EntityCommandMappingMapper entityCommandMappingMapper,
+        EntityBusinessCategoryMapper entityBusinessCategoryMapper,
+        VersionFeatureDictMapper versionFeatureDictMapper) {}

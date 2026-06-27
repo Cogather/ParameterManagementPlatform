@@ -12,7 +12,9 @@ import com.coretool.param.infrastructure.persistence.entity.SystemParameterPo;
 import com.coretool.param.infrastructure.persistence.mapper.CommandTypeDefinitionMapper;
 import com.coretool.param.infrastructure.persistence.mapper.CommandTypeVersionRangeMapper;
 import com.coretool.param.infrastructure.persistence.mapper.ConfigChangeDescriptionMapper;
+import com.coretool.param.infrastructure.persistence.mapper.EntityBusinessCategoryMapper;
 import com.coretool.param.infrastructure.persistence.mapper.EntityCommandMappingMapper;
+import com.coretool.param.infrastructure.persistence.mapper.VersionFeatureDictMapper;
 import com.coretool.param.infrastructure.persistence.mapper.EntityVersionInfoMapper;
 import com.coretool.param.infrastructure.persistence.mapper.SystemParameterMapper;
 import com.coretool.param.infrastructure.util.ExcelHelper;
@@ -70,7 +72,15 @@ class ParameterAppServiceTest {
     @Mock
     private EntityCommandMappingMapper entityCommandMappingMapper;
 
+    @Mock
+    private EntityBusinessCategoryMapper entityBusinessCategoryMapper;
+
+    @Mock
+    private VersionFeatureDictMapper versionFeatureDictMapper;
+
     private ParameterAppService newSvc() {
+        lenient().when(entityBusinessCategoryMapper.selectList(any())).thenReturn(List.of());
+        lenient().when(versionFeatureDictMapper.selectList(any())).thenReturn(List.of());
         ParameterAppPersistenceMappers persistence =
                 new ParameterAppPersistenceMappers(
                         systemParameterMapper,
@@ -83,7 +93,9 @@ class ParameterAppServiceTest {
                         changeSourceKeywordRepository,
                         configChangeTypeAppService,
                         operationLogAppService,
-                        entityCommandMappingMapper);
+                        entityCommandMappingMapper,
+                        entityBusinessCategoryMapper,
+                        versionFeatureDictMapper);
         return new ParameterAppService(persistence, collaboration);
     }
 
@@ -114,7 +126,7 @@ class ParameterAppServiceTest {
 
     private static List<String> minimalCreateRow(List<String> headers) {
         List<String> row = emptyRow(headers);
-        row.set(headers.indexOf("参数编码"), "BIT_1");
+        row.set(headers.indexOf("序号"), "1");
         row.set(headers.indexOf("参数名称（中）"), "参数中文");
         row.set(headers.indexOf("BIT 占用"), "1");
         row.set(headers.indexOf("参数默认值"), "0");
@@ -177,6 +189,8 @@ class ParameterAppServiceTest {
             if (po.getParameterId() == null) {
                 po.setParameterId(1);
             }
+            assertThat(po.getParameterCode()).isEqualTo("BIT_1");
+            assertThat(po.getParameterSequence()).isEqualTo(1);
             return 1;
         }).when(systemParameterMapper).insert(any(SystemParameterPo.class));
 
@@ -203,7 +217,7 @@ class ParameterAppServiceTest {
 
         List<String> headers = alignedImportHeadersZh();
         List<String> row = emptyRow(headers);
-        row.set(headers.indexOf("参数编码"), "BIT_1");
+        row.set(headers.indexOf("序号"), "1");
         row.set(headers.indexOf("参数名称（中）"), "参数中文");
         byte[] bytes =
                 ExcelTestHelper.workbookBytes(
@@ -318,7 +332,7 @@ class ParameterAppServiceTest {
     }
 
     @Test
-    void importParameters_updateByParameterId_shouldApplyBitAndValueDescription() {
+    void importParameters_updateByParameterId_updatesDetailFields() {
         lenient().when(changeSourceKeywordRepository.listEnabledRegexesByProduct("p1")).thenReturn(List.of());
         lenient().doNothing().when(configChangeTypeAppService).validateChangeTypesForParameterSave(any(Boolean.class), any());
 
@@ -368,6 +382,33 @@ class ParameterAppServiceTest {
 
         var out = newSvc().importParameters("p1", "v1", "FULL", null, "BIT", importWorkbookBytes(headers, row));
         assertThat(out.getSuccessCount()).isEqualTo(1);
+    }
+
+    @Test
+    void importParameters_createWithManualCode_shouldFailWhenNoMatch() {
+        lenient().when(changeSourceKeywordRepository.listEnabledRegexesByProduct("p1")).thenReturn(List.of());
+        when(systemParameterMapper.selectList(any())).thenReturn(List.of());
+
+        List<String> headers = alignedImportHeadersZh();
+        List<String> row = minimalCreateRow(headers);
+        row.set(headers.indexOf("参数编码"), "BIT_99");
+
+        var out = newSvc().importParameters("p1", "v1", "INCREMENTAL", "c1", "BIT", importWorkbookBytes(headers, row));
+        assertThat(out.getSuccessCount()).isZero();
+        assertThat(out.getFailures().get(0).getReason()).contains("新增导入请勿填写参数编码");
+    }
+
+    @Test
+    void importParameters_createWithoutCommandTypeCode_shouldFailRow() {
+        lenient().when(changeSourceKeywordRepository.listEnabledRegexesByProduct("p1")).thenReturn(List.of());
+        when(systemParameterMapper.selectList(any())).thenReturn(List.of());
+
+        List<String> headers = alignedImportHeadersZh();
+        List<String> row = minimalCreateRow(headers);
+
+        var out = newSvc().importParameters("p1", "v1", "FULL", "c1", null, importWorkbookBytes(headers, row));
+        assertThat(out.getSuccessCount()).isZero();
+        assertThat(out.getFailures().get(0).getReason()).contains("新增导入需选择命令类型");
     }
 
     @Test
